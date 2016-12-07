@@ -1,14 +1,12 @@
 module Main where
 
+import Data.Tree
 import Lexer
+import Parser
 
 main :: IO ()
 main = do
     input <- getLine
-    let lexems = tokenize input
-
-    printLexemes lexems
-
-printLexemes :: [Lexeme] -> IO ()
-printLexemes (x:xs) = print x >> printLexemes xs
-printLexemes [] = return ()
+    let lexemes = tokenize input
+    putStr $ drawTree $ parse $ tokenize input
+    --mapM_ print lexemes

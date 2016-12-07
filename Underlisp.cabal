@@ -19,6 +19,6 @@ executable Underlisp
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.8 && <4.10
+  build-depends:       base >=4.8 && <4.10, containers >= 0.5.8.1
   -- hs-source-dirs:      
   default-language:    Haskell2010
