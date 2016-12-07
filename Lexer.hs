@@ -3,23 +3,24 @@ module Lexer (Lexeme(..), tokenize) where
 data Lexeme = LeftParen | RightParen | Function String
     deriving (Eq, Show)
 
-data State = None | InsideFunction
+data State = None | Terminal
 
+-- | 'tokenize' takes a sequence of symbols and splits it into lexemes
 tokenize :: String -> [Lexeme]
-tokenize sequence = helper [] None sequence
-    where helper list None xs@(x:rest) = case x of
-                                      '(' -> helper (list ++ [LeftParen]) None rest
-                                      ')' -> helper (list ++ [RightParen]) None rest
-                                      ' ' -> helper list None rest
-                                      _   -> helper list InsideFunction xs
+tokenize sequence = reverse $ helper [] None sequence
+    where helper lexemes None xs@(x:rest) = case x of
+                                              '(' -> helper (LeftParen : lexemes) None rest
+                                              ')' -> helper (RightParen : lexemes) None rest
+                                              ' ' -> helper lexemes None rest
+                                              _   -> helper lexemes Terminal xs
 
-          helper list InsideFunction sequence = helper2 [] sequence
-            where helper2 function xs@(x:rest) = case x of
-                                                   ' ' -> helper (list ++ [Function function]) None xs
-                                                   '(' -> helper (list ++ [Function function]) None xs
-                                                   ')' -> helper (list ++ [Function function]) None xs
-                                                   _   -> helper2 (function ++ [x]) rest
+          helper lexemes Terminal sequence = parse_terminal [] sequence
+              where parse_terminal terminal xs@(x:rest) = case x of
+                                                            ' ' -> helper (Function terminal : lexemes) None xs
+                                                            '(' -> helper (Function terminal : lexemes) None xs
+                                                            ')' -> helper (Function terminal : lexemes) None xs
+                                                            _   -> parse_terminal (terminal ++ [x]) rest
 
-                  helper2 function [] = helper2 function []
+                    parse_terminal terminal [] = helper (Function terminal : lexemes) None []
 
-          helper list _ [] = list
+          helper lexemes _ [] = lexemes
