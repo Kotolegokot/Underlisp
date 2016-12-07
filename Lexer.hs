@@ -1,12 +1,12 @@
-module Parser (Lexem(..), parse) where
+module Lexer (Lexeme(..), tokenize) where
 
-data Lexem = LeftParen | RightParen | Function String
+data Lexeme = LeftParen | RightParen | Function String
     deriving (Eq, Show)
 
 data State = None | InsideFunction
 
-parse :: String -> [Lexem]
-parse sequence = helper [] None sequence
+tokenize :: String -> [Lexeme]
+tokenize sequence = helper [] None sequence
     where helper list None xs@(x:rest) = case x of
                                       '(' -> helper (list ++ [LeftParen]) None rest
                                       ')' -> helper (list ++ [RightParen]) None rest

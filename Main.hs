@@ -1,14 +1,14 @@
 module Main where
 
-import Parser
+import Lexer
 
 main :: IO ()
 main = do
     input <- getLine
-    let lexems = parse input
+    let lexems = tokenize input
 
-    printLexems lexems
+    printLexemes lexems
 
-printLexems :: [Lexem] -> IO ()
-printLexems (x:xs) = print x >> printLexems xs
-printLexems [] = return ()
+printLexemes :: [Lexeme] -> IO ()
+printLexemes (x:xs) = print x >> printLexemes xs
+printLexemes [] = return ()
