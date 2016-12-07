@@ -15,11 +15,9 @@ tokenize sequence = reverse $ helper [] None sequence
                                               _   -> helper lexemes Terminal xs
 
           helper lexemes Terminal sequence = parse_terminal [] sequence
-              where parse_terminal terminal xs@(x:rest) = case x of
-                                                            ' ' -> helper (Function terminal : lexemes) None xs
-                                                            '(' -> helper (Function terminal : lexemes) None xs
-                                                            ')' -> helper (Function terminal : lexemes) None xs
-                                                            _   -> parse_terminal (terminal ++ [x]) rest
+              where parse_terminal terminal xs@(x:rest)
+                      | elem x " ()" = helper (Function terminal : lexemes) None xs
+                      | otherwise    = parse_terminal (terminal ++ [x]) rest
 
                     parse_terminal terminal [] = helper (Function terminal : lexemes) None []
 
