@@ -1,4 +1,8 @@
-module SemanticAnalyzer (Terminal(..), analyze) where
+module SemanticAnalyzer
+    (Terminal(..),
+    analyze,
+    isKeyword,
+    fromKeyword) where
 
 import Text.Read
 import Data.Maybe
@@ -6,6 +10,12 @@ import Data.Tree
 
 data Terminal = TInteger Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String
   deriving (Eq, Show)
+
+isKeyword (TKeyword _) = True
+isKeyword _            = False
+
+fromKeyword (TKeyword a) = a
+fromKeyword _            = error "that's no keyword"
 
 data State = None | SInteger | SFloat | SString | SChar
 
