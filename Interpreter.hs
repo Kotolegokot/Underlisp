@@ -13,13 +13,6 @@ interprete :: Tree Terminal -> Program
 interprete (Node (TKeyword "program") body) = Program Map.empty $ head body
 interprete _ = error "no 'program' at the beginning of the outer list"
 
-{--
-eval_function :: Map.Map String Function -> Tree Terminal -> IO Terminal
-eval_function functions (Node head args)
-  | isKeyword head = call_function functions (fromKeyword head) =<< mapM (eval_function functions) args
-  | otherwise      = if null args then return head else error "too many arguments"
---}
-
 eval_function :: Map.Map String Function -> Tree Terminal -> IO Terminal
 eval_function functions (Node head args)
   | isKeyword head = call_function functions (fromKeyword head) args
@@ -113,6 +106,13 @@ call_function functions "<=" args
               exp2 <- eval_function functions arg2
               return . boolToTerminal $ exp1 <= exp2
 
+call_function functions "not" args
+    | length args /= 1 = error "'not' requires only one argument"
+    | otherwise = handle_not args
+    where handle_not [arg1] = do
+              exp1 <- eval_function functions arg1
+              return . boolToTerminal . not . terminalToBool $ exp1
+              
 call_function functions "seq" args = handle_seq args
     where handle_seq [x]    = eval_function functions x
           handle_seq (x:xs) = eval_function functions x >> handle_seq xs
@@ -127,9 +127,6 @@ call_function _ "+"        args = add_ args
 call_function _ "-"        args = substract_ args
 call_function _ "*"        args = product_ args
 call_function _ "/"        args = divide_ args
-call_function _ "<"        args = lt_ args
-call_function _ "<="       args = le_ args
-call_function _ ">="       args = ge_ args
 call_function _ "&"        args = and_ args
 call_function _ "|"        args = or_ args
 call_function _ "->"       args = impl_ args
