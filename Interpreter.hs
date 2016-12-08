@@ -113,26 +113,39 @@ call_function context "not" args
 call_function context "&" args
     | length args <= 2 = error "'&' requires two or more arguments"
     | otherwise = handle_and args
-    where handle_and [] = return $ TT 
+    where handle_and [] = return TT 
           handle_and (x:xs) = do
                 exp <- eval_function context x
                 case exp of
-                  TNil -> return $ TNil
+                  TNil -> return TNil
                   TT -> handle_and xs
                   _ -> error "T or Nil expected"
-
                   
 call_function context "|" args
     | length args <= 2 = error "'|' requires two or more arguments"
     | otherwise = handle_and args
-    where handle_and [] = return $ TNil 
+    where handle_and [] = return TNil 
           handle_and (x:xs) = do
                 exp <- eval_function context x
                 case exp of
-                  TT -> return $ TT
+                  TT -> return TT
                   TNil -> handle_and xs
                   _ -> error "T or Nil expected"
-              
+
+call_function context "->" args
+    | length args /= 2 = error "'->' requires two arguments"
+    | otherwise = handle_impl args
+    where handle_impl [arg1, arg2] = do
+            exp1 <- eval_function context arg1
+            exp2 <- eval_function context arg2
+            case exp1 of
+              TNil -> return TT
+              TT   -> case exp2 of
+                TNil -> return TNil
+                TT   -> return TT
+                _    -> error "expected T or Nil"
+              _    -> error "expected T or Nil"
+                
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x
           handle_seq (x:xs) = eval_function context x >> handle_seq xs
