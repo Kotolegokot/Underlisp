@@ -60,7 +60,19 @@ call_function functions "unless" args
           if terminalToBool cond
              then eval_function functions arg3
              else eval_function functions arg2
-             
+
+--call_function functions "+" args
+--    | length args <= 1 =  error "'+' requires more than two arguments"
+--    | otherwise = args >>= eval_function functions >>= 
+
+call_function functions "=" args
+    | length args /= 2 = error "'=' requires two argumens"
+    | otherwise = handle_eq args
+    where handle_eq [arg1, arg2] = do
+              exp1 <- eval_function functions arg1
+              exp2 <- eval_function functions arg2
+              return . boolToTerminal $ exp1 == exp2
+          
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 {--
