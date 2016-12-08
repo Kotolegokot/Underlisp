@@ -80,6 +80,11 @@ call_function functions "/=" args
               exp1 <- eval_function functions arg1
               exp2 <- eval_function functions arg2
               return . boolToTerminal $ exp1 /= exp2              
+
+call_function functions "seq" args = handle_seq args
+    where handle_seq [x]    = eval_function functions x
+          handle_seq (x:xs) = eval_function functions x >> handle_seq xs
+          handle_seq []     = return TNil
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
