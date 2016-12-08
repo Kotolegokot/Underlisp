@@ -12,11 +12,14 @@ interprete (Node (TKeyword "program") body) = void $ eval_function (Map.empty) (
 interprete _ = error "no 'program' at the beginning of the outer list"
 
 eval_function :: Context -> Tree Terminal -> IO Terminal
-eval_function context (Node head args)
-  | isKeyword head = call_function context (fromKeyword head) args
-  | otherwise      = if null args then return head else error $ "too many arguments for '" ++ printTerminal head ++ "'"
+eval_function context (Node (TKeyword kword) args)
+  | kword `Map.member` context = return $ context Map.! kword
+  | otherwise                  = call_function context kword args
+eval_function context (Node first args) 
+  | null args = return first
+  | otherwise = error $ "too many arguments for '" ++ printTerminal first ++ "'"
 
-call_function :: Map.Map String Function -> String -> Forest Terminal -> IO Terminal
+call_function :: Context -> String -> Forest Terminal -> IO Terminal
 
 call_function context "print" args
   | length args /= 1 = error "'print' requires only one argument"
@@ -208,7 +211,7 @@ call_function context "list" args = handle_list args []
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 data ArithmReturn = ARInt | ARFloat
-num_args :: Map.Map String Function -> Forest Terminal -> IO ([Terminal], ArithmReturn)
+num_args :: Context -> Forest Terminal -> IO ([Terminal], ArithmReturn)
 num_args context args = helper args [] ARInt
     where helper (x:xs) exps ARInt = do
             exp <- eval_function context x
