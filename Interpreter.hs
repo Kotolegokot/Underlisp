@@ -175,6 +175,13 @@ call_function context "str-to-int" args
                                         Just int -> int
                                         Nothing  -> error $ "couldn't convert string to int: '" ++ str ++ "'"
                  _           -> error "string expected"
+
+call_function context "list" args = handle_list args []
+    where handle_list (x:xs) items = do
+            exp <- eval_function context x
+            handle_list xs (items ++ [exp])
+
+          handle_list [] items = return . TList $ items
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
