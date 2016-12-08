@@ -21,6 +21,21 @@ eval_function context (Node first args)
 
 call_function :: Context -> String -> Forest Terminal -> IO Terminal
 
+call_function context "let" args
+  | length args <= 1 = error "'let' requires more than one argument"
+  | otherwise        = do
+      additional_context <- handleBindings (init args) Map.empty
+      eval_function (context `Map.union` additional_context) (last args)
+          where handleBindings (Node a subtree:xs) add_context
+                  | length subtree /= 1 = error "a binding in 'let' must be of the following form: (var value)"
+                  | not $ isKeyword  a = error "first item in a let binding pair must be a keyword"
+                  | otherwise          = do
+                      let (TKeyword var, [value]) = (a, subtree)
+                      exp <- eval_function (context `Map.union` add_context) value
+                      handleBindings xs (Map.insert var exp add_context)
+
+                handleBindings [] add_context = return add_context
+
 call_function context "print" args
   | length args /= 1 = error "'print' requires only one argument"
   | otherwise        = eval_function context (head args) >>= (putStr . printTerminal) >> return TNil
