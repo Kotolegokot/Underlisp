@@ -117,6 +117,16 @@ call_function functions "float" args
       exp <- eval_function functions $ head args
 
       return . TFloat . fromNumber $ exp
+
+call_function functions "concat" args = handle_concat args ""
+    where handle_concat (x:xs) string = do
+            exp <- eval_function functions x
+
+            case exp of
+              TString str -> handle_concat xs (string ++ str)
+              _           -> error "string expected"
+
+          handle_concat [] string = return . TString $ string
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
