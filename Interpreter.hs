@@ -16,7 +16,7 @@ eval_function context (Node head args)
   | isKeyword head = call_function context (fromKeyword head) args
   | otherwise      = if null args then return head else error $ "too many arguments for '" ++ printTerminal head ++ "'"
 
-call_function :: Map.Map String Function -> String -> Forest Terminal -> IO Terminal
+--call_function :: Map.Map String Function -> String -> Forest Terminal -> IO Terminal
 
 call_function context "print" args
   | length args /= 1 = error "'print' requires only one argument"
@@ -138,13 +138,7 @@ call_function context "->" args
     where handle_impl [arg1, arg2] = do
             exp1 <- eval_function context arg1
             exp2 <- eval_function context arg2
-            case exp1 of
-              TNil -> return TT
-              TT   -> case exp2 of
-                TNil -> return TNil
-                TT   -> return TT
-                _    -> error "expected T or Nil"
-              _    -> error "expected T or Nil"
+            return $ boolToTerminal . (||) (not . terminalToBool $ exp1) $ (terminalToBool exp2)
                 
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x
@@ -221,7 +215,7 @@ call_function context "list" args = handle_list args []
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 data ArithmReturn = ARInt | ARFloat
-num_args :: Map.Map String Function -> Forest Terminal -> IO ([Terminal], ArithmReturn)
+--num_args :: Map.Map String Function -> Forest Terminal -> IO ([Terminal], ArithmReturn)
 num_args context args = helper args [] ARInt
     where helper (x:xs) exps ARInt = do
             exp <- eval_function context x
