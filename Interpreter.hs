@@ -106,6 +106,13 @@ call_function functions "/" args
       return $ case return_type of
                  ARInt   -> TInt   $ fromInt x `div` fromInt y
                  ARFloat -> TFloat $ fromNumber x / fromNumber y
+
+call_function functions "float" args
+  | length args /= 1 = error "'float' requires only one argument"
+  | otherwise        = do
+      exp <- eval_function functions $ head args
+
+      return . TFloat . fromNumber $ exp
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
