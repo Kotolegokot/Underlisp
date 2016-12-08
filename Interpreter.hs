@@ -106,10 +106,19 @@ call_function context "<=" args
 
 call_function context "not" args
     | length args /= 1 = error "'not' requires only one argument"
-    | otherwise = handle_not args
-    where handle_not [arg1] = do
-              exp1 <- eval_function context arg1
-              return . boolToTerminal . not . terminalToBool $ exp1
+    | otherwise = do
+              exp <- eval_function context $ head args
+              return . boolToTerminal . not . terminalToBool $ exp
+
+call_function context "&" args
+    | length args <= 2 = error "'&' requires two or more arguments"
+    | otherwise = handle_and args
+    where handle_and [] = return $ TT 
+          handle_and (x:xs) = do
+                exp <- eval_function context x
+                case exp of
+                  TNil -> return $ TNil
+                  TT -> handle_and xs
               
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x
