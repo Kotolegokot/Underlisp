@@ -233,11 +233,7 @@ call_function context "list" args = handle_list args []
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 data ArithmReturn = ARInt | ARFloat
-<<<<<<< HEAD
 num_args :: Context -> Forest Terminal -> IO ([Terminal], ArithmReturn)
-=======
---num_args :: Map.Map String Function -> Forest Terminal -> IO ([Terminal], ArithmReturn)
->>>>>>> origin/master
 num_args context args = helper args [] ARInt
     where helper (x:xs) exps ARInt = do
             exp <- eval_function context x
