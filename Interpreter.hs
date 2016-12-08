@@ -5,6 +5,7 @@ import Data.Tree
 import qualified Data.Map as Map
 import Program
 import SemanticAnalyzer
+import BuiltInFunctions
 
 evaluate :: Program -> IO ()
 evaluate program@(Program functions body) = void $ eval_function functions body
@@ -21,84 +22,18 @@ eval_function functions (Node head args)
 -- built-in functions
 call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
 
--- print function
-call_function _ "print" args
-  | length args /= 1 = error "'print' expected only one argument"
-  | otherwise        = (putStr . printTerminal) (head args) >> return TNil
-
--- print function
-call_function _ "print-ln" args
-  | length args /= 1 = error "'print-ln' expected only one argument"
-  | otherwise        = (putStrLn . printTerminal) (head args) >> return TNil
-
--- type function
-call_function _ "type" args
-  | length args /= 1 = error "'type' expected only one argument"
-  | otherwise        = return . TString . printType $ head args
-
--- plus function
-call_function _ "+" args = return $ case check_num_args args of
-                                      ARFloat -> TFloat . sum $ fmap fromNumber args
-                                      ARInt   -> TInt . sum $ fmap fromInt args
-
--- minus function
-call_function _ "-" args@(x:y:[]) = return $ case check_num_args args of
-                                               ARFloat -> TFloat $ fromNumber x - fromNumber y
-                                               ARInt   -> TInt $ fromInt x - fromInt y
-
-call_function _ "-" _             = error "'-' expected two arguments"
-
--- product function
-call_function _ "*" args = return $ case check_num_args args of
-                                      ARFloat -> TFloat . product $ fmap fromNumber args
-                                      ARInt   -> TInt . product $ fmap fromInt args
-
--- divide function
-call_function _ "/" args@(x:y:[]) = return $ case check_num_args args of
-                                              ARFloat -> TFloat $ fromNumber x / fromNumber y
-                                              ARInt   -> TInt $ fromInt x `div` fromInt y
-
-call_function _ "/" _             = error "'/' expected two arguments"
-
--- equality function
-call_function _ "=" (x:xs) = return . boolToTerminal . and $ fmap (x==) xs
-
--- inequality function
-call_function _ "/=" args@(x:y:[]) = return . boolToTerminal $ x /= y
-
-call_function _ "/=" _             = error "'/=' expected two arguments"
-
--- less than function
-call_function _ "<" args@(x:y:[]) = return . boolToTerminal $ x < y
-
-call_function _ "<" _             = error "'/=' expected two arguments"
-
--- greater than function
-call_function _ ">" args@(x:y:[]) = return . boolToTerminal $ x > y
-
-call_function _ ">" _             = error "'>' expected two arguments"
-
--- less than or equal function
-call_function _ "<=" args@(x:y:[]) = return . boolToTerminal $ x <= y 
-call_function _ "<=" _             = error "'<=' expected two arguments"
-
--- greater than or equal function
-call_function _ ">=" args@(x:y:[]) = return . boolToTerminal $ x >= y
-call_function _ ">=" _             = error "'>=' expected two arguments"
+call_function _ "print"    args = print_ args
+call_function _ "print-ln" args = print_ln_ args
+call_function _ "type"     args = type_ args
+call_function _ "+"        args = add_ args
+call_function _ "-"        args = substract_ args
+call_function _ "*"        args = product_ args
+call_function _ "/"        args = divide_ args
+call_function _ "="        args = equal_ args
+call_function _ "/="       args = inequal_ args
+call_function _ "<"        args = lt_ args
+call_function _ ">"        args = gt_ args
+call_function _ "<="       args = le_ args
+call_function _ ">="       args = ge_ args
 
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
-
-data ArithmReturn = ARInt | ARFloat
-check_num_args :: [Terminal] -> ArithmReturn
-check_num_args args = helper args ARInt
-    where helper (x:xs) ARInt = case x of
-                                  TInt _   -> helper xs ARInt
-                                  TFloat _ -> helper xs ARFloat
-                                  _        -> error "float or int expected"
-
-          helper (x:xs) ARFloat = case x of
-                                   TInt _   -> helper xs ARFloat
-                                   TFloat _ -> helper xs ARFloat
-                                   _        -> error "float or int expected"
-
-          helper [] return_type = return_type
