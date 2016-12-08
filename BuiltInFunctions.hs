@@ -15,7 +15,8 @@ module BuiltInFunctions
      and_,
      or_,
      impl_,
-     not_
+     not_,
+     float_
     ) where
 
 import SemanticAnalyzer
@@ -97,6 +98,14 @@ impl_ _      = error "'->' requires two arguments"
 not_ :: Func
 not_ [x] = return . boolToTerminal . not . terminalToBool $ x
 not_ _   = error "'not' requires only one argument"
+
+float_ :: Func
+float_ [x] = return $ case x of
+                        TFloat float -> TFloat float
+                        TInt int     -> TFloat . fromIntegral $ int
+                        _            -> error "float or int expected"
+
+float_ _   = error "'float' requires only one argument"
 
 data ArithmReturn = ARInt | ARFloat
 check_num_args :: [Terminal] -> ArithmReturn

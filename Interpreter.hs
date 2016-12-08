@@ -38,4 +38,5 @@ call_function _ "&"        args = and_ args
 call_function _ "|"        args = or_ args
 call_function _ "->"       args = impl_ args
 call_function _ "not"      args = not_ args
+call_function _ "float"    args = float_ args
 call_function _ func       _    = error $ "undefined function '" ++ func ++ "'"
