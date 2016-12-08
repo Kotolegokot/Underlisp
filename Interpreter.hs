@@ -5,7 +5,6 @@ import Data.Tree
 import qualified Data.Map as Map
 import Program
 import SemanticAnalyzer
-import BuiltInFunctions
 
 evaluate :: Program -> IO ()
 evaluate program@(Program functions body) = void $ eval_function functions body
@@ -14,16 +13,46 @@ interprete :: Tree Terminal -> Program
 interprete (Node (TKeyword "program") body) = Program Map.empty $ head body
 interprete _ = error "no 'program' at the beginning of the outer list"
 
+{--
 eval_function :: Map.Map String Function -> Tree Terminal -> IO Terminal
 eval_function functions (Node head args)
   | isKeyword head = call_function functions (fromKeyword head) =<< mapM (eval_function functions) args
   | otherwise      = if null args then return head else error "too many arguments"
+--}
 
+eval_function :: Map.Map String Function -> Tree Terminal -> IO Terminal
+eval_function functions (Node head args)
+  | isKeyword head = call_function functions (fromKeyword head) args
+  | otherwise      = if null args then return head else error $ "too many arguments for '" ++ printTerminal head ++ "'"
+
+call_function :: Map.Map String Function -> String -> Forest Terminal -> IO Terminal
+
+call_function functions "print" args
+  | length args /= 1 = error "'print' requires only one argument"
+  | otherwise        = eval_function functions (head args) >>= (putStr . printTerminal) >> return TNil
+
+call_function functions "print-ln" args
+  | length args /= 1 = error "'print-ln' requires only one argument"
+  | otherwise        = eval_function functions (head args) >>= (putStrLn . printTerminal) >> return TNil
+
+call_function functions "type" args
+  | length args /= 1 = error "'type' requires only one argument"
+  | otherwise        = eval_function functions (head args) >>= (return . TString . printType)
+
+call_function functions "if" args
+  | length args == 1 = call_function functions "if" (args ++ [Node TNil [], Node TNil []]) 
+  | length args == 2 = call_function functions "if" (args ++ [Node TNil []])
+  | length args == 3 = handle_if args
+  | otherwise = error "'if' requires 1 to 3 arguments"
+  where handle_if [arg1, arg2, arg3] = do
+          cond <- eval_function functions arg1
+          if terminalToBool cond
+             then eval_function functions arg2
+             else eval_function functions arg3
+
+{--
 -- built-in functions
 call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
-call_function _ "print"    args = print_ args
-call_function _ "print-ln" args = print_ln_ args
-call_function _ "type"     args = type_ args
 call_function _ "+"        args = add_ args
 call_function _ "-"        args = substract_ args
 call_function _ "*"        args = product_ args
@@ -40,3 +69,4 @@ call_function _ "->"       args = impl_ args
 call_function _ "not"      args = not_ args
 call_function _ "float"    args = float_ args
 call_function _ func       _    = error $ "undefined function '" ++ func ++ "'"
+--}
