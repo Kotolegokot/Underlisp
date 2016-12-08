@@ -1,5 +1,6 @@
 module Interpreter (interprete, evaluate) where
 
+import Text.Read
 import Control.Monad
 import Data.Tree
 import qualified Data.Map as Map
@@ -127,6 +128,17 @@ call_function functions "concat" args = handle_concat args ""
               _           -> error "string expected"
 
           handle_concat [] string = return . TString $ string
+
+call_function functions "str-to-int" args
+  | length args /= 1 = error "'str-to-int' requires only one argument"
+  | otherwise        = do
+      exp <- eval_function functions $ head args
+
+      return $ case exp of
+                 TString str -> TInt $ case readMaybe str :: Maybe Int of
+                                        Just int -> int
+                                        Nothing  -> error $ "couldn't convert string to int: '" ++ str ++ "'"
+                 _           -> error "string expected"
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
