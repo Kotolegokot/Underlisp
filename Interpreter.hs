@@ -50,6 +50,8 @@ call_function functions "if" args
              then eval_function functions arg2
              else eval_function functions arg3
 
+call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
+
 {--
 -- built-in functions
 call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
