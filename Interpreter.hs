@@ -26,6 +26,11 @@ call_function _ "print" args
   | length args /= 1 = error "'print' expected only one argument"
   | otherwise        = (putStr . printTerminal) (head args) >> return TNil
 
+-- print function
+call_function _ "print-ln" args
+  | length args /= 1 = error "'print-ln' expected only one argument"
+  | otherwise        = (putStrLn . printTerminal) (head args) >> return TNil
+
 -- type function
 call_function _ "type" args
   | length args /= 1 = error "'type' expected only one argument"
