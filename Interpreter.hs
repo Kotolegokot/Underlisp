@@ -89,6 +89,11 @@ call_function functions ">" args
               exp2 <- eval_function functions arg2
               return . boolToTerminal $ exp1 > exp2
 
+call_function functions "seq" args = handle_seq args
+    where handle_seq [x]    = eval_function functions x
+          handle_seq (x:xs) = eval_function functions x >> handle_seq xs
+          handle_seq []     = return TNil
+              
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 {--
@@ -98,10 +103,7 @@ call_function _ "+"        args = add_ args
 call_function _ "-"        args = substract_ args
 call_function _ "*"        args = product_ args
 call_function _ "/"        args = divide_ args
-call_function _ "="        args = equal_ args
-call_function _ "/="       args = inequal_ args
 call_function _ "<"        args = lt_ args
-call_function _ ">"        args = gt_ args
 call_function _ "<="       args = le_ args
 call_function _ ">="       args = ge_ args
 call_function _ "&"        args = and_ args
