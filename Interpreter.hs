@@ -1,4 +1,4 @@
-module Interpreter (interprete) where
+module Interpreter (evaluate) where
 
 import Text.Read
 import Control.Monad
@@ -6,6 +6,11 @@ import Data.Tree
 import qualified Data.Map as Map
 import Context
 import SemanticAnalyzer
+import Parser
+import Lexer
+
+evaluate :: String -> IO ()
+evaluate = interprete . analyze . parse . tokenize
 
 interprete :: Tree Terminal -> IO ()
 interprete (Node (TKeyword "program") body) = void $ eval_function (Map.empty) (Node (TKeyword "seq") body)

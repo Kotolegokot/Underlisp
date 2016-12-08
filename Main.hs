@@ -1,12 +1,14 @@
 module Main where
 
 import Data.Tree
-import Lexer
-import Parser
-import SemanticAnalyzer
+import System.Environment
 import Interpreter
 
 main :: IO ()
-main = do
-    input <- getLine
-    interprete . analyze . parse . tokenize $ input
+main = getArgs >>= handle_args >>= evaluate
+
+handle_args :: [String] -> IO String
+handle_args []     = getLine
+handle_args [file] = readFile file
+handle_args _      = getExecutablePath >>= (\exe -> error $ "usage: " ++ exe ++ " [file]")
+
