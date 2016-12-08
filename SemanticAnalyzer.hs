@@ -7,7 +7,8 @@ module SemanticAnalyzer
     fromFloat,
     fromInt,
     printTerminal,
-    printType) where
+    printType,
+    boolToTerminal) where
 
 import Text.Read
 import Data.Maybe
@@ -16,13 +17,17 @@ import Data.Tree
 data Terminal = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String
   deriving (Eq, Show)
 
+boolToTerminal :: Bool -> Terminal
+boolToTerminal True  = TT
+boolToTerminal False = TNil
+
 printTerminal :: Terminal -> String
 printTerminal (TInt int)         = show int
 printTerminal (TFloat float)     = show float
 printTerminal (TString string)   = string
 printTerminal (TChar char)       = [char]
 printTerminal TT                 = "T"
-printTerminal TNil               = "TNil"
+printTerminal TNil               = "Nil"
 printTerminal (TKeyword keyword) = keyword
 
 printType :: Terminal -> String

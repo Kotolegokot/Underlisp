@@ -58,6 +58,12 @@ call_function _ "/" args@(x:y:[]) = return $ case check_num_args args of
                                               ARInt   -> TInt $ fromInt x `div` fromInt y
 call_function _ "/" _ = error "'/' expected two arguments"
 
+-- equality function
+call_function _ "=" (x:xs) = return . boolToTerminal . and $ fmap (x==) xs
+
+-- inequality function
+call_function _ "/=" args@(x:y:[]) = return . boolToTerminal $ x /= y
+call_function _ "/=" _             = error "'/=' expected two arguments"
 
 call_function _ _ _ = error "undefined function"
 
