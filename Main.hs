@@ -9,4 +9,4 @@ import Interpreter
 main :: IO ()
 main = do
     input <- getLine
-    evaluate . interprete . analyze . parse . tokenize $ input
+    interprete . analyze . parse . tokenize $ input

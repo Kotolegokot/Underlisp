@@ -1,4 +1,4 @@
-module Interpreter (interprete, evaluate) where
+module Interpreter (interprete) where
 
 import Text.Read
 import Control.Monad
@@ -7,11 +7,8 @@ import qualified Data.Map as Map
 import Program
 import SemanticAnalyzer
 
-evaluate :: Program -> IO ()
-evaluate program@(Program functions body) = void $ eval_function functions body
-
-interprete :: Tree Terminal -> Program
-interprete (Node (TKeyword "program") body) = Program Map.empty $ head body
+interprete :: Tree Terminal -> IO ()
+interprete (Node (TKeyword "program") body) = void $ eval_function (Map.empty) (Node (TKeyword "seq") body)
 interprete _ = error "no 'program' at the beginning of the outer list"
 
 eval_function :: Map.Map String Function -> Tree Terminal -> IO Terminal
