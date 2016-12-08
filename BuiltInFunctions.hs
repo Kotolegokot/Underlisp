@@ -11,7 +11,12 @@ module BuiltInFunctions
      lt_,
      gt_,
      le_,
-     ge_) where
+     ge_,
+     and_,
+     or_,
+     impl_,
+     not_
+    ) where
 
 import SemanticAnalyzer
 
@@ -38,7 +43,7 @@ add_ args = return $ case check_num_args args of
                        ARInt   -> TInt . sum $ fmap fromInt args
 
 substract_ :: Func
-substract_ args@(x:y:[]) = return $ case check_num_args args of
+substract_ args@[x, y] = return $ case check_num_args args of
                                       ARFloat -> TFloat $ fromNumber x - fromNumber y
                                       ARInt -> TInt $ fromInt x - fromInt y
 
@@ -50,7 +55,7 @@ product_ args = return $ case check_num_args args of
                            ARInt -> TInt . product $ fmap fromInt args
 
 divide_ :: Func
-divide_ args@(x:y:[]) = return $ case check_num_args args of
+divide_ args@[x, y] = return $ case check_num_args args of
                                    ARFloat -> TFloat $ fromNumber x / fromNumber y
                                    ARInt -> TInt $ fromInt x `div` fromInt y
 
@@ -60,24 +65,38 @@ equal_ :: Func
 equal_ (x:xs) = return . boolToTerminal . and $ fmap (x==) xs
 
 inequal_ :: Func
-ineuqal_ args@(x:y:[]) = return . boolToTerminal $ x /= y
-inequal_ _             = error "'/=' requires two arguments"
+ineuqal_ [x, y] = return . boolToTerminal $ x /= y
+inequal_ _      = error "'/=' requires two arguments"
 
 lt_ :: Func
-lt_ args@(x:y:[]) = return . boolToTerminal $ x < y
-lt_ _             = error "'<' requires two arguments"
+lt_ [x, y] = return . boolToTerminal $ x < y
+lt_ _      = error "'<' requires two arguments"
 
 gt_ :: Func
-gt_ args@(x:y:[]) = return . boolToTerminal $ x > y
-gt_ _             = error "'>' requires two arguments"
+gt_ [x, y] = return . boolToTerminal $ x > y
+gt_ _      = error "'>' requires two arguments"
 
 le_ :: Func
-le_ args@(x:y:[]) = return . boolToTerminal $ x <= y
-le_ _             = error "'<=' requires two arguments"
+le_ [x, y] = return . boolToTerminal $ x <= y
+le_ _      = error "'<=' requires two arguments"
 
 ge_ :: Func
-ge_ args@(x:y:[]) = return . boolToTerminal $ x >= y
-ge_ _             = error "'>=' requires two arguments"
+ge_ [x, y] = return . boolToTerminal $ x >= y
+ge_ _      = error "'>=' requires two arguments"
+
+and_ :: Func
+and_ args = return . boolToTerminal . and . fmap terminalToBool $ args
+
+or_ :: Func
+or_ args = return . boolToTerminal . or . fmap terminalToBool $ args
+
+impl_ :: Func
+impl_ [x, y] = return . boolToTerminal $ (not $ terminalToBool x) || terminalToBool y
+impl_ _      = error "'->' requires two arguments"
+
+not_ :: Func
+not_ [x] = return . boolToTerminal . not . terminalToBool $ x
+not_ _   = error "'not' requires only one argument"
 
 data ArithmReturn = ARInt | ARFloat
 check_num_args :: [Terminal] -> ArithmReturn

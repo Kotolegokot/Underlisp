@@ -8,7 +8,8 @@ module SemanticAnalyzer
     fromInt,
     printTerminal,
     printType,
-    boolToTerminal) where
+    boolToTerminal,
+    terminalToBool) where
 
 import Text.Read
 import Data.Maybe
@@ -30,6 +31,11 @@ instance Ord Terminal where
 boolToTerminal :: Bool -> Terminal
 boolToTerminal True  = TT
 boolToTerminal False = TNil
+
+terminalToBool :: Terminal -> Bool
+terminalToBool TT   = True
+terminalToBool TNil = False
+terminalToBool _    = error "T or Nil expected"
 
 printTerminal :: Terminal -> String
 printTerminal (TInt int)         = show int

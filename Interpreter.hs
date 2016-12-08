@@ -21,7 +21,6 @@ eval_function functions (Node head args)
 
 -- built-in functions
 call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
-
 call_function _ "print"    args = print_ args
 call_function _ "print-ln" args = print_ln_ args
 call_function _ "type"     args = type_ args
@@ -35,5 +34,8 @@ call_function _ "<"        args = lt_ args
 call_function _ ">"        args = gt_ args
 call_function _ "<="       args = le_ args
 call_function _ ">="       args = ge_ args
-
-call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
+call_function _ "&"        args = and_ args
+call_function _ "|"        args = or_ args
+call_function _ "->"       args = impl_ args
+call_function _ "not"      args = not_ args
+call_function _ func       _    = error $ "undefined function '" ++ func ++ "'"
