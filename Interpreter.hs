@@ -80,7 +80,15 @@ call_function functions "/=" args
               exp1 <- eval_function functions arg1
               exp2 <- eval_function functions arg2
               return . boolToTerminal $ exp1 /= exp2              
-              
+
+call_function functions ">" args
+    | length args /= 2 = error "'>' requires two argumens"
+    | otherwise = handle_gt args
+    where handle_gt [arg1, arg2] = do
+              exp1 <- eval_function functions arg1
+              exp2 <- eval_function functions arg2
+              return . boolToTerminal $ exp1 > exp2
+
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 {--
