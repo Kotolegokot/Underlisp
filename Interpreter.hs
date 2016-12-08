@@ -28,6 +28,10 @@ call_function functions "print-ln" args
   | length args /= 1 = error "'print-ln' requires only one argument"
   | otherwise        = eval_function functions (head args) >>= (putStrLn . printTerminal) >> return TNil
 
+call_function functions "get-line" args
+  | not $ null args  = error "'get-line' requires no arguments"
+  | otherwise        = getLine >>= (return . TString)
+
 call_function functions "type" args
   | length args /= 1 = error "'type' requires only one argument"
   | otherwise        = eval_function functions (head args) >>= (return . TString . printType)
@@ -148,5 +152,4 @@ call_function _ "&"        args = and_ args
 call_function _ "|"        args = or_ args
 call_function _ "->"       args = impl_ args
 call_function _ "not"      args = not_ args
-call_function _ "float"    args = float_ args
 --}
