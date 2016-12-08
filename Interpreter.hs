@@ -119,6 +119,17 @@ call_function context "&" args
                 case exp of
                   TNil -> return $ TNil
                   TT -> handle_and xs
+
+                  
+call_function context "|" args
+    | length args <= 2 = error "'|' requires two or more arguments"
+    | otherwise = handle_and args
+    where handle_and [] = return $ TNil 
+          handle_and (x:xs) = do
+                exp <- eval_function context x
+                case exp of
+                  TT -> return $ TT
+                  TNil -> handle_and xs
               
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x
