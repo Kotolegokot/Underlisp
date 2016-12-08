@@ -15,7 +15,7 @@ import Text.Read
 import Data.Maybe
 import Data.Tree
 
-data Terminal = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String
+data Terminal = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String | TList [Terminal]
   deriving (Eq, Show)
 
 instance Ord Terminal where
@@ -26,6 +26,7 @@ instance Ord Terminal where
     compare TT TT = EQ
     compare TNil TNil = EQ
     compare (TKeyword a) (TKeyword b) = compare a b
+    compare (TList a) (TList b) = compare a b
     compare _ _ = error "can't compare terminals of different types"
 
 boolToTerminal :: Bool -> Terminal
@@ -45,6 +46,10 @@ printTerminal (TChar char)       = [char]
 printTerminal TT                 = "T"
 printTerminal TNil               = "Nil"
 printTerminal (TKeyword keyword) = keyword
+printTerminal (TList list)       = "(list " ++ handle_list list ++ ")"
+    where handle_list [x]    = printTerminal x
+          handle_list (x:xs) = printTerminal x ++ " " ++ handle_list xs
+          handle_list []     = ""
 
 printType :: Terminal -> String
 printType (TInt _)     = "Int"
@@ -54,6 +59,7 @@ printType (TChar _)    = "Char"
 printType TT           = "T"
 printType TNil         = "Nil"
 printType (TKeyword _) = "Keyword"
+printType (TList _)    = "List"
 
 isKeyword :: Terminal -> Bool
 isKeyword (TKeyword _) = True
