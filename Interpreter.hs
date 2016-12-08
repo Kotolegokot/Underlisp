@@ -49,7 +49,18 @@ call_function functions "if" args
           if terminalToBool cond
              then eval_function functions arg2
              else eval_function functions arg3
-
+             
+call_function functions "unless" args
+  | length args == 1 = call_function functions "unless" (args ++ [Node TNil [], Node TNil []]) 
+  | length args == 2 = call_function functions "unless" (args ++ [Node TNil []])
+  | length args == 3 = handle_if args
+  | otherwise = error "'unless' requires 1 to 3 arguments"
+  where handle_if [arg1, arg2, arg3] = do
+          cond <- eval_function functions arg1
+          if terminalToBool cond
+             then eval_function functions arg3
+             else eval_function functions arg2
+             
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 {--
