@@ -49,7 +49,6 @@ call_function functions "if" args
           if terminalToBool cond
              then eval_function functions arg2
              else eval_function functions arg3
-
              
 call_function functions "unless" args
   | length args == 1 = call_function functions "unless" (args ++ [Node TNil [], Node TNil []]) 
@@ -61,6 +60,9 @@ call_function functions "unless" args
           if terminalToBool cond
              then eval_function functions arg3
              else eval_function functions arg2
+             
+call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
+
 {--
 -- built-in functions
 call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
