@@ -26,6 +26,11 @@ call_function _ "print" args
   | length args /= 1 = error "'print' expected only one argument"
   | otherwise        = (putStr . printTerminal) (head args) >> return TNil
 
+-- type function
+call_function _ "type" args
+  | length args /= 1 = error "'type' expected only one argument"
+  | otherwise        = return . TString . printType $ head args
+
 -- plus function
 call_function _ "+" args = return $ case check_num_args args of
                                       ARFloat -> TFloat . sum $ fmap fromNumber args

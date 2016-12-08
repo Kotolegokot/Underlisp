@@ -6,7 +6,8 @@ module SemanticAnalyzer
     fromNumber,
     fromFloat,
     fromInt,
-    printTerminal) where
+    printTerminal,
+    printType) where
 
 import Text.Read
 import Data.Maybe
@@ -23,6 +24,15 @@ printTerminal (TChar char)       = [char]
 printTerminal TT                 = "T"
 printTerminal TNil               = "TNil"
 printTerminal (TKeyword keyword) = keyword
+
+printType :: Terminal -> String
+printType (TInt _)     = "Int"
+printType (TFloat _)   = "Float"
+printType (TString _)  = "String"
+printType (TChar _)    = "Char"
+printType TT           = "T"
+printType TNil         = "Nil"
+printType (TKeyword _) = "Keyword"
 
 isKeyword :: Terminal -> Bool
 isKeyword (TKeyword _) = True
