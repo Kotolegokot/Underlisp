@@ -106,10 +106,32 @@ call_function context "<=" args
 
 call_function context "not" args
     | length args /= 1 = error "'not' requires only one argument"
-    | otherwise = handle_not args
-    where handle_not [arg1] = do
-              exp1 <- eval_function context arg1
-              return . boolToTerminal . not . terminalToBool $ exp1
+    | otherwise = do
+              exp <- eval_function context $ head args
+              return . boolToTerminal . not . terminalToBool $ exp
+
+call_function context "&" args
+    | length args <= 2 = error "'&' requires two or more arguments"
+    | otherwise = handle_and args
+    where handle_and [] = return $ TT 
+          handle_and (x:xs) = do
+                exp <- eval_function context x
+                case exp of
+                  TNil -> return $ TNil
+                  TT -> handle_and xs
+                  _ -> error "T or Nil expected"
+
+                  
+call_function context "|" args
+    | length args <= 2 = error "'|' requires two or more arguments"
+    | otherwise = handle_and args
+    where handle_and [] = return $ TNil 
+          handle_and (x:xs) = do
+                exp <- eval_function context x
+                case exp of
+                  TT -> return $ TT
+                  TNil -> handle_and xs
+                  _ -> error "T or Nil expected"
               
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x
@@ -205,12 +227,3 @@ num_args context args = helper args [] ARInt
               _        -> error "float or int expected"
 
           helper [] exps return_type = return (exps, return_type)
-
-{--
--- built-in context
-call_function :: Map.Map String Function -> String -> [Terminal] -> IO Terminal
-call_function _ "&"        args = and_ args
-call_function _ "|"        args = or_ args
-call_function _ "->"       args = impl_ args
-call_function _ "not"      args = not_ args
---}
