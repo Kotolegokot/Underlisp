@@ -17,6 +17,16 @@ import Data.Tree
 data Terminal = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String
   deriving (Eq, Show)
 
+instance Ord Terminal where
+    compare (TInt a) (TInt b) = compare a b
+    compare (TFloat a) (TFloat b) = compare a b
+    compare (TString a) (TString b) = compare a b
+    compare (TChar a) (TChar b) = compare a b
+    compare TT TT = EQ
+    compare TNil TNil = EQ
+    compare (TKeyword a) (TKeyword b) = compare a b
+    compare _ _ = error "can't compare terminals of different types"
+
 boolToTerminal :: Bool -> Terminal
 boolToTerminal True  = TT
 boolToTerminal False = TNil

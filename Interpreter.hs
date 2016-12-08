@@ -45,7 +45,8 @@ call_function _ "+" args = return $ case check_num_args args of
 call_function _ "-" args@(x:y:[]) = return $ case check_num_args args of
                                                ARFloat -> TFloat $ fromNumber x - fromNumber y
                                                ARInt   -> TInt $ fromInt x - fromInt y
-call_function _ "-" _ = error "'-' expected two arguments"
+
+call_function _ "-" _             = error "'-' expected two arguments"
 
 -- product function
 call_function _ "*" args = return $ case check_num_args args of
@@ -56,16 +57,36 @@ call_function _ "*" args = return $ case check_num_args args of
 call_function _ "/" args@(x:y:[]) = return $ case check_num_args args of
                                               ARFloat -> TFloat $ fromNumber x / fromNumber y
                                               ARInt   -> TInt $ fromInt x `div` fromInt y
-call_function _ "/" _ = error "'/' expected two arguments"
+
+call_function _ "/" _             = error "'/' expected two arguments"
 
 -- equality function
 call_function _ "=" (x:xs) = return . boolToTerminal . and $ fmap (x==) xs
 
 -- inequality function
 call_function _ "/=" args@(x:y:[]) = return . boolToTerminal $ x /= y
+
 call_function _ "/=" _             = error "'/=' expected two arguments"
 
-call_function _ _ _ = error "undefined function"
+-- less than function
+call_function _ "<" args@(x:y:[]) = return . boolToTerminal $ x < y
+
+call_function _ "<" _             = error "'/=' expected two arguments"
+
+-- greater than function
+call_function _ ">" args@(x:y:[]) = return . boolToTerminal $ x > y
+
+call_function _ ">" _             = error "'>' expected two arguments"
+
+-- less than or equal function
+call_function _ "<=" args@(x:y:[]) = return . boolToTerminal $ x <= y 
+call_function _ "<=" _             = error "'<=' expected two arguments"
+
+-- greater than or equal function
+call_function _ ">=" args@(x:y:[]) = return . boolToTerminal $ x >= y
+call_function _ ">=" _             = error "'>=' expected two arguments"
+
+call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 data ArithmReturn = ARInt | ARFloat
 check_num_args :: [Terminal] -> ArithmReturn
