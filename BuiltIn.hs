@@ -33,7 +33,6 @@ builtin_lambda eval context (SList args:body)
                                                 Just index -> FRef index
                                                 Nothing    -> FKeyword str
           handle_sexpr sexpr                = sexpr2fexpr sexpr
-
 builtin_lambda _    _       [_] = error "first argument of 'define' must be argument list"
 builtin_lambda _    _       _   = error "'define' requires at least one argument"
 
