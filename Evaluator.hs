@@ -60,6 +60,8 @@ builtin_let context ((SList pairs):body) = do
                                           _              -> error "a binding in 'let' must be of the following form: (var value)"
               
               handle_pairs []     acc = return acc
+              
+builtin_let _       _                    = error "list of bindings expected"
 
 builtin_print :: Context.Context -> [SExpr] -> IO SExpr
 builtin_print context [arg] = eval_sexpr context arg >>= (putStr . show_sexpr) >> return empty_list
