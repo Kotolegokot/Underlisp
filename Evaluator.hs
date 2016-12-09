@@ -48,7 +48,18 @@ call_function fname = case fname of
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
 
---builtin_let
+builtin_let :: Context.Context -> [SExpr] -> IO SExpr
+builtin_let context ((SList pairs):body) = do
+    new_context <- handle_pairs pairs context
+    eval_sexpr new_context (SList (SKeyword "concat":body))
+        where handle_pairs (x:xs) acc = case x of
+                                          (SList [SKeyword var, value]) -> do
+                                              exp <- eval_sexpr acc value
+                                              handle_pairs xs (Map.insert var exp acc)
+                                          (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
+                                          _              -> error "a binding in 'let' must be of the following form: (var value)"
+              
+              handle_pairs []     acc = return acc
 
 builtin_print :: Context.Context -> [SExpr] -> IO SExpr
 builtin_print context [arg] = eval_sexpr context arg >>= (putStr . show_sexpr) >> return empty_list
@@ -141,7 +152,7 @@ builtin_and context (x:xs) = do
                    True  -> builtin_and context xs
                    False -> return $ SBool False
 
-builtin_and []             = return $ SBool True
+builtin_and _       []     = return $ SBool True
 
 builtin_or :: Context.Context -> [SExpr] -> IO SExpr
 builtin_or context (x:xs) = do
@@ -150,7 +161,7 @@ builtin_or context (x:xs) = do
               True -> return $ SBool True
               False -> builtin_or context xs
 
-builtin_or []             = return $ SBool False
+builtin_or _       []     = return $ SBool False
 
 builtin_impl :: Context.Context -> [SExpr] -> IO SExpr
 builtin_impl context [arg1, arg2] = do
@@ -220,4 +231,4 @@ builtin_float context [arg] = do
       SFloat float -> SFloat float
       SInt   int   -> SFloat $ fromIntegral int
       _            -> error "float or int expected"
-builtin_float _ _ = "'float' requires only one argument"
+builtin_float _       _     = error "'float' requires only one argument"
