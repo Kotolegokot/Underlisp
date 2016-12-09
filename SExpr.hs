@@ -80,10 +80,11 @@ str2atom :: String -> SExpr
 str2atom "True"  = SBool True
 str2atom "False" = SBool False
 str2atom atom
-  | isJust try_int    = SInt    $ read atom
-  | isJust try_float  = SFloat  $ read atom
-  | isJust try_char   = SChar   $ read atom
-  | isJust try_string = SString $ read atom
+  | isJust try_int    = SInt     $ read atom
+  | isJust try_float  = SFloat   $ read atom
+  | isJust try_char   = SChar    $ read atom
+  | isJust try_string = SString  $ read atom
+  | otherwise         = SKeyword $ read atom
   where try_int    = readMaybe atom :: Maybe Int
         try_float  = readMaybe atom :: Maybe Float
         try_char   = readMaybe atom :: Maybe Char
