@@ -51,12 +51,12 @@ call_function fname = case fname of
 --builtin_let
 
 builtin_print :: Context.Context -> [SExpr] -> IO SExpr
-builtin_print context [sexpr] = eval_sexpr context sexpr >>= (putStr . show_sexpr) >> return empty_list
-builtin_print _       _       = error "'print' requires only one argument"
+builtin_print context [arg] = eval_sexpr context arg >>= (putStr . show_sexpr) >> return empty_list
+builtin_print _       _     = error "'print' requires only one argument"
 
 builtin_print_ln :: Context.Context -> [SExpr] -> IO SExpr
-builtin_print_ln context [sexpr] = eval_sexpr context sexpr >>= (putStrLn . show_sexpr) >> return empty_list
-builtin_print_ln _       _       = error "'print-ln' requires only one argument"
+builtin_print_ln context [arg] = eval_sexpr context arg >>= (putStrLn . show_sexpr) >> return empty_list
+builtin_print_ln _       _     = error "'print-ln' requires only one argument"
 
 builtin_flush :: Context.Context -> [SExpr] -> IO SExpr
 builtin_flush context [] = hFlush stdout >> return empty_list
@@ -67,8 +67,8 @@ builtin_get_line context [] = getLine >>= (return . SString)
 builtin_get_line _       _  = error "'get-line' requires no arguments"
 
 builtin_type :: Context.Context -> [SExpr] -> IO SExpr
-builtin_type context [sexpr] = eval_sexpr context sexpr >>= (return . SString . showType)
-builtin_type _       _       = error "'type' requires no arguments"
+builtin_type context [arg] = eval_sexpr context arg >>= (return . SString . show_type)
+builtin_type _       _     = error "'type' requires no arguments"
 
 builtin_if :: Context.Context -> [SExpr] -> IO SExpr
 builtin_if context [cond_sexpr]                          = builtin_if context [cond_sexpr, empty_list, empty_list]
@@ -79,3 +79,57 @@ builtin_if context [cond_sexpr, true_sexpr, false_sexpr] = do
        then eval_sexpr context true_sexpr
        else eval_sexpr context false_sexpr
 builtin_if _       _                                     = error "'if' requires 1 to 3 arguments"
+
+builtin_unless :: Context.Context -> [SExpr] -> IO SExpr
+builtin_unless context [cond_sexpr]                          = builtin_if context [cond_sexpr]
+builtin_unless context [cond_sexpr, false_sexpr]             = builtin_if context [cond_sexpr, empty_list, false_sexpr]
+builtin_unless context [cond_sexpr, false_sexpr, true_sexpr] = builtin_if context [cond_sexpr, true_sexpr, false_sexpr]
+builtin_unless _       _                                     = error "'unless' requires 1 to 3 arguments"
+
+builtin_eq :: Context.Context -> [SExpr] -> IO SExpr
+builtin_eq context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 == arg2
+builtin_eq _       _            = error "'=' requires two arguments"
+
+builtin_ne :: Context.Context -> [SExpr] -> IO SExpr
+builtin_ne context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 /= arg2
+builtin_ne _       _            = error "'/=' requires two arguments"
+
+builtin_lt :: Context.Context -> [SExpr] -> IO SExpr
+builtin_lt context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 < arg2
+builtin_lt _       _            = error "'<' requires two arguments"
+
+builtin_gt :: Context.Context -> [SExpr] -> IO SExpr
+builtin_gt context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 > arg2
+builtin_gt _       _            = error "'>' requires two arguments"
+
+builtin_le :: Context.Context -> [SExpr] -> IO SExpr
+builtin_le context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 <= arg2
+builtin_le _       _            = error "'<=' requires two arguments"
+
+builtin_ge :: Context.Context -> [SExpr] -> IO SExpr
+builtin_ge context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    expr2 <- eval_sexpr context arg2
+    return . SBool $ arg1 >= arg2
+builtin_ge _       _            = error "'>=' requires two arguments"
+
+builtin_not :: Context.Context -> [SExpr] -> IO SExpr
+builtin_not context [arg] = do
+    expr <- eval_sexpr context arg
+    return . SBool . not . from_bool $ expr
+builtin_not _       _     = error "'not' requires only one arguments"
