@@ -30,36 +30,6 @@ call_function context "let" args
                       handleBindings xs (Map.insert var exp add_context)
 
                 handleBindings [] add_context = return add_context
-
-call_function context "&" args
-    | length args <= 2 = error "'&' requires two or more arguments"
-    | otherwise = handle_and args
-    where handle_and [] = return TT 
-          handle_and (x:xs) = do
-                exp <- eval_function context x
-                case exp of
-                  TNil -> return TNil
-                  TT -> handle_and xs
-                  _ -> error "T or Nil expected"
-                  
-call_function context "|" args
-    | length args <= 2 = error "'|' requires two or more arguments"
-    | otherwise = handle_and args
-    where handle_and [] = return TNil 
-          handle_and (x:xs) = do
-                exp <- eval_function context x
-                case exp of
-                  TT -> return TT
-                  TNil -> handle_and xs
-                  _ -> error "T or Nil expected"
-
-call_function context "->" args
-    | length args /= 2 = error "'->' requires two arguments"
-    | otherwise = handle_impl args
-    where handle_impl [arg1, arg2] = do
-            exp1 <- eval_function context arg1
-            exp2 <- eval_function context arg2
-            return $ boolToTerminal . (||) (not . terminalToBool $ exp1) $ (terminalToBool exp2)
                 
 call_function context "seq" args = handle_seq args
     where handle_seq [x]    = eval_function context x

@@ -144,3 +144,10 @@ builtin_and context args = helper args
 
           helper []     = return $ SBool True
 
+builtin_impl :: Context.Context -> [SExpr] -> IO SExpr
+builtin_impl context [arg1, arg2] = do
+    expr1 <- eval_sexpr context arg1
+    if not $ from_bool expr1
+       then return $ SBool True
+       else eval_sexpr context arg2
+
