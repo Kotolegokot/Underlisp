@@ -2,7 +2,7 @@
   (print-ln "Hi! I'm a stupid calculator. I can either multiply or add two numbers.")
   (print-ln "Please, type either + or *, and then two numbers")
   (flush)
-  (let (input (get-line))
+  (let ((input (get-line)))
     (if (= input "*")
       (let ((n1 (str-to-int (get-line))) (n2 (str-to-int (get-line))) (mult (* n1 n2)))
         (print "Your number is ")

@@ -107,42 +107,42 @@ builtin_eq :: Context.Context -> [SExpr] -> IO SExpr
 builtin_eq context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 == arg2
+    return . SBool $ expr1 == expr2
 builtin_eq _       _            = error "'=' requires two arguments"
 
 builtin_ne :: Context.Context -> [SExpr] -> IO SExpr
 builtin_ne context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 /= arg2
+    return . SBool $ expr1 /= expr2
 builtin_ne _       _            = error "'/=' requires two arguments"
 
 builtin_lt :: Context.Context -> [SExpr] -> IO SExpr
 builtin_lt context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 < arg2
+    return . SBool $ expr1 < expr2
 builtin_lt _       _            = error "'<' requires two arguments"
 
 builtin_gt :: Context.Context -> [SExpr] -> IO SExpr
 builtin_gt context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 > arg2
+    return . SBool $ expr1 > expr2
 builtin_gt _       _            = error "'>' requires two arguments"
 
 builtin_le :: Context.Context -> [SExpr] -> IO SExpr
 builtin_le context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 <= arg2
+    return . SBool $ expr1 <= expr2
 builtin_le _       _            = error "'<=' requires two arguments"
 
 builtin_ge :: Context.Context -> [SExpr] -> IO SExpr
 builtin_ge context [arg1, arg2] = do
     expr1 <- eval_sexpr context arg1
     expr2 <- eval_sexpr context arg2
-    return . SBool $ arg1 >= arg2
+    return . SBool $ expr1 >= expr2
 builtin_ge _       _            = error "'>=' requires two arguments"
 
 builtin_not :: Context.Context -> [SExpr] -> IO SExpr
