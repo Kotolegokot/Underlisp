@@ -48,6 +48,7 @@ call_function fname = case fname of
                         "/"            -> builtin_divide
                         "float"        -> builtin_float
                         "concat"       -> builtin_concat
+                        "str-length"   -> builtin_str_length
                         "str-to-int"   -> builtin_str_to_int
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
@@ -251,6 +252,14 @@ builtin_concat context args = helper args ""
               SString string -> helper xs (str ++ string)
               _              -> error "string expected"
           helper [] str     = return $ SString str
+
+builtin_str_length :: Context.Context -> [SExpr] -> IO SExpr
+builtin_str_length context [arg] = do
+  expr <- eval_sexpr context arg
+  case expr of
+    SString xs -> return . SInt . length $ xs
+    _     -> error "string expected"
+builtin_str_length _       _     = error "str-length requires only one argument"
 
 builtin_str_to_int :: Context.Context -> [SExpr] -> IO SExpr
 builtin_str_to_int context [arg] = do
