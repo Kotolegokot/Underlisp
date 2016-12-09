@@ -1,5 +1,9 @@
 module SExpr (
     SExpr (..),
+    FExpr (..),
+    Function (..),
+    Context,
+    apply,
     str2atom,
     show_sexpr, show_type,
     is_list, from_list, empty_list,
@@ -9,20 +13,27 @@ module SExpr (
     is_string, from_string,
     is_char, from_char,
     is_bool, from_bool,
-    is_keyword, from_keyword) where
+    is_keyword, from_keyword,
+    is_func, from_func) where
 
 import Text.Read
 import Data.Maybe
+import qualified Data.Map as Map
 
-data Function = Function Int FExpr
+type Context = Map.Map String SExpr
+
+data Function = UserDefined Int FExpr-- | BuiltIn ((Context -> SExpr -> IO SExpr) -> Context ->[SExpr] -> IO SExpr)
   deriving (Eq, Show)
+
+--is_builtin :: Function -> Bool
+--is_builtin (UserDefined _ _) = True
+--is_builtin (BuiltIn _)       = False
 
 data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
   deriving (Eq, Show)
 
-
 apply :: Function -> [SExpr] -> SExpr
-apply (Function args_count fexpr) args = fexpr2sexpr fexpr
+apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
   where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
         fexpr2sexpr (FInt int)       = SInt int
         fexpr2sexpr (FFloat float)   = SFloat float
@@ -132,6 +143,14 @@ is_keyword _            = False
 from_keyword :: SExpr -> String
 from_keyword (SKeyword keyword) = keyword
 from_keyword _                  = error "keyword expected"
+
+is_func :: SExpr -> Bool
+is_func (SFunc _) = True
+is_func _         = False
+
+from_func :: SExpr -> Function
+from_func (SFunc f) = f
+from_func _         = error "function expected"
 
 str2atom :: String -> SExpr
 str2atom atom
