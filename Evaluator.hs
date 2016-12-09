@@ -52,6 +52,9 @@ call_function fname = case fname of
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
                         "head"         -> builtin_head
+                        "tail"         -> builtin_tail
+                        "last"         -> builtin_last
+                        "init"         -> builtin_init
                         "eval"         -> builtin_eval
                         _              -> error $ "undefined function: '" ++ fname ++ "'"
 
@@ -274,10 +277,37 @@ builtin_head :: Context.Context -> [SExpr] -> IO SExpr
 builtin_head context [arg] = do
   expr <- eval_sexpr context arg
   case expr of
-    SList (x:xs) -> return x
+    SList xs@(_:_) -> return . head $ xs
     SList []     -> error "head: empty list"
     _            -> error "list expected"
 builtin_head _       _     = error "'head' requires only one argument"
+
+builtin_tail :: Context.Context -> [SExpr] -> IO SExpr
+builtin_tail context [arg] = do
+  expr <- eval_sexpr context arg
+  case expr of
+    SList xs@(_:_)     -> return . SList . tail $ xs
+    SList []     -> error "tail: empty list"
+    _            -> error "list expected"
+builtin_tail _       _     = error "'tail' requires only one argument"
+
+builtin_init :: Context.Context -> [SExpr] -> IO SExpr
+builtin_init context [arg] = do
+  expr <- eval_sexpr context arg
+  case expr of
+    SList xs@(_:_) -> return . SList . init $ xs
+    SList []     -> error "init: empty list"
+    _            -> error "list expected"
+builtin_init _       _     = error "'init' requires only one argument"
+
+builtin_last :: Context.Context -> [SExpr] -> IO SExpr
+builtin_last context [arg] = do
+  expr <- eval_sexpr context arg
+  case expr of
+    SList xs@(_:_) -> return . last $ xs
+    SList []     -> error "last: empty list"
+    _            -> error "list expected"
+builtin_last _       _     = error "'last' requires only one argument"
 
 builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
 builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
