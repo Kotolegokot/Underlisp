@@ -2,6 +2,7 @@ module BuiltIn where
 
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.List (elemIndex)
 import Text.Read (readMaybe)
 import System.IO (stdout, hFlush)
 import SExpr
@@ -22,6 +23,19 @@ builtin_let eval context ((SList pairs):body) = do
 
               handle_pairs []     acc = return acc
 builtin_let _    _       _               = error "list of bindings expected"
+
+builtin_lambda :: Eval -> Context -> [SExpr] -> IO SExpr
+builtin_lambda eval context (SList args:body)
+  | not $ all is_keyword args = error "every argument in 'define' must be a keyword"
+  | otherwise                 = return $ SFunc (UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body))
+    where handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
+          handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
+                                                Just index -> FRef index
+                                                Nothing    -> FKeyword str
+          handle_sexpr sexpr                = sexpr2fexpr sexpr
+
+builtin_lambda _    _       [_] = error "first argument of 'define' must be argument list"
+builtin_lambda _    _       _   = error "'define' requires at least one argument"
 
 builtin_print :: Eval -> Context -> [SExpr] -> IO SExpr
 builtin_print eval context [arg] = eval context arg >>= (putStr . show_sexpr) >> return empty_list

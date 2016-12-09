@@ -5,6 +5,7 @@ module SExpr (
     Context,
     apply,
     str2atom,
+    sexpr2fexpr,
     show_sexpr, show_type,
     is_list, from_list, empty_list,
     is_int, from_int,
@@ -50,6 +51,16 @@ apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
         fexpr2sexpr (FKeyword kword) = SKeyword kword
         fexpr2sexpr (FFunc func)     = SFunc func
         fexpr2sexpr (FRef index)     = args !! index
+
+sexpr2fexpr :: SExpr -> FExpr
+sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
+sexpr2fexpr (SInt int)       = FInt int
+sexpr2fexpr (SFloat float)   = FFloat float
+sexpr2fexpr (SString string) = FString string
+sexpr2fexpr (SChar char)     = FChar char
+sexpr2fexpr (SBool bool)     = FBool bool
+sexpr2fexpr (SKeyword str)   = FKeyword str
+sexpr2fexpr (SFunc func)     = FFunc func
 
 data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
   deriving (Eq, Show)
