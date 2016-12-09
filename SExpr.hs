@@ -14,7 +14,24 @@ module SExpr (
 import Text.Read
 import Data.Maybe
 
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String
+data Function = Function [Int] FExpr
+  deriving (Eq, Show)
+
+data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
+  deriving (Eq, Show)
+
+fexpr2sexpr :: FExpr -> SExpr
+fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
+fexpr2sexpr (FInt int)       = SInt int
+fexpr2sexpr (FFloat float)   = SFloat float
+fexpr2sexpr (FString string) = SString string
+fexpr2sexpr (FChar char)     = SChar char
+fexpr2sexpr (FBool bool)     = SBool bool
+fexpr2sexpr (FKeyword kword) = SKeyword kword
+fexpr2sexpr (FFunc func)     = SFunc func
+fexpr2sexpr (FRef _)         = error "can't convert FExpr (FRef) to SExpr"
+
+data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -25,6 +42,7 @@ instance Ord SExpr where
     compare (SChar a)    (SChar b)    = compare a b
     compare (SBool a)    (SBool b)    = compare a b
     compare (SKeyword a) (SKeyword b) = compare a b
+    compare (SFunc a)    (SFunc b)    = error "can't compare two functions"
     compare _ _ = error "can't compare terminals of different types"
 
 show_sexpr :: SExpr -> String
@@ -38,6 +56,7 @@ show_sexpr (SString string)   = string
 show_sexpr (SChar char)       = [char]
 show_sexpr (SBool bool)       = show bool
 show_sexpr (SKeyword keyword) = keyword
+show_sexpr (SFunc func)       = show func
 
 show_type :: SExpr -> String
 show_type (SList _)    = "List"
