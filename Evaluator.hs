@@ -50,6 +50,7 @@ call_function fname = case fname of
                         "str-to-int"   -> builtin_str_to_int
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
+                        "head"         -> builtin_head
                         _              -> error $ "undefined function: '" ++ fname ++ "'"
 
 builtin_let :: Context.Context -> [SExpr] -> IO SExpr
@@ -62,9 +63,7 @@ builtin_let context ((SList pairs):body) = do
                                               handle_pairs xs (Map.insert var exp acc)
                                           (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
                                           _              -> error "a binding in 'let' must be of the following form: (var value)"
-              
               handle_pairs []     acc = return acc
-              
 builtin_let _       _                    = error "list of bindings expected"
 
 builtin_print :: Context.Context -> [SExpr] -> IO SExpr
@@ -268,3 +267,12 @@ builtin_str_to_float _       _     = error "str-to-float requires only one argum
 
 builtin_list :: Context.Context -> [SExpr] -> IO SExpr
 builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
+
+builtin_head :: Context.Context -> [SExpr] -> IO SExpr
+builtin_head context [arg] = do
+  expr <- eval_sexpr context arg
+  case expr of
+    SList (x:xs) -> return x
+    SList []     -> error "head: empty list"
+    _            -> error "list expected"
+builtin_head _       _     = error "'head' requires only one argument"
