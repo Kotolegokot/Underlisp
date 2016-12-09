@@ -135,12 +135,12 @@ builtin_not context [arg] = do
 builtin_not _       _     = error "'not' requires only one arguments"
 
 builtin_and :: Context.Context -> [SExpr] -> IO SExpr
-builtin_and context args = helper args True
-    where helper (x:xs) result = do
+builtin_and context args = helper args
+    where helper (x:xs) = do
             expr <- eval_sexpr context x
-            case from_bool expr && result of
-                   True  -> helper xs (from_bool expr && result)
+            case from_bool expr of
+                   True  -> helper xs
                    False -> return $ SBool False
 
-          helper []     result = return $ SBool result
+          helper []     = return $ SBool False
 

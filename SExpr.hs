@@ -17,6 +17,7 @@ data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Ch
   deriving (Eq, Show)
 
 instance Ord SExpr where
+    compare (SList a)    (SList b)    = compare a b
     compare (SInt a)     (SInt b)     = compare a b
     compare (SFloat a)   (SFloat b)   = compare a b
     compare (SString a)  (SString b)  = compare a b
@@ -24,6 +25,27 @@ instance Ord SExpr where
     compare (SBool a)    (SBool b)    = compare a b
     compare (SKeyword a) (SKeyword b) = compare a b
     compare _ _ = error "can't compare terminals of different types"
+
+show_sexpr :: SExpr -> String
+show_sexpr (SList list)       = "(list " ++ show_list list ++ ")"
+    where show_list [x]    = show_sexpr x
+          show_list (x:xs) = show_sexpr x ++ " " ++ show_list xs
+          show_list []     = ""
+show_sexpr (SInt int)         = show int
+show_sexpr (SFloat float)     = show float
+show_sexpr (SString string)   = string
+show_sexpr (SChar char)       = [char]
+show_sexpr (SBool bool)       = show bool
+show_sexpr (SKeyword keyword) = keyword
+
+show_type :: SExpr -> String
+show_type (SList _)    = "List"
+show_type (SInt _)     = "Int"
+show_type (SFloat _)   = "Float"
+show_type (SString _)  = "String"
+show_type (SChar _)    = "Char"
+show_type (SBool _)    = "Bool"
+show_type (SKeyword _) = "Keyword"
 
 is_list :: SExpr -> Bool
 is_list (SList _) = True
