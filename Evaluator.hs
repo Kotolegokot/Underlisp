@@ -140,7 +140,6 @@ builtin_and context (x:xs) = do
             case from_bool expr of
                    True  -> builtin_and context xs
                    False -> return $ SBool False
-
 builtin_and []             = return $ SBool True
 
 builtin_or :: Context.Context -> [SExpr] -> IO SExpr
@@ -149,7 +148,6 @@ builtin_or context (x:xs) = do
             case from_bool expr of
               True -> return $ SBool True
               False -> builtin_or context xs
-
 builtin_or []             = return $ SBool False
 
 builtin_impl :: Context.Context -> [SExpr] -> IO SExpr
@@ -166,5 +164,13 @@ builtin_float context [arg] = do
       SFloat float -> SFloat float
       SInt   int   -> SFloat $ fromIntegral int
       _            -> error "float or int expected"
-  
 builtin_float _ _ = "'float' requires only one argument"
+
+builtin_concat :: Context.Context -> [SExpr] -> IO SExpr
+builtin_concat context args = helper args ""
+    where helper (x:xs) str = do
+            expr <- eval_sexpr context x
+            case expr of
+              SString string -> helper xs (str ++ string)
+              _              -> error "string expected"
+          helper [] str     = return $ SString str
