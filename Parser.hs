@@ -21,3 +21,5 @@ parseList lexemes = helper [] lexemes
             RightParen -> (SList $ reverse acc, xs)
             LeftParen  -> let (sublist, rest) = helper [] xs
                            in helper (sublist : acc) rest
+
+        helper acc []     = error "unexpected EOF in the middle of a list"
