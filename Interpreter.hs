@@ -15,15 +15,6 @@ interprete :: String -> IO ()
 interprete = Evaluator.evaluate . Reader.read
 
 {--
-eval_function :: Context -> SExpr -> IO Atom
-eval_function context (Node (TKeyword kword) args)
-  | kword `Map.member` context = return $ context Map.! kword
-  | otherwise                  = call_function context kword args
-eval_function context (Node first args) 
-  | null args = return first
-  | otherwise = error $ "too many arguments for '" ++ printTerminal first ++ "'"
-
-call_function :: Context -> String -> [SExpr] -> IO Atom
 
 call_function context "let" args
   | length args <= 1 = error "'let' requires more than one argument"
