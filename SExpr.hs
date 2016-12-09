@@ -14,22 +14,24 @@ module SExpr (
 import Text.Read
 import Data.Maybe
 
-data Function = Function [Int] FExpr
+data Function = Function Int FExpr
   deriving (Eq, Show)
 
 data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
   deriving (Eq, Show)
 
-fexpr2sexpr :: FExpr -> SExpr
-fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
-fexpr2sexpr (FInt int)       = SInt int
-fexpr2sexpr (FFloat float)   = SFloat float
-fexpr2sexpr (FString string) = SString string
-fexpr2sexpr (FChar char)     = SChar char
-fexpr2sexpr (FBool bool)     = SBool bool
-fexpr2sexpr (FKeyword kword) = SKeyword kword
-fexpr2sexpr (FFunc func)     = SFunc func
-fexpr2sexpr (FRef _)         = error "can't convert FExpr (FRef) to SExpr"
+
+apply :: Function -> [SExpr] -> SExpr
+apply (Function args_count fexpr) args = fexpr2sexpr fexpr
+  where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
+        fexpr2sexpr (FInt int)       = SInt int
+        fexpr2sexpr (FFloat float)   = SFloat float
+        fexpr2sexpr (FString string) = SString string
+        fexpr2sexpr (FChar char)     = SChar char
+        fexpr2sexpr (FBool bool)     = SBool bool
+        fexpr2sexpr (FKeyword kword) = SKeyword kword
+        fexpr2sexpr (FFunc func)     = SFunc func
+        fexpr2sexpr (FRef index)     = args !! index
 
 data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
   deriving (Eq, Show)
