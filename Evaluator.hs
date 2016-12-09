@@ -58,6 +58,7 @@ call_function fname = case fname of
                         "last"         -> builtin_last
                         "init"         -> builtin_init
                         "length"       -> builtin_length
+                        "++"           -> builtin_append
                         "eval"         -> builtin_eval
                         _              -> error $ "undefined function: '" ++ fname ++ "'"
 
@@ -331,6 +332,15 @@ builtin_length context [arg] = do
     SList xs -> return . SInt . length $ xs
     _     -> error "list expected"
 builtin_length _       _     = error "length requires only one argument"
+
+builtin_append :: Context.Context -> [SExpr] -> IO SExpr
+builtin_append context args = helper args []
+  where helper (x:xs) acc = do
+          expr <- eval_sexpr context x
+          case expr of
+            SList list -> helper xs (acc ++ list)
+            _          -> error "list expected"
+        helper [] acc = return . SList $ acc
 
 builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
 builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
