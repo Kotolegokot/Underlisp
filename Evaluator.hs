@@ -270,7 +270,6 @@ builtin_str_to_float _       _     = error "str-to-float requires only one argum
 builtin_list :: Context.Context -> [SExpr] -> IO SExpr
 builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
 
-<<<<<<< HEAD
 builtin_head :: Context.Context -> [SExpr] -> IO SExpr
 builtin_head context [arg] = do
   expr <- eval_sexpr context arg
@@ -279,10 +278,8 @@ builtin_head context [arg] = do
     SList []     -> error "head: empty list"
     _            -> error "list expected"
 builtin_head _       _     = error "'head' requires only one argument"
-=======
+
 builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
 builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
 builtin_eval _       [_]            = error "string expected"
 builtin_eval _       _              = error "'eval' requires only one argument"
-
->>>>>>> f51377baf3e3a62c526e53cae91ed2061b6a8676
