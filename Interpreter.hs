@@ -6,7 +6,6 @@ import Data.Tree
 import System.IO
 import qualified Data.Map as Map
 import Context
-import SemanticAnalyzer
 import Parser
 import Lexer
 

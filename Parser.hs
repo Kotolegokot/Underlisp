@@ -1,42 +1,23 @@
 module Parser (parse) where
 
-import Data.Tree
+import SExpr
 import Lexer
 
-parse :: [Lexeme] -> Tree String
-parse [] = error "empty file"
-parse (LeftParen:rest) = let (tree, rest2) = parseList rest
-                          in if not $ null rest2 then error "trailing characters after first list" else tree
-                         where parseList (x:rest) =
-                                 case x of 
-                                   Atom     str -> let (args, rest2) = parseArgs rest [] 
-                                                    in (Node str args, rest2) 
-                                   RightParen   -> error "empty list" 
-                                   LeftParen    -> error "a list at the beginning of another list" 
+-- | takes a list of lexemes and generates a complete s-expression
+parse :: [Lexeme] -> SExpr
+parse [] = error "empty list of lexemes"
+parse (x:xs)
+  | x /= LeftParen = error "list of lexemes doesn't start with a left paren"
+  | otherwise      = let (sexpr, rest) = parseList xs
+                      in case rest of
+                           [] -> sexpr
+                           _  -> error "trailing characters after first list"
 
-                               parseList [] = error "unexpected EOF" 
-
-                               parseArgs (x:rest) args =
-                                   case x of
-                                     Atom     str -> parseArgs rest (args ++ [Node str []])
-                                     RightParen   -> (args, rest)
-                                     LeftParen    -> let (tree, rest2) = parseList rest
-                                                      in parseArgs rest2 (args ++ [tree])
-                               parseArgs [] _ = error "unexpected EOF"
-
-parse _ = error "a left paren expected at the beginning of file"
-
-{--
-emptyTree :: Tree String
-emptyTree = Node "" []
-
--- | parse a list of lexemes and returns the abstract syntax tree (Tree String)
--- | which will be translated into an s-expression (Tree Atom)
-parse2 :: [Lexeme] -> [[String]]
-parse2 [] = emptyTree
-parse2 (LeftParen:rest) = let (tree, rest2) = parseList rest
-                           in if not $ null rest2 then error "trailing characters after first list" else tree
-                          where parseList (x:rest) =
-                                  case x of
-                                    Atom str -> (args, rest2) = parseArgs
-                                    --}
+parseList :: [Lexeme] -> (SExpr, [Lexeme])
+parseList lexemes = helper [] lexemes
+  where helper acc (x:xs) =
+          case x of
+            Atom atom  -> helper (atom : acc) xs
+            RightParen -> (SList $ reverse acc, xs)
+            LeftParen  -> let (sublist, rest) = helper [] xs
+                           in helper (sublist : acc) rest
