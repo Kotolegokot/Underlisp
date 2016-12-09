@@ -160,3 +160,8 @@ builtin_impl context [arg1, arg2] = do
     if not $ from_bool expr1
        then return $ SBool True
        else eval_sexpr context arg2
+
+builtin_seq :: Context.Context -> [SExpr] -> IO SExpr
+builtin_seq context [arg]  = eval_sexpr context arg
+builtin_seq context (x:xs) = eval_sexpr context x >> builtin_seq context xs
+builtin_seq context []     = return empty_list
