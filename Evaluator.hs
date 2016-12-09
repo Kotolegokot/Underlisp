@@ -1,5 +1,7 @@
 module Evaluator (evaluate) where
 
+import System.IO
+
 import qualified Context
 import qualified Data.Map as Map
 import SExpr
@@ -59,3 +61,21 @@ builtin_print_ln _       _       = error "'print-ln' requires only one argument"
 builtin_flush :: Context.Context -> [SExpr] -> IO SExpr
 builtin_flush context [] = hFlush stdout >> return empty_list
 builtin_flush _       _  = error "'flush' requires no arguments"
+
+builtin_get_line :: Context.Context -> [SExpr] -> IO SExpr
+builtin_get_line context [] = getLine >>= (return . SString)
+builtin_get_line _       _  = error "'get-line' requires no arguments"
+
+builtin_type :: Context.Context -> [SExpr] -> IO SExpr
+builtin_type context [sexpr] = eval_sexpr context sexpr >>= (return . SString . showType)
+builtin_type _       _       = error "'type' requires no arguments"
+
+builtin_if :: Context.Context -> [SExpr] -> IO SExpr
+builtin_if context [cond_sexpr]                          = builtin_if context [cond_sexpr, empty_list, empty_list]
+builtin_if context [cond_sexpr, true_sexpr]              = builtin_if context [cond_sexpr, true_sexpr, empty_list]
+builtin_if context [cond_sexpr, true_sexpr, false_sexpr] = do
+    cond <- eval_sexpr context cond_sexpr
+    if from_bool cond
+       then eval_sexpr context true_sexpr
+       else eval_sexpr context false_sexpr
+builtin_if _       _                                     = error "'if' requires 1 to 3 arguments"

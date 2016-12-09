@@ -31,18 +31,6 @@ call_function context "let" args
 
                 handleBindings [] add_context = return add_context
 
-call_function context "print" args
-  | length args /= 1 = error "'print' requires only one argument"
-  | otherwise        = eval_function context (head args) >>= (putStr . printTerminal) >> return TNil
-
-call_function context "print-ln" args
-  | length args /= 1 = error "'print-ln' requires only one argument"
-  | otherwise        = eval_function context (head args) >>= (putStrLn . printTerminal) >> return TNil
-
-call_function context "flush" args
-  | not $ null args  = error "'flush' requires no arguments"
-  | otherwise        = hFlush stdout >> return TNil
-
 call_function context "get-line" args
   | not $ null args  = error "'get-line' requires no arguments"
   | otherwise        = getLine >>= (return . TString)
