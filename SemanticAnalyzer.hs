@@ -1,24 +1,27 @@
 module SemanticAnalyzer
-    (Terminal(..),
-    analyze,
-    isKeyword,
-    fromKeyword,
-    fromNumber,
-    fromFloat,
-    fromInt,
-    printTerminal,
-    printType,
-    boolToTerminal,
-    terminalToBool) where
+    (Atom(..),
+     SExpr,
+     analyze,
+     isKeyword,
+     fromKeyword,
+     fromNumber,
+     fromFloat,
+     fromInt,
+     printTerminal,
+     printType,
+     boolToTerminal,
+     terminalToBool) where
 
 import Text.Read
 import Data.Maybe
 import Data.Tree
 
-data Terminal = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String | TList [Terminal]
+data Atom = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String | TList [Atom]
   deriving (Eq, Show)
 
-instance Ord Terminal where
+type SExpr = Tree Atom
+
+instance Ord Atom where
     compare (TInt a) (TInt b) = compare a b
     compare (TFloat a) (TFloat b) = compare a b
     compare (TString a) (TString b) = compare a b
@@ -29,16 +32,16 @@ instance Ord Terminal where
     compare (TList a) (TList b) = compare a b
     compare _ _ = error "can't compare terminals of different types"
 
-boolToTerminal :: Bool -> Terminal
+boolToTerminal :: Bool -> Atom
 boolToTerminal True  = TT
 boolToTerminal False = TNil
 
-terminalToBool :: Terminal -> Bool
+terminalToBool :: Atom -> Bool
 terminalToBool TT   = True
 terminalToBool TNil = False
 terminalToBool _    = error "T or Nil expected"
 
-printTerminal :: Terminal -> String
+printTerminal :: Atom -> String
 printTerminal (TInt int)         = show int
 printTerminal (TFloat float)     = show float
 printTerminal (TString string)   = string
@@ -51,7 +54,7 @@ printTerminal (TList list)       = "(list " ++ handle_list list ++ ")"
           handle_list (x:xs) = printTerminal x ++ " " ++ handle_list xs
           handle_list []     = ""
 
-printType :: Terminal -> String
+printType :: Atom -> String
 printType (TInt _)     = "Int"
 printType (TFloat _)   = "Float"
 printType (TString _)  = "String"
@@ -61,28 +64,28 @@ printType TNil         = "Nil"
 printType (TKeyword _) = "Keyword"
 printType (TList _)    = "List"
 
-isKeyword :: Terminal -> Bool
+isKeyword :: Atom -> Bool
 isKeyword (TKeyword _) = True
 isKeyword _            = False
 
-fromKeyword :: Terminal -> String
+fromKeyword :: Atom -> String
 fromKeyword (TKeyword a) = a
 fromKeyword _            = error "that's no keyword"
 
-fromNumber :: Terminal -> Float
+fromNumber :: Atom -> Float
 fromNumber (TFloat f)     = f
 fromNumber (TInt i)       = fromIntegral i
 fromNumber _              = error "float or int expected"
 
-fromFloat :: Terminal -> Float
+fromFloat :: Atom -> Float
 fromFloat (TFloat f) = f
 fromFloat _          = error "float expected"
 
-fromInt :: Terminal -> Int
+fromInt :: Atom -> Int
 fromInt (TInt i) = i
 fromInt _        = error "int expected"
 
-analyze :: Tree String -> Tree Terminal
+analyze :: Tree String -> Tree Atom
 analyze = fmap analyze_terminal
     where analyze_terminal "T" = TT
           analyze_terminal "Nil" = TNil

@@ -13,11 +13,11 @@ import Lexer
 evaluate :: String -> IO ()
 evaluate = interprete . analyze . parse . tokenize
 
-interprete :: Tree Terminal -> IO ()
+interprete :: SExpr -> IO ()
 interprete (Node (TKeyword "program") body) = void $ eval_function (Map.empty) (Node (TKeyword "seq") body)
 interprete _ = error "no 'program' at the beginning of the outer list"
 
-eval_function :: Context -> Tree Terminal -> IO Terminal
+eval_function :: Context -> SExpr -> IO Atom
 eval_function context (Node (TKeyword kword) args)
   | kword `Map.member` context = return $ context Map.! kword
   | otherwise                  = call_function context kword args
@@ -25,7 +25,7 @@ eval_function context (Node first args)
   | null args = return first
   | otherwise = error $ "too many arguments for '" ++ printTerminal first ++ "'"
 
-call_function :: Context -> String -> Forest Terminal -> IO Terminal
+call_function :: Context -> String -> [SExpr] -> IO Atom
 
 call_function context "let" args
   | length args <= 1 = error "'let' requires more than one argument"
@@ -243,7 +243,7 @@ call_function context "list" args = handle_list args []
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
 
 data ArithmReturn = ARInt | ARFloat
-num_args :: Context -> Forest Terminal -> IO ([Terminal], ArithmReturn)
+num_args :: Context -> [SExpr] -> IO ([Atom], ArithmReturn)
 num_args context args = helper args [] ARInt
     where helper (x:xs) exps ARInt = do
             exp <- eval_function context x
