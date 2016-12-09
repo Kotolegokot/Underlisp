@@ -5,12 +5,20 @@ import Control.Monad
 import Data.Tree
 import System.IO
 import qualified Data.Map as Map
+
 import Context
-import Parser
-import Lexer
+import SExpr
+import qualified Reader
 
 evaluate :: String -> IO ()
 evaluate = const $ return ()
+-- evaluate = Evaluator.evaluate . Reader.read
+
+--interprete :: SExpr -> IO ()
+--interprete sexpr
+--  | 
+
+
     {--
 
 evaluate :: String -> IO ()

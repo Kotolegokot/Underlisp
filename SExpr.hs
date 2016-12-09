@@ -15,6 +15,34 @@ instance Ord SExpr where
     compare (SKeyword a) (SKeyword b) = compare a b
     compare _ _ = error "can't compare terminals of different types"
 
+isList :: SExpr -> Bool
+isList (SList _) = True
+isList _         = False
+
+isInt :: SExpr -> Bool
+isInt (SInt _) = True
+isInt _        = False
+
+isFloat :: SExpr -> Bool
+isFloat (SFloat _) = True
+isFloat _          = False
+
+isString :: SExpr -> Bool
+isString (SString _) = True
+isString _           = False
+
+isChar :: SExpr -> Bool
+isChar (SChar _) = True
+isChar _         = False
+
+isBool :: SExpr -> Bool
+isBool (SBool _) = True
+isBool _         = False
+
+isKeyword :: SExpr -> Bool
+isKeyword (SKeyword _) = True
+isKeyword _            = False
+
 str2atom :: String -> SExpr
 str2atom "True"  = SBool True
 str2atom "False" = SBool False
