@@ -1,4 +1,14 @@
-module SExpr (SExpr (..), str2atom) where
+module SExpr (
+    SExpr (..),
+    str2atom,
+    isList, fromList, emptyList,
+    isInt, fromInt,
+    isFloat, fromFloat,
+    fromNumber,
+    isString, fromString,
+    isChar, fromChar,
+    isBool, fromBool,
+    isKeyword, fromKeyword) where
 
 import Text.Read
 import Data.Maybe
@@ -22,6 +32,9 @@ isList _         = False
 fromList :: SExpr -> [SExpr]
 fromList (SList list) = list
 fromList _            = error "list expected"
+
+emptyList :: SExpr
+emptyList = SList []
 
 isInt :: SExpr -> Bool
 isInt (SInt _) = True

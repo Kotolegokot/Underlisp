@@ -6,28 +6,15 @@ import Data.Tree
 import System.IO
 import qualified Data.Map as Map
 
-import Context
 import SExpr
 import qualified Reader
+import qualified Evaluator
 
+-- | a lisp interpretator is just a reader and evaluator joined together
 interprete :: String -> IO ()
-interprete = const $ return ()
--- evaluate = Evaluator.evaluate . Reader.read
+interprete = Evaluator.evaluate . Reader.read
 
---interprete :: SExpr -> IO ()
---interprete sexpr
---  | 
-
-
-    {--
-
-evaluate :: String -> IO ()
-evaluate = interprete . analyze . parse . tokenize
-
-interprete :: SExpr -> IO ()
-interprete (Node (TKeyword "program") body) = void $ eval_function (Map.empty) (Node (TKeyword "seq") body)
-interprete _ = error "no 'program' at the beginning of the outer list"
-
+{--
 eval_function :: Context -> SExpr -> IO Atom
 eval_function context (Node (TKeyword kword) args)
   | kword `Map.member` context = return $ context Map.! kword
