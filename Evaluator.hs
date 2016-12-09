@@ -50,6 +50,7 @@ call_function fname = case fname of
                         "str-to-int"   -> builtin_str_to_int
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
+                        _              -> error $ "undefined function: '" ++ fname ++ "'"
 
 builtin_let :: Context.Context -> [SExpr] -> IO SExpr
 builtin_let context ((SList pairs):body) = do
