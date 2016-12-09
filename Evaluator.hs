@@ -59,6 +59,7 @@ call_function fname = case fname of
                         "init"         -> builtin_init
                         "length"       -> builtin_length
                         "++"           -> builtin_append
+                        "nth"          -> builtin_nth
                         "eval"         -> builtin_eval
                         _              -> error $ "undefined function: '" ++ fname ++ "'"
 
@@ -342,6 +343,18 @@ builtin_append context args = helper args []
             _          -> error "list expected"
         helper [] acc = return . SList $ acc
 
+builtin_nth :: Context.Context -> [SExpr] -> IO SExpr
+builtin_nth context [arg1, arg2] = do
+  expr1 <- eval_sexpr context arg1
+  case expr1 of
+    SInt n -> if n < 0 then error "nth: expect positive number" else do
+      expr2 <- eval_sexpr context arg2
+      case expr2 of
+        SList list -> if length list <= n then error "nth: out of bounds" else return $ list !! n
+        _          -> error "nth: second argument must be a list"
+    _      -> error "nth: first argument must be an int" 
+builtin_nth _       _            = error "'nth' requires two arguments"
+      
 builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
 builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
 builtin_eval _       [_]            = error "string expected"
