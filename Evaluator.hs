@@ -51,6 +51,7 @@ call_function fname = case fname of
                         "str-to-int"   -> builtin_str_to_int
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
+                        "quote"        -> builtin_quote
                         "head"         -> builtin_head
                         "tail"         -> builtin_tail
                         "last"         -> builtin_last
@@ -272,6 +273,10 @@ builtin_str_to_float _       _     = error "str-to-float requires only one argum
 
 builtin_list :: Context.Context -> [SExpr] -> IO SExpr
 builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
+
+builtin_quote :: Context.Context -> [SExpr] -> IO SExpr
+builtin_quote context [arg] = return arg
+builtin_quote _       _     = error "'quot' requires only one argument"
 
 builtin_head :: Context.Context -> [SExpr] -> IO SExpr
 builtin_head context [arg] = do
