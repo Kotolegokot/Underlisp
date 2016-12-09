@@ -68,7 +68,7 @@ builtin_get_line _       _  = error "'get-line' requires no arguments"
 
 builtin_type :: Context.Context -> [SExpr] -> IO SExpr
 builtin_type context [arg] = eval_sexpr context arg >>= (return . SString . show_type)
-builtin_type _       _     = error "'type' requires no arguments"
+builtin_type _       _     = error "'type' requires only one argument"
 
 builtin_if :: Context.Context -> [SExpr] -> IO SExpr
 builtin_if context [cond_sexpr]                          = builtin_if context [cond_sexpr, empty_list, empty_list]
@@ -132,27 +132,25 @@ builtin_not :: Context.Context -> [SExpr] -> IO SExpr
 builtin_not context [arg] = do
     expr <- eval_sexpr context arg
     return . SBool . not . from_bool $ expr
-builtin_not _       _     = error "'not' requires only one arguments"
+builtin_not _       _     = error "'not' requires only one argument"
 
 builtin_and :: Context.Context -> [SExpr] -> IO SExpr
-builtin_and context args = helper args
-    where helper (x:xs) = do
+builtin_and context (x:xs) = do
             expr <- eval_sexpr context x
             case from_bool expr of
-                   True  -> helper xs
+                   True  -> builtin_and context xs
                    False -> return $ SBool False
 
-          helper []     = return $ SBool True
+builtin_and []             = return $ SBool True
 
 builtin_or :: Context.Context -> [SExpr] -> IO SExpr
-builtin_or context args = helper args
-    where helper (x:xs) = do
+builtin_or context (x:xs) = do
             expr <- eval_sexpr context x
             case from_bool expr of
               True -> return $ SBool True
-              False -> helper xs
+              False -> builtin_or context xs
 
-          helper []     = return $ SBool False
+builtin_or []             = return $ SBool False
 
 builtin_impl :: Context.Context -> [SExpr] -> IO SExpr
 builtin_impl context [arg1, arg2] = do
@@ -160,3 +158,13 @@ builtin_impl context [arg1, arg2] = do
     if not $ from_bool expr1
        then return $ SBool True
        else eval_sexpr context arg2
+
+builtin_float :: Context.Context -> [SExpr] -> IO SExpr
+builtin_float context [arg] = do
+    expr <- eval_sexpr context arg
+    return $ case expr of
+      SFloat float -> SFloat float
+      SInt   int   -> SFloat $ fromIntegral int
+      _            -> error "float or int expected"
+  
+builtin_float _ _ = "'float' requires only one argument"
