@@ -1,4 +1,4 @@
-module Interpreter (evaluate) where
+module Interpreter (interprete) where
 
 import Text.Read
 import Control.Monad
@@ -10,8 +10,8 @@ import Context
 import SExpr
 import qualified Reader
 
-evaluate :: String -> IO ()
-evaluate = const $ return ()
+interprete :: String -> IO ()
+interprete = const $ return ()
 -- evaluate = Evaluator.evaluate . Reader.read
 
 --interprete :: SExpr -> IO ()
