@@ -142,5 +142,5 @@ builtin_and context args = helper args
                    True  -> helper xs
                    False -> return $ SBool False
 
-          helper []     = return $ SBool False
+          helper []     = return $ SBool True
 
