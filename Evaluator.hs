@@ -245,7 +245,7 @@ builtin_str_to_int :: Context.Context -> [SExpr] -> IO SExpr
 builtin_str_to_int context [arg] = do
     expr <- eval_sexpr context arg
     case expr of
-      SString str -> SInt $ case readMaybe str :: Maybe Int of
+      SString str -> return . SInt $ case readMaybe str :: Maybe Int of
                                         Just int -> int
                                         Nothing  -> error $ "couldn't convert string to int: '" ++ str ++ "'"
       _           -> error "string expected"
@@ -255,11 +255,11 @@ builtin_str_to_float :: Context.Context -> [SExpr] -> IO SExpr
 builtin_str_to_float context [arg] = do
     expr <- eval_sexpr context arg
     case expr of
-      SString str -> SFloat $ case readMaybe str :: Maybe Float of
+      SString str -> return . SFloat $ case readMaybe str :: Maybe Float of
                                         Just float -> float
                                         Nothing  -> error $ "couldn't convert string to float: '" ++ str ++ "'"
       _           -> error "string expected"
 builtin_str_to_float _       _     = error "str-to-float requires only one argument"
 
 builtin_list :: Context.Context -> [SExpr] -> IO SExpr
-builtin_list context args = return . SList . mapM (eval_sexpr context) $ args
+builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
