@@ -113,15 +113,15 @@ from_keyword (SKeyword keyword) = keyword
 from_keyword _                  = error "keyword expected"
 
 str2atom :: String -> SExpr
-str2atom "True"  = SBool True
-str2atom "False" = SBool False
 str2atom atom
-  | isJust try_int    = SInt     $ read atom
-  | isJust try_float  = SFloat   $ read atom
-  | isJust try_char   = SChar    $ read atom
-  | isJust try_string = SString  $ read atom
-  | otherwise         = SKeyword $ read atom
+  | isJust try_int    = SInt     $ fromJust try_int
+  | isJust try_float  = SFloat   $ fromJust try_float
+  | isJust try_char   = SChar    $ fromJust try_char
+  | isJust try_string = SString  $ fromJust try_string
+  | isJust try_bool   = SBool    $ fromJust try_bool
+  | otherwise         = SKeyword atom
   where try_int    = readMaybe atom :: Maybe Int
         try_float  = readMaybe atom :: Maybe Float
         try_char   = readMaybe atom :: Maybe Char
         try_string = readMaybe atom :: Maybe String
+        try_bool   = readMaybe atom :: Maybe Bool
