@@ -34,8 +34,8 @@ call_function fname = case fname of
                         "<="           -> builtin_le
                         ">="           -> builtin_ge
                         "not"          -> builtin_not
-                        "&"            -> builtin_and
-                        "|"            -> builtin_or
+                        "and"          -> builtin_and
+                        "or"           -> builtin_or
                         "->"           -> builtin_impl
                         "seq"          -> builtin_seq
                         "+"            -> builtin_sum
@@ -133,3 +133,14 @@ builtin_not context [arg] = do
     expr <- eval_sexpr context arg
     return . SBool . not . from_bool $ expr
 builtin_not _       _     = error "'not' requires only one arguments"
+
+builtin_and :: Context.Context -> [SExpr] -> IO SExpr
+builtin_and context args = helper args True
+    where helper (x:xs) result = do
+            expr <- eval_sexpr context x
+            case from_bool expr && result of
+                   True  -> helper xs (from_bool expr && result)
+                   False -> return $ SBool False
+
+          helper []     result = return $ SBool result
+
