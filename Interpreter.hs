@@ -11,6 +11,10 @@ import Parser
 import Lexer
 
 evaluate :: String -> IO ()
+evaluate = const $ return ()
+    {--
+
+evaluate :: String -> IO ()
 evaluate = interprete . analyze . parse . tokenize
 
 interprete :: SExpr -> IO ()
@@ -262,3 +266,4 @@ num_args context args = helper args [] ARInt
               _        -> error "float or int expected"
 
           helper [] exps return_type = return (exps, return_type)
+          --}

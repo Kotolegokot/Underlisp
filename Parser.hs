@@ -25,3 +25,18 @@ parse (LeftParen:rest) = let (tree, rest2) = parseList rest
                                parseArgs [] _ = error "unexpected EOF"
 
 parse _ = error "a left paren expected at the beginning of file"
+
+{--
+emptyTree :: Tree String
+emptyTree = Node "" []
+
+-- | parse a list of lexemes and returns the abstract syntax tree (Tree String)
+-- | which will be translated into an s-expression (Tree Atom)
+parse2 :: [Lexeme] -> [[String]]
+parse2 [] = emptyTree
+parse2 (LeftParen:rest) = let (tree, rest2) = parseList rest
+                           in if not $ null rest2 then error "trailing characters after first list" else tree
+                          where parseList (x:rest) =
+                                  case x of
+                                    Atom str -> (args, rest2) = parseArgs
+                                    --}

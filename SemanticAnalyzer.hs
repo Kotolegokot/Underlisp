@@ -15,6 +15,7 @@ module SemanticAnalyzer
 import Text.Read
 import Data.Maybe
 import Data.Tree
+import Lexer
 
 data Atom = TInt Int | TFloat Float | TString String | TChar Char | TT | TNil | TKeyword String | TList [Atom]
   deriving (Eq, Show)
