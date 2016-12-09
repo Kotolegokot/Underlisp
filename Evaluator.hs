@@ -6,6 +6,7 @@ import Text.Read
 import qualified Context
 import qualified Data.Map as Map
 import SExpr
+import qualified Reader
 
 evaluate :: SExpr -> IO ()
 evaluate (SList (SKeyword "program":body)) = mapM_ (eval_sexpr Context.empty) body
@@ -50,6 +51,7 @@ call_function fname = case fname of
                         "str-to-int"   -> builtin_str_to_int
                         "str-to-float" -> builtin_str_to_float
                         "list"         -> builtin_list
+                        "eval"         -> builtin_eval
                         _              -> error $ "undefined function: '" ++ fname ++ "'"
 
 builtin_let :: Context.Context -> [SExpr] -> IO SExpr
@@ -268,3 +270,9 @@ builtin_str_to_float _       _     = error "str-to-float requires only one argum
 
 builtin_list :: Context.Context -> [SExpr] -> IO SExpr
 builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
+
+builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
+builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
+builtin_eval _       [_]            = error "string expected"
+builtin_eval _       _              = error "'eval' requires only one argument"
+
