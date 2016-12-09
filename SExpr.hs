@@ -1,14 +1,14 @@
 module SExpr (
     SExpr (..),
     str2atom,
-    isList, fromList, emptyList,
-    isInt, fromInt,
-    isFloat, fromFloat,
-    fromNumber,
-    isString, fromString,
-    isChar, fromChar,
-    isBool, fromBool,
-    isKeyword, fromKeyword) where
+    is_list, from_list, empty_list,
+    is_int, from_int,
+    is_float, from_float,
+    from_number,
+    is_string, from_string,
+    is_char, from_char,
+    is_bool, from_bool,
+    is_keyword, from_keyword) where
 
 import Text.Read
 import Data.Maybe
@@ -25,69 +25,69 @@ instance Ord SExpr where
     compare (SKeyword a) (SKeyword b) = compare a b
     compare _ _ = error "can't compare terminals of different types"
 
-isList :: SExpr -> Bool
-isList (SList _) = True
-isList _         = False
+is_list :: SExpr -> Bool
+is_list (SList _) = True
+is_list _         = False
 
-fromList :: SExpr -> [SExpr]
-fromList (SList list) = list
-fromList _            = error "list expected"
+from_list :: SExpr -> [SExpr]
+from_list (SList list) = list
+from_list _            = error "list expected"
 
-emptyList :: SExpr
-emptyList = SList []
+empty_list :: SExpr
+empty_list = SList []
 
-isInt :: SExpr -> Bool
-isInt (SInt _) = True
-isInt _        = False
+is_int :: SExpr -> Bool
+is_int (SInt _) = True
+is_int _        = False
 
-fromInt :: SExpr -> Int
-fromInt (SInt int) = int
-fromInt _          = error "int expected"
+from_int :: SExpr -> Int
+from_int (SInt int) = int
+from_int _          = error "int expected"
 
-isFloat :: SExpr -> Bool
-isFloat (SFloat _) = True
-isFloat _          = False
+is_float :: SExpr -> Bool
+is_float (SFloat _) = True
+is_float _          = False
 
-fromFloat :: SExpr -> Float
-fromFloat (SFloat float) = float
-fromFloat _              = error "float expected"
+from_float :: SExpr -> Float
+from_float (SFloat float) = float
+from_float _              = error "float expected"
 
-fromNumber :: SExpr -> Float
-fromNumber (SFloat float) = float
-fromNumber (SInt int)     = fromIntegral int
-fromNumber _              = error "int or float expected"
+from_number :: SExpr -> Float
+from_number (SFloat float) = float
+from_number (SInt int)     = fromIntegral int
+from_number _              = error "int or float expected"
 
-isString :: SExpr -> Bool
-isString (SString _) = True
-isString _           = False
+is_string :: SExpr -> Bool
+is_string (SString _) = True
+is_string _           = False
 
-fromString :: SExpr -> String
-fromString (SString string) = string
-fromString _                = error "string expected"
+from_string :: SExpr -> String
+from_string (SString string) = string
+from_string _                = error "string expected"
 
-isChar :: SExpr -> Bool
-isChar (SChar _) = True
-isChar _         = False
+is_char :: SExpr -> Bool
+is_char (SChar _) = True
+is_char _         = False
 
-fromChar :: SExpr -> Char
-fromChar (SChar char) = char
-fromChar _            = error "char expected"
+from_char :: SExpr -> Char
+from_char (SChar char) = char
+from_char _            = error "char expected"
 
-isBool :: SExpr -> Bool
-isBool (SBool _) = True
-isBool _         = False
+is_bool :: SExpr -> Bool
+is_bool (SBool _) = True
+is_bool _         = False
 
-fromBool :: SExpr -> Bool
-fromBool (SBool bool) = bool
-fromBool _            = error "bool expected"
+from_bool :: SExpr -> Bool
+from_bool (SBool bool) = bool
+from_bool _            = error "bool expected"
 
-isKeyword :: SExpr -> Bool
-isKeyword (SKeyword _) = True
-isKeyword _            = False
+is_keyword :: SExpr -> Bool
+is_keyword (SKeyword _) = True
+is_keyword _            = False
 
-fromKeyword :: SExpr -> String
-fromKeyword (SKeyword keyword) = keyword
-fromKeyword _                  = error "keyword expected"
+from_keyword :: SExpr -> String
+from_keyword (SKeyword keyword) = keyword
+from_keyword _                  = error "keyword expected"
 
 str2atom :: String -> SExpr
 str2atom "True"  = SBool True

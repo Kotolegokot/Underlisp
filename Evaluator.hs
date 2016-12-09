@@ -16,4 +16,4 @@ eval_sexpr context (SKeyword kword)
   | otherwise                  = error $ "undefined indentificator '" ++ kword ++ "'"
 
 call_function :: Context.Context -> String -> [SExpr] -> IO SExpr
-call_function _ _ _ = return emptyList
+call_function _ _ _ = return empty_list
