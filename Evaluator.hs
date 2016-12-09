@@ -55,7 +55,7 @@ call_function fname = case fname of
 builtin_let :: Context.Context -> [SExpr] -> IO SExpr
 builtin_let context ((SList pairs):body) = do
     new_context <- handle_pairs pairs context
-    eval_sexpr new_context (SList (SKeyword "concat":body))
+    eval_sexpr new_context (SList (SKeyword "seq":body))
         where handle_pairs (x:xs) acc = case x of
                                           (SList [SKeyword var, value]) -> do
                                               exp <- eval_sexpr acc value
