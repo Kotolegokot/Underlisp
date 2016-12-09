@@ -161,7 +161,58 @@ builtin_impl context [arg1, arg2] = do
        then return $ SBool True
        else eval_sexpr context arg2
 
+builtin_impl _       _            = error "'->' requires two arguments"
+
 builtin_seq :: Context.Context -> [SExpr] -> IO SExpr
 builtin_seq context [arg]  = eval_sexpr context arg
 builtin_seq context (x:xs) = eval_sexpr context x >> builtin_seq context xs
 builtin_seq context []     = return empty_list
+
+builtin_sum :: Context.Context -> [SExpr] -> IO SExpr
+builtin_sum context args = do
+    (exps, return_type) <- num_args context args
+    return $ case return_type of
+               NTInt   -> SInt . sum . fmap from_int $ exps
+               NTFloat -> SFloat . sum . fmap from_number $ exps
+
+builtin_substract :: Context.Context -> [SExpr] -> IO SExpr
+builtin_substract context args@[_, _] = do
+    ([x, y], return_type) <- num_args context args
+    return $ case return_type of
+               NTInt   -> SInt   $ from_int x - from_int y
+               NTFloat -> SFloat $ from_number x - from_number y
+builtin_substract _       _            = error "'-' expects requires two arguments"
+
+builtin_product :: Context.Context -> [SExpr] -> IO SExpr
+builtin_product context args = do
+    (exps, return_type) <- num_args context args
+    return $ case return_type of
+               NTInt   -> SInt . product . fmap from_int $ exps
+               NTFloat -> SFloat . product . fmap from_number $ exps
+
+builtin_divide :: Context.Context -> [SExpr] -> IO SExpr
+builtin_divide context args@[_, _] = do
+    ([x, y], return_type) <- num_args context args
+    return $ case return_type of
+               NTInt   -> SInt   $ from_int x `div` from_int y
+               NTFloat -> SFloat $ from_number x / from_number y
+
+data NumType = NTInt | NTFloat
+num_args :: Context.Context -> [SExpr] -> IO ([SExpr], NumType)
+num_args context args = helper args [] NTInt
+    where helper (x:xs) acc NTInt = do
+            exp <- eval_sexpr context x
+            case exp of
+              SInt   _ -> helper xs (exp : acc) NTInt
+              SFloat _ -> helper xs (exp : acc) NTFloat
+              _        -> error "float or int expected"
+
+          helper (x:xs) acc NTFloat = do
+              exp <- eval_sexpr context x
+              case exp of
+                SInt   _ -> helper xs (exp : acc) NTFloat
+                SFloat _ -> helper xs (exp : acc) NTFloat
+                _        -> error "float or int expected"
+
+          helper [] acc return_type = return (reverse acc, return_type)
+

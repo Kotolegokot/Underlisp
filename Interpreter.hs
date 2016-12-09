@@ -30,43 +30,6 @@ call_function context "let" args
                       handleBindings xs (Map.insert var exp add_context)
 
                 handleBindings [] add_context = return add_context
-                
-call_function context "seq" args = handle_seq args
-    where handle_seq [x]    = eval_function context x
-          handle_seq (x:xs) = eval_function context x >> handle_seq xs
-          handle_seq []     = return TNil
-
-call_function context "+" args = do
-    (exps, return_type) <- num_args context args
-
-    return $ case return_type of
-               ARInt   -> TInt . sum . fmap fromInt $ exps
-               ARFloat -> TFloat . sum . fmap fromNumber $ exps
-
-call_function context "-" args
-  | length args /= 2 = error "'-' requires two arguments"
-  | otherwise        = do
-      ([x, y], return_type) <- num_args context args
-      
-      return $ case return_type of
-                 ARInt   -> TInt   $ fromInt x - fromInt y
-                 ARFloat -> TFloat $ fromNumber x - fromNumber y
-
-call_function context "*" args = do
-    (exps, return_type) <- num_args context args
-
-    return $ case return_type of
-               ARInt   -> TInt . product . fmap fromInt $ exps
-               ARFloat -> TFloat . product . fmap fromNumber $ exps
-
-call_function context "/" args
-  | length args /= 2 = error "'/' requires two arguments"
-  | otherwise        = do
-      ([x, y], return_type) <- num_args context args
-
-      return $ case return_type of
-                 ARInt   -> TInt   $ fromInt x `div` fromInt y
-                 ARFloat -> TFloat $ fromNumber x / fromNumber y
 
 call_function context "float" args
   | length args /= 1 = error "'float' requires only one argument"
@@ -104,25 +67,4 @@ call_function context "list" args = handle_list args []
           handle_list [] items = return . TList $ items
               
 call_function _ func _ = error $ "undefined function '" ++ func ++ "'"
-
-data ArithmReturn = ARInt | ARFloat
-num_args :: Context -> [SExpr] -> IO ([Atom], ArithmReturn)
-num_args context args = helper args [] ARInt
-    where helper (x:xs) exps ARInt = do
-            exp <- eval_function context x
-        
-            case exp of
-              TInt   _ -> helper xs (exps ++ [exp]) ARInt
-              TFloat _ -> helper xs (exps ++ [exp]) ARFloat
-              _        -> error "float or int expected"
-
-          helper (x:xs) exps ARFloat = do
-            exp <- eval_function context x
-
-            case exp of
-              TInt   _ -> helper xs (exps ++ [exp]) ARFloat
-              TFloat _ -> helper xs (exps ++ [exp]) ARFloat
-              _        -> error "float or int expected"
-
-          helper [] exps return_type = return (exps, return_type)
           --}
