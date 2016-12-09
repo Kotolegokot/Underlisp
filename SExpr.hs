@@ -22,12 +22,19 @@ import qualified Data.Map as Map
 
 type Context = Map.Map String SExpr
 
-data Function = UserDefined Int FExpr-- | BuiltIn ((Context -> SExpr -> IO SExpr) -> Context ->[SExpr] -> IO SExpr)
-  deriving (Eq, Show)
+data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO SExpr) -> Context ->[SExpr] -> IO SExpr)
 
---is_builtin :: Function -> Bool
---is_builtin (UserDefined _ _) = True
---is_builtin (BuiltIn _)       = False
+instance Eq Function where
+    (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
+    (==) (BuiltIn a _) (BuiltIn b _)         = a == b
+
+instance Show Function where
+    show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
+    show (BuiltIn a _)     = "Built-In Function " ++ a
+
+is_builtin :: Function -> Bool
+is_builtin (UserDefined _ _) = True
+is_builtin (BuiltIn _ _)     = False
 
 data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
   deriving (Eq, Show)
