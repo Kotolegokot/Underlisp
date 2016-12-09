@@ -10,11 +10,36 @@ import BuiltIn
 
 start_context :: Context
 start_context = Map.fromList [
-  ("let",      SFunc $ BuiltIn "let"      builtin_let),
-  ("print",    SFunc $ BuiltIn "print"    builtin_print),
-  ("print-ln", SFunc $ BuiltIn "print-ln" builtin_print_ln),
-  ("flush",    SFunc $ BuiltIn "flush"    builtin_flush),
-  ("get-line", SFunc $ BuiltIn "get-line" builtin_get_line) ]
+  ("let",          SFunc $ BuiltIn "let"          builtin_let),
+  ("print",        SFunc $ BuiltIn "print"        builtin_print),
+  ("print-ln",     SFunc $ BuiltIn "print-ln"     builtin_print_ln),
+  ("flush",        SFunc $ BuiltIn "flush"        builtin_flush),
+  ("get-line",     SFunc $ BuiltIn "get-line"     builtin_get_line),
+  ("type",         SFunc $ BuiltIn "type"         builtin_type),
+  ("if",           SFunc $ BuiltIn "if"           builtin_if),
+  ("unless",       SFunc $ BuiltIn "unless"       builtin_unless),
+  ("=",            SFunc $ BuiltIn "="            builtin_eq),
+  ("/=",           SFunc $ BuiltIn "/="           builtin_ne),
+  ("<",            SFunc $ BuiltIn "<"            builtin_lt),
+  (">",            SFunc $ BuiltIn ">"            builtin_gt),
+  ("<=",           SFunc $ BuiltIn "<="           builtin_le),
+  (">=",           SFunc $ BuiltIn ">="           builtin_ge),
+  ("not",          SFunc $ BuiltIn "not"          builtin_not),
+  ("and",          SFunc $ BuiltIn "and"          builtin_and),
+  ("or",           SFunc $ BuiltIn "or"           builtin_or),
+  ("->",           SFunc $ BuiltIn "->"           builtin_impl),
+  ("seq",          SFunc $ BuiltIn "seq"          builtin_seq),
+  ("+",            SFunc $ BuiltIn "+"            builtin_sum),
+  ("-",            SFunc $ BuiltIn "-"            builtin_substract),
+  ("*",            SFunc $ BuiltIn "*"            builtin_product),
+  ("/",            SFunc $ BuiltIn "/"            builtin_divide),
+  ("float",        SFunc $ BuiltIn "float"        builtin_float),
+  ("concat",       SFunc $ BuiltIn "concat"       builtin_concat),
+  ("str-to-int",   SFunc $ BuiltIn "str-to-int"   builtin_str_to_int),
+  ("str-to-float", SFunc $ BuiltIn "str-to-float" builtin_str_to_float),
+  ("list",         SFunc $ BuiltIn "list"         builtin_list),
+  ("eval",         SFunc $ BuiltIn "eval"         builtin_eval) ]
+
 
 evaluate :: SExpr -> IO ()
 evaluate (SList (SKeyword "program":body)) = mapM_ (eval_sexpr start_context) body
