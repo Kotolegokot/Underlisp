@@ -9,7 +9,7 @@ parse (LeftParen:rest) = let (tree, rest2) = parseList rest
                           in if not $ null rest2 then error "trailing characters after first list" else tree
                          where parseList (x:rest) =
                                  case x of 
-                                   Function str -> let (args, rest2) = parseArgs rest [] 
+                                   Atom     str -> let (args, rest2) = parseArgs rest [] 
                                                     in (Node str args, rest2) 
                                    RightParen   -> error "empty list" 
                                    LeftParen    -> error "a list at the beginning of another list" 
@@ -18,7 +18,7 @@ parse (LeftParen:rest) = let (tree, rest2) = parseList rest
 
                                parseArgs (x:rest) args =
                                    case x of
-                                     Function str -> parseArgs rest (args ++ [Node str []])
+                                     Atom     str -> parseArgs rest (args ++ [Node str []])
                                      RightParen   -> (args, rest)
                                      LeftParen    -> let (tree, rest2) = parseList rest
                                                       in parseArgs rest2 (args ++ [tree])
