@@ -1,6 +1,7 @@
 module SExpr (
     SExpr (..),
     str2atom,
+    show_sexpr, show_type,
     is_list, from_list, empty_list,
     is_int, from_int,
     is_float, from_float,
