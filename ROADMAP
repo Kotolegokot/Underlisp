@@ -1,4 +1,3 @@
-&rest parameter in define
 macro
 defmacro
 packages (modules, libs?)

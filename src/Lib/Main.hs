@@ -53,9 +53,11 @@ builtin_defvar eval context [var, value]
   | otherwise            = do
       (expr, _) <- eval context value
       return (expr, Map.insert (from_keyword var) expr context)
+builtin_defvar _    _       _ = error "'defvar' requires two arguments"
 
 builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_define = error "don't use define yet, pls"
+builtin_define eval context (name:rest) = eval context (SList [SKeyword "defvar", name, SList ([SKeyword "lambda"] ++ rest)])
+
     {--
 builtin_define eval context (first:second:body)
   | not $ is_keyword first                    = error "first argument of 'define' must be a keyword"
