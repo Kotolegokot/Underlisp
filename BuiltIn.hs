@@ -1,4 +1,5 @@
 module BuiltIn where
+
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List (elemIndex)
@@ -316,7 +317,6 @@ builtin_nth eval context [arg1, arg2] = do
         SList list -> if length list <= n then error "nth: out of bounds" else return $ list !! n
         _          -> error "nth: second argument must be a list"
     _      -> error "nth: first argument must be an int" 
-
 builtin_nth _    _       _            = error "'nth' requires two arguments"
 
 builtin_quote :: Eval -> Context -> [SExpr] -> IO SExpr
@@ -324,9 +324,12 @@ builtin_quote eval context [arg] = return arg
 builtin_quote _    _       _     = error "'quote' requires only one argument"
 
 builtin_interprete :: Eval -> Context -> [SExpr] -> IO SExpr
-builtin_interprete eval context [SString expr] = (eval context . Reader.read $ expr) >> return empty_list
-builtin_interprete _    _       [_]            = error "string expected"
-builtin_interprete _    _       _              = error "interprete requires only one argument"
+builtin_interprete eval context [arg] = do
+    expr <- eval context arg
+    case expr of
+      SString str -> (eval context . Reader.read $ str) >> (return empty_list)
+      _           -> error "string expected"
+builtin_interprete _    _       _              = error "'interprete' requires only one argument"
 
 builtin_eval :: Eval -> Context -> [SExpr] -> IO SExpr
 builtin_eval eval context [arg] = do
