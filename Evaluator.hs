@@ -1,361 +1,65 @@
 module Evaluator (evaluate) where
 
-import System.IO
-import Text.Read
-
-import qualified Context
 import qualified Data.Map as Map
-import SExpr
 import qualified Reader
+import SExpr
+import BuiltIn
 
 evaluate :: SExpr -> IO ()
-evaluate (SList (SKeyword "program":body)) = mapM_ (eval_sexpr Context.empty) body
+evaluate (SList (SKeyword "program":body)) = mapM_ (eval_sexpr start_context) body
 evaluate _                                 = error "a program must start with calling 'program'"
 
-eval_sexpr :: Context.Context -> SExpr -> IO SExpr
-eval_sexpr context (SList (SKeyword fname:body)) = call_function fname context body
-eval_sexpr _       (SList _)                     = error "keyword expected"
-eval_sexpr context (SKeyword kword)
-  | kword `Map.member` context = return $ context Map.! kword
-  | otherwise                  = error $ "undefined indentificator '" ++ kword ++ "'"
-
-eval_sexpr _        sexpr                         = return sexpr
-
-call_function :: String -> Context.Context -> [SExpr] -> IO SExpr
-call_function fname = case fname of
-                        "let"          -> builtin_let
-                        "print"        -> builtin_print
-                        "print-ln"     -> builtin_print_ln
-                        "flush"        -> builtin_flush
-                        "get-line"     -> builtin_get_line
-                        "type"         -> builtin_type
-                        "if"           -> builtin_if
-                        "unless"       -> builtin_unless
-                        "="            -> builtin_eq
-                        "/="           -> builtin_ne
-                        "<"            -> builtin_lt
-                        ">"            -> builtin_gt
-                        "<="           -> builtin_le
-                        ">="           -> builtin_ge
-                        "not"          -> builtin_not
-                        "and"          -> builtin_and
-                        "or"           -> builtin_or
-                        "->"           -> builtin_impl
-                        "seq"          -> builtin_seq
-                        "+"            -> builtin_sum
-                        "-"            -> builtin_substract
-                        "*"            -> builtin_product
-                        "/"            -> builtin_divide
-                        "float"        -> builtin_float
-                        "concat"       -> builtin_concat
-                        "str-length"   -> builtin_str_length
-                        "str-to-int"   -> builtin_str_to_int
-                        "str-to-float" -> builtin_str_to_float
-                        "list"         -> builtin_list
-                        "quote"        -> builtin_quote
-                        "head"         -> builtin_head
-                        "tail"         -> builtin_tail
-                        "last"         -> builtin_last
-                        "init"         -> builtin_init
-                        "length"       -> builtin_length
-                        "++"           -> builtin_append
-                        "nth"          -> builtin_nth
-                        "eval"         -> builtin_eval
-                        _              -> error $ "undefined function: '" ++ fname ++ "'"
-
-builtin_let :: Context.Context -> [SExpr] -> IO SExpr
-builtin_let context ((SList pairs):body) = do
-    new_context <- handle_pairs pairs context
-    eval_sexpr new_context (SList (SKeyword "seq":body))
-        where handle_pairs (x:xs) acc = case x of
-                                          (SList [SKeyword var, value]) -> do
-                                              exp <- eval_sexpr acc value
-                                              handle_pairs xs (Map.insert var exp acc)
-                                          (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
-                                          _              -> error "a binding in 'let' must be of the following form: (var value)"
-              handle_pairs []     acc = return acc
-builtin_let _       _                    = error "list of bindings expected"
-
-builtin_print :: Context.Context -> [SExpr] -> IO SExpr
-builtin_print context [arg] = eval_sexpr context arg >>= (putStr . show_sexpr) >> return empty_list
-builtin_print _       _     = error "'print' requires only one argument"
-
-builtin_print_ln :: Context.Context -> [SExpr] -> IO SExpr
-builtin_print_ln context [arg] = eval_sexpr context arg >>= (putStrLn . show_sexpr) >> return empty_list
-builtin_print_ln _       _     = error "'print-ln' requires only one argument"
-
-builtin_flush :: Context.Context -> [SExpr] -> IO SExpr
-builtin_flush context [] = hFlush stdout >> return empty_list
-builtin_flush _       _  = error "'flush' requires no arguments"
-
-builtin_get_line :: Context.Context -> [SExpr] -> IO SExpr
-builtin_get_line context [] = getLine >>= (return . SString)
-builtin_get_line _       _  = error "'get-line' requires no arguments"
-
-builtin_type :: Context.Context -> [SExpr] -> IO SExpr
-builtin_type context [arg] = eval_sexpr context arg >>= (return . SString . show_type)
-builtin_type _       _     = error "'type' requires only one argument"
-
-builtin_if :: Context.Context -> [SExpr] -> IO SExpr
-builtin_if context [cond_sexpr]                          = builtin_if context [cond_sexpr, empty_list, empty_list]
-builtin_if context [cond_sexpr, true_sexpr]              = builtin_if context [cond_sexpr, true_sexpr, empty_list]
-builtin_if context [cond_sexpr, true_sexpr, false_sexpr] = do
-    cond <- eval_sexpr context cond_sexpr
-    if from_bool cond
-       then eval_sexpr context true_sexpr
-       else eval_sexpr context false_sexpr
-builtin_if _       _                                     = error "'if' requires 1 to 3 arguments"
-
-builtin_unless :: Context.Context -> [SExpr] -> IO SExpr
-builtin_unless context [cond_sexpr]                          = builtin_if context [cond_sexpr]
-builtin_unless context [cond_sexpr, false_sexpr]             = builtin_if context [cond_sexpr, empty_list, false_sexpr]
-builtin_unless context [cond_sexpr, false_sexpr, true_sexpr] = builtin_if context [cond_sexpr, true_sexpr, false_sexpr]
-builtin_unless _       _                                     = error "'unless' requires 1 to 3 arguments"
-
-builtin_eq :: Context.Context -> [SExpr] -> IO SExpr
-builtin_eq context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 == expr2
-builtin_eq _       _            = error "'=' requires two arguments"
-
-builtin_ne :: Context.Context -> [SExpr] -> IO SExpr
-builtin_ne context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 /= expr2
-builtin_ne _       _            = error "'/=' requires two arguments"
-
-builtin_lt :: Context.Context -> [SExpr] -> IO SExpr
-builtin_lt context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 < expr2
-builtin_lt _       _            = error "'<' requires two arguments"
-
-builtin_gt :: Context.Context -> [SExpr] -> IO SExpr
-builtin_gt context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 > expr2
-builtin_gt _       _            = error "'>' requires two arguments"
-
-builtin_le :: Context.Context -> [SExpr] -> IO SExpr
-builtin_le context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 <= expr2
-builtin_le _       _            = error "'<=' requires two arguments"
-
-builtin_ge :: Context.Context -> [SExpr] -> IO SExpr
-builtin_ge context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    expr2 <- eval_sexpr context arg2
-    return . SBool $ expr1 >= expr2
-builtin_ge _       _            = error "'>=' requires two arguments"
-
-builtin_not :: Context.Context -> [SExpr] -> IO SExpr
-builtin_not context [arg] = do
-    expr <- eval_sexpr context arg
-    return . SBool . not . from_bool $ expr
-builtin_not _       _     = error "'not' requires only one argument"
-
-builtin_and :: Context.Context -> [SExpr] -> IO SExpr
-builtin_and context (x:xs) = do
-            expr <- eval_sexpr context x
-            case from_bool expr of
-                   True  -> builtin_and context xs
-                   False -> return $ SBool False
-builtin_and _       []     = return $ SBool True
-
-builtin_or :: Context.Context -> [SExpr] -> IO SExpr
-builtin_or context (x:xs) = do
-            expr <- eval_sexpr context x
-            case from_bool expr of
-              True -> return $ SBool True
-              False -> builtin_or context xs
-builtin_or _       []     = return $ SBool False
-
-builtin_impl :: Context.Context -> [SExpr] -> IO SExpr
-builtin_impl context [arg1, arg2] = do
-    expr1 <- eval_sexpr context arg1
-    if not $ from_bool expr1
-       then return $ SBool True
-       else eval_sexpr context arg2
-builtin_impl _       _            = error "'->' requires two arguments"
-
-builtin_seq :: Context.Context -> [SExpr] -> IO SExpr
-builtin_seq context [arg]  = eval_sexpr context arg
-builtin_seq context (x:xs) = eval_sexpr context x >> builtin_seq context xs
-builtin_seq context []     = return empty_list
-
-builtin_sum :: Context.Context -> [SExpr] -> IO SExpr
-builtin_sum context args = do
-    (exps, return_type) <- num_args context args
-    return $ case return_type of
-               NTInt   -> SInt . sum . fmap from_int $ exps
-               NTFloat -> SFloat . sum . fmap from_number $ exps
-
-builtin_substract :: Context.Context -> [SExpr] -> IO SExpr
-builtin_substract context args@[_, _] = do
-    ([x, y], return_type) <- num_args context args
-    return $ case return_type of
-               NTInt   -> SInt   $ from_int x - from_int y
-               NTFloat -> SFloat $ from_number x - from_number y
-builtin_substract _       _            = error "'-' expects requires two arguments"
-
-builtin_product :: Context.Context -> [SExpr] -> IO SExpr
-builtin_product context args = do
-    (exps, return_type) <- num_args context args
-    return $ case return_type of
-               NTInt   -> SInt . product . fmap from_int $ exps
-               NTFloat -> SFloat . product . fmap from_number $ exps
-
-builtin_divide :: Context.Context -> [SExpr] -> IO SExpr
-builtin_divide context args@[_, _] = do
-    ([x, y], return_type) <- num_args context args
-    return $ case return_type of
-               NTInt   -> SInt   $ from_int x `div` from_int y
-               NTFloat -> SFloat $ from_number x / from_number y
-
-data NumType = NTInt | NTFloat
-num_args :: Context.Context -> [SExpr] -> IO ([SExpr], NumType)
-num_args context args = helper args [] NTInt
-    where helper (x:xs) acc NTInt = do
-            exp <- eval_sexpr context x
-            case exp of
-              SInt   _ -> helper xs (exp : acc) NTInt
-              SFloat _ -> helper xs (exp : acc) NTFloat
-              _        -> error "float or int expected"
-
-          helper (x:xs) acc NTFloat = do
-              exp <- eval_sexpr context x
-              case exp of
-                SInt   _ -> helper xs (exp : acc) NTFloat
-                SFloat _ -> helper xs (exp : acc) NTFloat
-                _        -> error "float or int expected"
-
-          helper [] acc return_type = return (reverse acc, return_type)
-
-builtin_float :: Context.Context -> [SExpr] -> IO SExpr
-builtin_float context [arg] = do
-    expr <- eval_sexpr context arg
-    return $ case expr of
-      SFloat float -> SFloat float
-      SInt   int   -> SFloat $ fromIntegral int
-      _            -> error "float or int expected"
-builtin_float _       _     = error "'float' requires only one argument"
-
-builtin_concat :: Context.Context -> [SExpr] -> IO SExpr
-builtin_concat context args = helper args ""
-    where helper (x:xs) str = do
-            expr <- eval_sexpr context x
-            case expr of
-              SString string -> helper xs (str ++ string)
-              _              -> error "string expected"
-          helper [] str     = return $ SString str
-
-builtin_str_length :: Context.Context -> [SExpr] -> IO SExpr
-builtin_str_length context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SString xs -> return . SInt . length $ xs
-    _     -> error "string expected"
-builtin_str_length _       _     = error "str-length requires only one argument"
-
-builtin_str_to_int :: Context.Context -> [SExpr] -> IO SExpr
-builtin_str_to_int context [arg] = do
-    expr <- eval_sexpr context arg
+eval_sexpr ::Context -> SExpr -> IO SExpr
+eval_sexpr context (SList (first:body)) = do
+    expr <- eval_sexpr context first
     case expr of
-      SString str -> return . SInt $ case readMaybe str :: Maybe Int of
-                                        Just int -> int
-                                        Nothing  -> error $ "couldn't convert string to int: '" ++ str ++ "'"
-      _           -> error "string expected"
-builtin_str_to_int _ _           = error "str-to-int requires only one argument"
+           SFunc (UserDefined count_args fexpr) -> eval_sexpr context (apply (from_func expr) body)
+           SFunc (BuiltIn _ f)                  -> f eval_sexpr context body
+           _                                    -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
+eval_sexpr context (SList [])           = error "can't execute empty list"
+eval_sexpr context (SKeyword str) 
+  | str `Map.member` context = return $ context Map.! str
+  | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
+eval_sexpr context sexpr                = return sexpr
 
-builtin_str_to_float :: Context.Context -> [SExpr] -> IO SExpr
-builtin_str_to_float context [arg] = do
-    expr <- eval_sexpr context arg
-    case expr of
-      SString str -> return . SFloat $ case readMaybe str :: Maybe Float of
-                                        Just float -> float
-                                        Nothing  -> error $ "couldn't convert string to float: '" ++ str ++ "'"
-      _           -> error "string expected"
-builtin_str_to_float _       _     = error "str-to-float requires only one argument"
-
-builtin_list :: Context.Context -> [SExpr] -> IO SExpr
-builtin_list context args = return . SList =<< mapM (eval_sexpr context) args
-
-builtin_quote :: Context.Context -> [SExpr] -> IO SExpr
-builtin_quote context [arg] = return arg
-builtin_quote _       _     = error "'quot' requires only one argument"
-
-builtin_head :: Context.Context -> [SExpr] -> IO SExpr
-builtin_head context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SList xs@(_:_) -> return . head $ xs
-    SList []     -> error "head: empty list"
-    _            -> error "list expected"
-builtin_head _       _     = error "'head' requires only one argument"
-
-builtin_tail :: Context.Context -> [SExpr] -> IO SExpr
-builtin_tail context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SList xs@(_:_)     -> return . SList . tail $ xs
-    SList []     -> error "tail: empty list"
-    _            -> error "list expected"
-builtin_tail _       _     = error "'tail' requires only one argument"
-
-builtin_init :: Context.Context -> [SExpr] -> IO SExpr
-builtin_init context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SList xs@(_:_) -> return . SList . init $ xs
-    SList []     -> error "init: empty list"
-    _            -> error "list expected"
-builtin_init _       _     = error "'init' requires only one argument"
-
-builtin_last :: Context.Context -> [SExpr] -> IO SExpr
-builtin_last context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SList xs@(_:_) -> return . last $ xs
-    SList []     -> error "last: empty list"
-    _            -> error "list expected"
-builtin_last _       _     = error "'last' requires only one argument"
-
-builtin_length :: Context.Context -> [SExpr] -> IO SExpr
-builtin_length context [arg] = do
-  expr <- eval_sexpr context arg
-  case expr of
-    SList xs -> return . SInt . length $ xs
-    _     -> error "list expected"
-builtin_length _       _     = error "length requires only one argument"
-
-builtin_append :: Context.Context -> [SExpr] -> IO SExpr
-builtin_append context args = helper args []
-  where helper (x:xs) acc = do
-          expr <- eval_sexpr context x
-          case expr of
-            SList list -> helper xs (acc ++ list)
-            _          -> error "list expected"
-        helper [] acc = return . SList $ acc
-
-builtin_nth :: Context.Context -> [SExpr] -> IO SExpr
-builtin_nth context [arg1, arg2] = do
-  expr1 <- eval_sexpr context arg1
-  case expr1 of
-    SInt n -> if n < 0 then error "nth: expect positive number" else do
-      expr2 <- eval_sexpr context arg2
-      case expr2 of
-        SList list -> if length list <= n then error "nth: out of bounds" else return $ list !! n
-        _          -> error "nth: second argument must be a list"
-    _      -> error "nth: first argument must be an int" 
-builtin_nth _       _            = error "'nth' requires two arguments"
-      
-builtin_eval :: Context.Context -> [SExpr] -> IO SExpr
-builtin_eval context [SString expr] = (eval_sexpr Context.empty . Reader.read $ expr) >> return empty_list
-builtin_eval _       [_]            = error "string expected"
-builtin_eval _       _              = error "'eval' requires only one argument"
+start_context :: Context
+start_context = Map.fromList [
+  ("let",          SFunc $ BuiltIn "let"          builtin_let),
+  ("lambda",       SFunc $ BuiltIn "lambda"       builtin_lambda),
+  ("print",        SFunc $ BuiltIn "print"        builtin_print),
+  ("print-ln",     SFunc $ BuiltIn "print-ln"     builtin_print_ln),
+  ("flush",        SFunc $ BuiltIn "flush"        builtin_flush),
+  ("get-line",     SFunc $ BuiltIn "get-line"     builtin_get_line),
+  ("type",         SFunc $ BuiltIn "type"         builtin_type),
+  ("if",           SFunc $ BuiltIn "if"           builtin_if),
+  ("unless",       SFunc $ BuiltIn "unless"       builtin_unless),
+  ("=",            SFunc $ BuiltIn "="            builtin_eq),
+  ("/=",           SFunc $ BuiltIn "/="           builtin_ne),
+  ("<",            SFunc $ BuiltIn "<"            builtin_lt),
+  (">",            SFunc $ BuiltIn ">"            builtin_gt),
+  ("<=",           SFunc $ BuiltIn "<="           builtin_le),
+  (">=",           SFunc $ BuiltIn ">="           builtin_ge),
+  ("not",          SFunc $ BuiltIn "not"          builtin_not),
+  ("and",          SFunc $ BuiltIn "and"          builtin_and),
+  ("or",           SFunc $ BuiltIn "or"           builtin_or),
+  ("->",           SFunc $ BuiltIn "->"           builtin_impl),
+  ("seq",          SFunc $ BuiltIn "seq"          builtin_seq),
+  ("+",            SFunc $ BuiltIn "+"            builtin_sum),
+  ("-",            SFunc $ BuiltIn "-"            builtin_substract),
+  ("*",            SFunc $ BuiltIn "*"            builtin_product),
+  ("/",            SFunc $ BuiltIn "/"            builtin_divide),
+  ("float",        SFunc $ BuiltIn "float"        builtin_float),
+  ("concat",       SFunc $ BuiltIn "concat"       builtin_concat),
+  ("str-to-int",   SFunc $ BuiltIn "str-to-int"   builtin_str_to_int),
+  ("str-to-float", SFunc $ BuiltIn "str-to-float" builtin_str_to_float),
+  ("list",         SFunc $ BuiltIn "list"         builtin_list),
+  ("str-length",   SFunc $ BuiltIn "str-length"   builtin_str_length),
+  ("head",         SFunc $ BuiltIn "head"         builtin_head),
+  ("tail",         SFunc $ BuiltIn "tail"         builtin_tail),
+  ("init",         SFunc $ BuiltIn "init"         builtin_init),
+  ("last",         SFunc $ BuiltIn "last"         builtin_last),
+  ("length",       SFunc $ BuiltIn "length"       builtin_length),
+  ("append",       SFunc $ BuiltIn "append"       builtin_append),
+  ("nth",          SFunc $ BuiltIn "nth"          builtin_nth),
+  ("quote",        SFunc $ BuiltIn "quote"        builtin_quote),
+  ("eval",         SFunc $ BuiltIn "eval"         builtin_eval) ]

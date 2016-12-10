@@ -1,6 +1,11 @@
 module SExpr (
     SExpr (..),
+    FExpr (..),
+    Function (..),
+    Context,
+    apply,
     str2atom,
+    sexpr2fexpr,
     show_sexpr, show_type,
     is_list, from_list, empty_list,
     is_int, from_int,
@@ -9,12 +14,55 @@ module SExpr (
     is_string, from_string,
     is_char, from_char,
     is_bool, from_bool,
-    is_keyword, from_keyword) where
+    is_keyword, from_keyword,
+    is_func, from_func) where
 
 import Text.Read
 import Data.Maybe
+import qualified Data.Map as Map
 
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String
+type Context = Map.Map String SExpr
+
+data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO SExpr) -> Context ->[SExpr] -> IO SExpr)
+
+instance Eq Function where
+    (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
+    (==) (BuiltIn a _) (BuiltIn b _)         = a == b
+
+instance Show Function where
+    show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
+    show (BuiltIn a _)     = "Built-In Function " ++ a
+
+is_builtin :: Function -> Bool
+is_builtin (UserDefined _ _) = True
+is_builtin (BuiltIn _ _)     = False
+
+data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
+  deriving (Eq, Show)
+
+apply :: Function -> [SExpr] -> SExpr
+apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
+  where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
+        fexpr2sexpr (FInt int)       = SInt int
+        fexpr2sexpr (FFloat float)   = SFloat float
+        fexpr2sexpr (FString string) = SString string
+        fexpr2sexpr (FChar char)     = SChar char
+        fexpr2sexpr (FBool bool)     = SBool bool
+        fexpr2sexpr (FKeyword kword) = SKeyword kword
+        fexpr2sexpr (FFunc func)     = SFunc func
+        fexpr2sexpr (FRef index)     = args !! index
+
+sexpr2fexpr :: SExpr -> FExpr
+sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
+sexpr2fexpr (SInt int)       = FInt int
+sexpr2fexpr (SFloat float)   = FFloat float
+sexpr2fexpr (SString string) = FString string
+sexpr2fexpr (SChar char)     = FChar char
+sexpr2fexpr (SBool bool)     = FBool bool
+sexpr2fexpr (SKeyword str)   = FKeyword str
+sexpr2fexpr (SFunc func)     = FFunc func
+
+data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -25,6 +73,7 @@ instance Ord SExpr where
     compare (SChar a)    (SChar b)    = compare a b
     compare (SBool a)    (SBool b)    = compare a b
     compare (SKeyword a) (SKeyword b) = compare a b
+    compare (SFunc a)    (SFunc b)    = error "can't compare two functions"
     compare _ _ = error "can't compare terminals of different types"
 
 show_sexpr :: SExpr -> String
@@ -38,6 +87,7 @@ show_sexpr (SString string)   = string
 show_sexpr (SChar char)       = [char]
 show_sexpr (SBool bool)       = show bool
 show_sexpr (SKeyword keyword) = keyword
+show_sexpr (SFunc func)       = show func
 
 show_type :: SExpr -> String
 show_type (SList _)    = "List"
@@ -111,6 +161,14 @@ is_keyword _            = False
 from_keyword :: SExpr -> String
 from_keyword (SKeyword keyword) = keyword
 from_keyword _                  = error "keyword expected"
+
+is_func :: SExpr -> Bool
+is_func (SFunc _) = True
+is_func _         = False
+
+from_func :: SExpr -> Function
+from_func (SFunc f) = f
+from_func _         = error "function expected"
 
 str2atom :: String -> SExpr
 str2atom atom
