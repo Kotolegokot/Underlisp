@@ -15,7 +15,6 @@
       (if (= input "+")
         (let ((n1 (get-float)) (n2 (get-int)) (sum (+ n1 n2)))
           (print-number sum)
-          (flush)
         )
         (if (= input "factorial")
           (let ((n (get-int)) (f (factorial n)))
