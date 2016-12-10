@@ -1,3 +1,4 @@
+&rest parameter in define
 defvar
 macro
 defmacro
