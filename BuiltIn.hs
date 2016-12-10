@@ -1,5 +1,4 @@
 module BuiltIn where
-
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List (elemIndex)
@@ -325,7 +324,14 @@ builtin_quote eval context [arg] = return arg
 builtin_quote _    _       _     = error "'quote' requires only one argument"
 
 builtin_interprete :: Eval -> Context -> [SExpr] -> IO SExpr
-builtin_interprete eval context [SString expr] = (eval Map.empty . Reader.read $ expr) >> return empty_list
+builtin_interprete eval context [SString expr] = (eval context . Reader.read $ expr) >> return empty_list
 builtin_interprete _    _       [_]            = error "string expected"
-builtin_interprete _    _       _              = error "'eval' requires only one argument"
+builtin_interprete _    _       _              = error "interprete requires only one argument"
 
+builtin_eval :: Eval -> Context -> [SExpr] -> IO SExpr
+builtin_eval eval context [arg] = do
+    expr <- eval context arg
+    case expr of
+      list@(SList _) -> eval context list
+      _              -> error "list expected"
+builtin_eval _    _       _                = error "'eval' requires only one argument"

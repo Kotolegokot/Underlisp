@@ -62,4 +62,5 @@ start_context = Map.fromList [
   ("append",       SFunc $ BuiltIn "append"       builtin_append),
   ("nth",          SFunc $ BuiltIn "nth"          builtin_nth),
   ("quote",        SFunc $ BuiltIn "quote"        builtin_quote),
-  ("interprete",   SFunc $ BuiltIn "interprete"   builtin_interprete) ]
+  ("interprete",   SFunc $ BuiltIn "interprete"   builtin_interprete),
+  ("eval",         SFunc $ BuiltIn "eval"         builtin_eval) ]
