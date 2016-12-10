@@ -5,6 +5,8 @@
   (define get-int () (str-to-int (get-line)))
   (define get-float () (str-to-float (get-line)))
   (define print-number (x) (print "Your number is ") (print-ln x))
+
+  ;; factorial
   (define factorial (x) (if (<= x 1) 1 (* x (factorial (- x 1)))))
 
   (let ((input (get-line)))

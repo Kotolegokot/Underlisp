@@ -7,7 +7,7 @@ import SExpr
 data Lexeme = LeftParen | RightParen | Atom SExpr
     deriving (Eq, Show)
 
-data State = None | String | OtherAtom
+data State = None | Comment | String | OtherAtom
 
 -- | takes a string and splits it into lexems
 tokenize :: String -> [Lexeme]
@@ -17,7 +17,12 @@ tokenize sequence = helper [] None sequence
             | x == ')'  = helper (RightParen : lexemes) None rest
             | isSpace x = helper lexemes None rest
             | x == '"'  = helper lexemes String rest
+            | x == ';'  = helper lexemes Comment rest
             | otherwise = helper lexemes OtherAtom xs
+
+          helper lexemes Comment (x:xs) = case x of
+                                            '\n' -> helper lexemes None xs
+                                            _    -> helper lexemes Comment xs
 
           helper lexemes String sequence = parse_string [] sequence
               where parse_string string xs@(x:rest)
