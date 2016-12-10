@@ -3,3 +3,7 @@ defvar
 macro
 defmacro
 packages (modules, libs?)
+synactic sugar:
+  [...] for (bind ...)
+  's-expr for (quote s-expr)
+  @(...) for (unfold (...))
