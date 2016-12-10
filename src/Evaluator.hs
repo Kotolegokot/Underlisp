@@ -4,7 +4,7 @@ import qualified Data.Map as Map
 import qualified Reader
 import Control.Monad (void)
 import SExpr
-import BuiltIn
+import Lib.Everything
 
 evaluate :: SExpr -> IO ()
 evaluate (SList (SKeyword "program":body)) = void $ eval_list eval_sexpr start_context body
