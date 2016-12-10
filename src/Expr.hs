@@ -1,6 +1,7 @@
 module Expr (SExpr (..),
              FExpr (..),
              Function (..),
+             Args (..),
              Context,
              apply,
              str2atom,
@@ -149,19 +150,6 @@ str2atom atom
 data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
   deriving (Eq, Show)
 
-apply :: Function -> [SExpr] -> SExpr
-apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
-  where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
-        fexpr2sexpr (FInt int)       = SInt int
-        fexpr2sexpr (FFloat float)   = SFloat float
-        fexpr2sexpr (FString string) = SString string
-        fexpr2sexpr (FChar char)     = SChar char
-        fexpr2sexpr (FBool bool)     = SBool bool
-        fexpr2sexpr (FKeyword kword) = SKeyword kword
-        fexpr2sexpr (FFunc func)     = SFunc func
-        fexpr2sexpr (FRef index)     = args !! index
-apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
-
 sexpr2fexpr :: SExpr -> FExpr
 sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
 sexpr2fexpr (SInt int)       = FInt int
@@ -173,7 +161,10 @@ sexpr2fexpr (SKeyword str)   = FKeyword str
 sexpr2fexpr (SFunc func)     = FFunc func
 
 -- Function --
-data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
+data Function = UserDefined Args FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
+
+data Args = Args { num :: Int, rest :: Bool }
+  deriving (Eq, Show)
 
 instance Eq Function where
     (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
@@ -187,4 +178,21 @@ instance Show Function where
 is_builtin :: Function -> Bool
 is_builtin (UserDefined _ _) = True
 is_builtin (BuiltIn _ _)     = False
+
+apply :: Function -> [SExpr] -> SExpr
+apply (UserDefined (Args args_count is_rest) fexpr) args
+  | not is_rest && length args > args_count = error "too many arguments"
+  | length args < args_count                = error "too little arguments"
+  | otherwise                               = fexpr2sexpr fexpr
+    where new_args = take args_count args ++ [SList (SKeyword "list" : drop args_count args)]
+          fexpr2sexpr (FList flist)                   = SList $ fmap fexpr2sexpr flist
+          fexpr2sexpr (FInt int)                      = SInt int
+          fexpr2sexpr (FFloat float)                  = SFloat float
+          fexpr2sexpr (FString string)                = SString string
+          fexpr2sexpr (FChar char)                    = SChar char
+          fexpr2sexpr (FBool bool)                    = SBool bool
+          fexpr2sexpr (FKeyword kword)                = SKeyword kword
+          fexpr2sexpr (FFunc func)                    = SFunc func
+          fexpr2sexpr (FRef index)                    = new_args !! index
+apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
 

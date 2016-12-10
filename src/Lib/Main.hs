@@ -4,7 +4,7 @@ module Lib.Main (builtin_let,
                  builtin_type) where
 
 import qualified Data.Map as Map
-import Data.List (elemIndex)
+import Data.List (elemIndex, elemIndices, delete)
 import Expr
 import Lib.Internal
 
@@ -22,19 +22,33 @@ builtin_let eval context ((SList pairs):body) = do
 builtin_let _    _       _               = error "list of bindings expected"
 
 builtin_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_lambda eval context (SList args:body)
-  | not $ all is_keyword args = error "every argument in 'define' must be a keyword"
-  | otherwise                 = return (SFunc func, context)
-  where func = UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)
-        handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
-        handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
-                                              Just index -> FRef index
-                                              Nothing    -> FKeyword str
-        handle_sexpr sexpr                = sexpr2fexpr sexpr
-builtin_lambda _    _       (_:_) = error "first argument of 'define' must be an argument list"
+builtin_lambda eval context (first:body) = return (SFunc func, context)
+    where (args, args_list) = handle_lambda_list first
+          func = UserDefined args (FList $ FKeyword "seq" : fmap handle_sexpr body)
+          handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
+          handle_sexpr (SKeyword str) = case elemIndex str args_list of
+                                                Just index -> FRef index
+                                                Nothing    -> FKeyword str
+          handle_sexpr sexpr                = sexpr2fexpr sexpr
 builtin_lambda _    _       _     = error "'define' requires at least one argument"
 
+handle_lambda_list :: SExpr -> (Args, [String])
+handle_lambda_list (SList lambda_list)
+  | not $ all is_keyword lambda_list = error "every item in lambda list must be a keyword"
+  | length ixs > 1                   = error "more than one &rest in lambda list"
+  | rest && ix /= count - 2          = error "&rest must be last but one"
+  | otherwise                        = if rest
+                                          then (Args (count - 2) rest, delete "&rest" . fmap from_keyword $ lambda_list)
+                                          else (Args count rest, fmap from_keyword lambda_list)
+    where ixs   = elemIndices (SKeyword "&rest") lambda_list
+          ix    = head ixs
+          rest  = length ixs == 1
+          count = length lambda_list
+handle_lambda_list _                 = error "lambda list must be a list"
+
 builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+builtin_define = error "don't use define yet, pls"
+    {--
 builtin_define eval context (first:second:body)
   | not $ is_keyword first                    = error "first argument of 'define' must be a keyword"
   | not $ is_list second                      = error "second argument of 'define' must be a list"
@@ -49,6 +63,7 @@ builtin_define eval context (first:second:body)
                                                   Nothing    -> FKeyword str
             handle_sexpr sexpr                = sexpr2fexpr sexpr
 builtin_define _    _       _                = error "'define' requires at least two arguments"
+--}
 
 builtin_type :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_type eval context [arg] = do
