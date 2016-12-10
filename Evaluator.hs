@@ -7,13 +7,14 @@ import BuiltIn
 
 evaluate :: SExpr -> IO ()
 evaluate (SList (SKeyword "program":body)) = mapM_ (eval_sexpr start_context) body
-evaluate _                                 = error "a program must start with calling 'program'"
+evaluate (SList _)                         = error "program must start with calling 'program'"
+evaluate _                                 = error "program must be a list"
 
 eval_sexpr ::Context -> SExpr -> IO SExpr
 eval_sexpr context (SList (first:body)) = do
     expr <- eval_sexpr context first
     case expr of
-           SFunc (UserDefined count_args fexpr) -> eval_sexpr context (apply (from_func expr) body)
+           SFunc func@(UserDefined count_args fexpr) -> eval_sexpr context (apply func body)
            SFunc (BuiltIn _ f)                  -> f eval_sexpr context body
            _                                    -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
