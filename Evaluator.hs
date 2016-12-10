@@ -16,16 +16,13 @@ eval_sexpr context (SList (first:body)) = do
     (expr, new_context) <- eval_sexpr context first
     case expr of
       SFunc func@(UserDefined count_args fexpr) -> eval_sexpr new_context (apply func body)
-      SFunc (BuiltIn _ f)                  -> f eval_sexpr new_context body
-      _                                    -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
+      SFunc (BuiltIn _ f)                       -> f eval_sexpr new_context body
+      _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SKeyword str) 
   | str `Map.member` context = return (context Map.! str, context)
   | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
 eval_sexpr context sexpr                = return (sexpr, context)
-
-no_context_change :: (Eval -> Context -> [SExpr] -> IO SExpr) -> Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-no_context_change f eval context args = f eval context args >>= (\sexpr -> return (sexpr, context))
 
 start_context :: Context
 start_context = Map.fromList . fmap (\(name, f) -> (name, SFunc $ BuiltIn name f)) $ [
