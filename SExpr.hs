@@ -27,7 +27,8 @@ data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO 
 
 instance Eq Function where
     (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
-    (==) (BuiltIn a _) (BuiltIn b _)         = a == b
+    (==) (BuiltIn a _)     (BuiltIn b _)     = a == b
+    (==) _                 _                 = False
 
 instance Show Function where
     show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
