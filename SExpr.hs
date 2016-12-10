@@ -23,7 +23,7 @@ import qualified Data.Map as Map
 
 type Context = Map.Map String SExpr
 
-data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO SExpr) -> Context ->[SExpr] -> IO SExpr)
+data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
 
 instance Eq Function where
     (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
@@ -52,6 +52,7 @@ apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
         fexpr2sexpr (FKeyword kword) = SKeyword kword
         fexpr2sexpr (FFunc func)     = SFunc func
         fexpr2sexpr (FRef index)     = args !! index
+apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
 
 sexpr2fexpr :: SExpr -> FExpr
 sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
