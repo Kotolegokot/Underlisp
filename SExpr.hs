@@ -77,7 +77,7 @@ instance Ord SExpr where
     compare _ _ = error "can't compare terminals of different types"
 
 show_sexpr :: SExpr -> String
-show_sexpr (SList list)       = "(list " ++ show_list list ++ ")"
+show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
     where show_list [x]    = show_sexpr x
           show_list (x:xs) = show_sexpr x ++ " " ++ show_list xs
           show_list []     = ""
