@@ -324,8 +324,8 @@ builtin_quote :: Eval -> Context -> [SExpr] -> IO SExpr
 builtin_quote eval context [arg] = return arg
 builtin_quote _    _       _     = error "'quote' requires only one argument"
 
-builtin_eval :: Eval -> Context -> [SExpr] -> IO SExpr
-builtin_eval eval context [SString expr] = (eval Map.empty . Reader.read $ expr) >> return empty_list
-builtin_eval _    _       [_]            = error "string expected"
-builtin_eval _    _       _              = error "'eval' requires only one argument"
+builtin_interprete :: Eval -> Context -> [SExpr] -> IO SExpr
+builtin_interprete eval context [SString expr] = (eval Map.empty . Reader.read $ expr) >> return empty_list
+builtin_interprete _    _       [_]            = error "string expected"
+builtin_interprete _    _       _              = error "'eval' requires only one argument"
 
