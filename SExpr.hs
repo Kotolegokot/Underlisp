@@ -75,7 +75,7 @@ instance Ord SExpr where
     compare (SBool a)    (SBool b)    = compare a b
     compare (SKeyword a) (SKeyword b) = compare a b
     compare (SFunc a)    (SFunc b)    = error "can't compare two functions"
-    compare _ _ = error "can't compare terminals of different types"
+    compare _ _ = error "can't compare s-expressions of different types"
 
 show_sexpr :: SExpr -> String
 show_sexpr (SList list)       = "(" ++ show_list list ++ ")"

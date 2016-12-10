@@ -26,11 +26,11 @@ tokenize sequence = helper [] None sequence
 
                     parse_string string [] = error "unexpected EOF in the middle of a string"
 
-          helper lexemes OtherAtom sequence = parse_terminal [] sequence
-              where parse_terminal atom xs@(x:rest)
+          helper lexemes OtherAtom sequence = parse_atom [] sequence
+              where parse_atom atom xs@(x:rest)
                       | isSpace x || elem x "()" = helper (Atom (str2atom atom) : lexemes) None xs
-                      | otherwise                = parse_terminal (atom ++ [x]) rest
+                      | otherwise                = parse_atom (atom ++ [x]) rest
 
-                    parse_terminal atom [] = helper (Atom (str2atom atom) : lexemes) None []
+                    parse_atom atom [] = helper (Atom (str2atom atom) : lexemes) None []
 
           helper lexemes _ [] = reverse lexemes
