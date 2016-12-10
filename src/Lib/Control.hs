@@ -2,7 +2,7 @@ module Lib.Control (builtin_if,
                     builtin_unless,
                     builtin_seq) where
 
-import SExpr
+import Expr
 import Lib.Internal
 
 builtin_if :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

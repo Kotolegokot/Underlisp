@@ -3,7 +3,7 @@ module Evaluator (evaluate) where
 import qualified Data.Map as Map
 import qualified Reader
 import Control.Monad (void)
-import SExpr
+import Expr
 import Lib.Everything
 
 evaluate :: SExpr -> IO ()

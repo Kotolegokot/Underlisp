@@ -3,7 +3,7 @@ module Lib.Boolean (builtin_not,
                     builtin_or,
                     builtin_impl) where
 
-import SExpr
+import Expr
 import Lib.Internal
 
 builtin_not :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

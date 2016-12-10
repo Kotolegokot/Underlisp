@@ -4,7 +4,7 @@ module Lib.IO (builtin_print,
                builtin_get_line) where 
 
 import System.IO (stdout, hFlush)
-import SExpr
+import Expr
 import Lib.Internal
 
 builtin_print :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

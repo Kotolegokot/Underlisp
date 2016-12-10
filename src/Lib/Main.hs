@@ -5,7 +5,7 @@ module Lib.Main (builtin_let,
 
 import qualified Data.Map as Map
 import Data.List (elemIndex)
-import SExpr
+import Expr
 import Lib.Internal
 
 builtin_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
@@ -24,12 +24,13 @@ builtin_let _    _       _               = error "list of bindings expected"
 builtin_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_lambda eval context (SList args:body)
   | not $ all is_keyword args = error "every argument in 'define' must be a keyword"
-  | otherwise                 = return (SFunc (UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)), context)
-    where handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
-          handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
-                                                Just index -> FRef index
-                                                Nothing    -> FKeyword str
-          handle_sexpr sexpr                = sexpr2fexpr sexpr
+  | otherwise                 = return (SFunc func, context)
+  where func = UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)
+        handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
+        handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
+                                              Just index -> FRef index
+                                              Nothing    -> FKeyword str
+        handle_sexpr sexpr                = sexpr2fexpr sexpr
 builtin_lambda _    _       (_:_) = error "first argument of 'define' must be an argument list"
 builtin_lambda _    _       _     = error "'define' requires at least one argument"
 

@@ -3,7 +3,7 @@ module Lib.Meta (builtin_quote,
                  builtin_eval) where
 
 import qualified Reader
-import SExpr
+import Expr
 import Lib.Internal
 
 builtin_quote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

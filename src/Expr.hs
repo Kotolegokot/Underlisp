@@ -1,69 +1,28 @@
-module SExpr (
-    SExpr (..),
-    FExpr (..),
-    Function (..),
-    Context,
-    apply,
-    str2atom,
-    sexpr2fexpr,
-    show_sexpr, show_type,
-    is_list, from_list, empty_list,
-    is_int, from_int,
-    is_float, from_float,
-    from_number,
-    is_string, from_string,
-    is_char, from_char,
-    is_bool, from_bool,
-    is_keyword, from_keyword,
-    is_func, from_func) where
+module Expr (SExpr (..),
+             FExpr (..),
+             Function (..),
+             Context,
+             apply,
+             str2atom,
+             sexpr2fexpr,
+             show_sexpr, show_type,
+             is_list, from_list, empty_list,
+             is_int, from_int,
+             is_float, from_float,
+             from_number,
+             is_string, from_string,
+             is_char, from_char,
+             is_bool, from_bool,
+             is_keyword, from_keyword,
+             is_func, from_func) where
 
-import Text.Read
 import Data.Maybe
+import Text.Read (readMaybe)
 import qualified Data.Map as Map
 
 type Context = Map.Map String SExpr
 
-data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
-
-instance Eq Function where
-    (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
-    (==) (BuiltIn a _)     (BuiltIn b _)     = a == b
-    (==) _                 _                 = False
-
-instance Show Function where
-    show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
-    show (BuiltIn a _)     = "Built-In Function " ++ a
-
-is_builtin :: Function -> Bool
-is_builtin (UserDefined _ _) = True
-is_builtin (BuiltIn _ _)     = False
-
-data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
-  deriving (Eq, Show)
-
-apply :: Function -> [SExpr] -> SExpr
-apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
-  where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
-        fexpr2sexpr (FInt int)       = SInt int
-        fexpr2sexpr (FFloat float)   = SFloat float
-        fexpr2sexpr (FString string) = SString string
-        fexpr2sexpr (FChar char)     = SChar char
-        fexpr2sexpr (FBool bool)     = SBool bool
-        fexpr2sexpr (FKeyword kword) = SKeyword kword
-        fexpr2sexpr (FFunc func)     = SFunc func
-        fexpr2sexpr (FRef index)     = args !! index
-apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
-
-sexpr2fexpr :: SExpr -> FExpr
-sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
-sexpr2fexpr (SInt int)       = FInt int
-sexpr2fexpr (SFloat float)   = FFloat float
-sexpr2fexpr (SString string) = FString string
-sexpr2fexpr (SChar char)     = FChar char
-sexpr2fexpr (SBool bool)     = FBool bool
-sexpr2fexpr (SKeyword str)   = FKeyword str
-sexpr2fexpr (SFunc func)     = FFunc func
-
+-- SExpr --
 data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
   deriving (Eq, Show)
 
@@ -185,3 +144,47 @@ str2atom atom
         try_char   = readMaybe atom :: Maybe Char
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
+--
+-- FExpr --
+data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
+  deriving (Eq, Show)
+
+apply :: Function -> [SExpr] -> SExpr
+apply (UserDefined args_count fexpr) args = fexpr2sexpr fexpr
+  where fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
+        fexpr2sexpr (FInt int)       = SInt int
+        fexpr2sexpr (FFloat float)   = SFloat float
+        fexpr2sexpr (FString string) = SString string
+        fexpr2sexpr (FChar char)     = SChar char
+        fexpr2sexpr (FBool bool)     = SBool bool
+        fexpr2sexpr (FKeyword kword) = SKeyword kword
+        fexpr2sexpr (FFunc func)     = SFunc func
+        fexpr2sexpr (FRef index)     = args !! index
+apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
+
+sexpr2fexpr :: SExpr -> FExpr
+sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
+sexpr2fexpr (SInt int)       = FInt int
+sexpr2fexpr (SFloat float)   = FFloat float
+sexpr2fexpr (SString string) = FString string
+sexpr2fexpr (SChar char)     = FChar char
+sexpr2fexpr (SBool bool)     = FBool bool
+sexpr2fexpr (SKeyword str)   = FKeyword str
+sexpr2fexpr (SFunc func)     = FFunc func
+
+-- Function --
+data Function = UserDefined Int FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
+
+instance Eq Function where
+    (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
+    (==) (BuiltIn a _)     (BuiltIn b _)     = a == b
+    (==) _                 _                 = False
+
+instance Show Function where
+    show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
+    show (BuiltIn a _)     = "Built-In Function " ++ a
+
+is_builtin :: Function -> Bool
+is_builtin (UserDefined _ _) = True
+is_builtin (BuiltIn _ _)     = False
+
