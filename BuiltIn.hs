@@ -39,8 +39,24 @@ builtin_lambda eval context (SList args:body)
                                                 Just index -> FRef index
                                                 Nothing    -> FKeyword str
           handle_sexpr sexpr                = sexpr2fexpr sexpr
-builtin_lambda _    _       [_] = error "first argument of 'define' must be argument list"
-builtin_lambda _    _       _   = error "'define' requires at least one argument"
+builtin_lambda _    _       (_:_) = error "first argument of 'define' must be an argument list"
+builtin_lambda _    _       _     = error "'define' requires at least one argument"
+
+builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+builtin_define eval context (first:second:body)
+  | not $ is_keyword first                    = error "first argument of 'define' must be a keyword"
+  | not $ is_list second                      = error "second argument of 'define' must be a list"
+  | not . all is_keyword . from_list $ second = error "arguments in 'define' must be keywords"
+  | otherwise                                 = return (empty_list, Map.insert name (SFunc func) context)
+      where name = from_keyword first
+            args = from_list second
+            func = UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)
+            handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
+            handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
+                                                  Just index -> FRef index
+                                                  Nothing    -> FKeyword str
+            handle_sexpr sexpr                = sexpr2fexpr sexpr
+builtin_define _    _       _                = error "'define' requires at least two arguments"
 
 builtin_print :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_print eval context [arg] = do
