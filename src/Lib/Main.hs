@@ -1,5 +1,6 @@
 module Lib.Main (builtin_let,
                  builtin_lambda,
+                 builtin_defvar,
                  builtin_define,
                  builtin_type) where
 
@@ -45,6 +46,13 @@ handle_lambda_list (SList lambda_list)
           rest  = length ixs == 1
           count = length lambda_list
 handle_lambda_list _                 = error "lambda list must be a list"
+
+builtin_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+builtin_defvar eval context [var, value]
+  | not $ is_keyword var = error "first argument of 'defvar' must be a keyword"
+  | otherwise            = do
+      (expr, _) <- eval context value
+      return (expr, Map.insert (from_keyword var) expr context)
 
 builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_define = error "don't use define yet, pls"

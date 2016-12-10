@@ -30,6 +30,7 @@ start_context :: Context
 start_context = Map.fromList . fmap (\(name, f) -> (name, SFunc $ BuiltIn name f)) $ [
   ("let",          builtin_let),
   ("lambda",       builtin_lambda),
+  ("defvar",       builtin_defvar),
   ("define",       builtin_define),
   ("print",        builtin_print),
   ("print-ln",     builtin_print_ln),
