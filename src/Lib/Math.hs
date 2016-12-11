@@ -7,65 +7,42 @@ module Lib.Math (builtin_sum,
 import Expr
 import Lib.Internal
 
-builtin_sum :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_sum eval context args = do
-    (exps, return_type) <- num_args eval context args
-    return (case return_type of
-              NTInt   -> SInt . sum . fmap from_int $ exps
-              NTFloat -> SFloat . sum . fmap from_number $ exps,
-            context)
+builtin_sum :: [SExpr] -> IO SExpr
+builtin_sum sexprs = case num_args sexprs of
+                       NTInt   -> return . SInt . sum . fmap from_int $ sexprs
+                       NTFloat -> return . SFloat . sum . fmap from_number $ sexprs
 
-builtin_substract :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_substract eval context args@[_, _] = do
-    ([x, y], return_type) <- num_args eval context args
-    return (case return_type of
-              NTInt   -> SInt   $ from_int x - from_int y
-              NTFloat -> SFloat $ from_number x - from_number y,
-            context)
-builtin_substract _    _       _           = error "'-' expects requires two arguments"
+builtin_substract :: [SExpr] -> IO SExpr
+builtin_substract sexprs@[num1, num2] = case num_args sexprs of
+                                          NTInt   -> return . SInt $ from_int num1 - from_int num2
+                                          NTFloat -> return . SFloat $ from_number num1 - from_number num2
+builtin_substract _                   = error "-: two arguments required"
 
-builtin_product :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_product eval context args = do
-    (exps, return_type) <- num_args eval context args
-    return (case return_type of
-              NTInt   -> SInt . product . fmap from_int $ exps
-              NTFloat -> SFloat . product . fmap from_number $ exps,
-            context)
+builtin_product :: [SExpr] -> IO SExpr
+builtin_product sexprs = case num_args sexprs of
+                                NTInt   -> return . SInt . product . fmap from_int $ sexprs
+                                NTFloat -> return . SFloat . product . fmap from_number $ sexprs
 
-builtin_divide :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_divide eval context args@[_, _] = do
-    ([x, y], return_type) <- num_args eval context args
-    return (case return_type of
-              NTInt   -> SInt   $ from_int x `div` from_int y
-              NTFloat -> SFloat $ from_number x / from_number y,
-            context)
-builtin_divide _    _       _           = error "'-' expects requires two arguments"
+builtin_divide :: [SExpr] -> IO SExpr
+builtin_divide sexprs@[num1, num2] = case num_args sexprs of
+                                       NTInt   -> return . SInt $ from_int num1 - from_int num2
+                                       NTFloat -> return . SFloat $ from_number num1 - from_number num2
+builtin_divide _                   = error "/: two arguments required"
 
 data NumType = NTInt | NTFloat
-num_args :: Eval -> Context -> [SExpr] -> IO ([SExpr], NumType)
-num_args eval context args = helper args [] NTInt
-    where helper (x:xs) acc NTInt = do
-            (expr, _) <- eval context x
-            case expr of
-              SInt   _ -> helper xs (expr : acc) NTInt
-              SFloat _ -> helper xs (expr : acc) NTFloat
-              _        -> error "float or int expected"
+num_args :: [SExpr] -> NumType
+num_args sexprs = num_args' sexprs NTInt
+  where num_args' (x:xs) NTInt = case x of
+                                   SInt _   -> num_args' xs NTInt
+                                   SFloat _ -> num_args' xs NTFloat
+                                   _        -> error "float or int expected"
+        num_args' (x:xs) NTFloat = if is_number x
+                                      then num_args' xs NTFloat
+                                      else error "float or int expected"
+        num_args' [] return_type = return_type
 
-          helper (x:xs) acc NTFloat = do
-              (expr, _) <- eval context x
-              case expr of
-                SInt   _ -> helper xs (expr : acc) NTFloat
-                SFloat _ -> helper xs (expr : acc) NTFloat
-                _        -> error "float or int expected"
-
-          helper [] acc return_type = return (reverse acc, return_type)
-
-builtin_float :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_float eval context [arg] = do
-    (expr, _) <- eval context arg
-    return (case expr of
-              SFloat float -> SFloat float
-              SInt   int   -> SFloat $ fromIntegral int
-              _            -> error "float or int expected",
-            context)
-builtin_float _    _       _     = error "'float' requires just one argument"
+builtin_float :: [SExpr] -> IO SExpr
+builtin_float [SInt int]         = return . SFloat . fromIntegral $ int
+builtin_float [float@(SFloat _)] = return float
+builtin_float [_]                = error "float: float or int expected"
+builtin_float _                  = error "float: just one argument requried"

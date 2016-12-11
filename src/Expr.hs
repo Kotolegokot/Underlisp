@@ -10,7 +10,7 @@ module Expr (SExpr (..),
              is_list, from_list, empty_list,
              is_int, from_int,
              is_float, from_float,
-             from_number,
+             is_number, from_number,
              is_string, from_string,
              is_char, from_char,
              is_bool, from_bool,
@@ -86,6 +86,9 @@ is_float _          = False
 from_float :: SExpr -> Float
 from_float (SFloat float) = float
 from_float _              = error "float expected"
+
+is_number :: SExpr -> Bool
+is_number sexpr = is_int sexpr || is_float sexpr
 
 from_number :: SExpr -> Float
 from_number (SFloat float) = float

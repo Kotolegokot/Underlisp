@@ -8,44 +8,26 @@ module Lib.Ord (builtin_eq,
 import Expr
 import Lib.Internal
 
-builtin_eq :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_eq eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 == expr2, context)
-builtin_eq _    _       _            = error "'=' requires two arguments"
+builtin_eq :: [SExpr] -> IO SExpr
+builtin_eq [arg1, arg2] = return . SBool $ arg1 == arg2
+builtin_eq _            = error "=: two arguments required"
 
-builtin_ne :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_ne eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 /= expr2, context)
-builtin_ne _      _       _          = error "'/=' requires two arguments"
+builtin_ne :: [SExpr] -> IO SExpr
+builtin_ne [arg1, arg2] = return . SBool $ arg1 /= arg2
+builtin_ne _            = error "/=: two arguments required"
 
-builtin_lt :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_lt eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 < expr2, context)
-builtin_lt _    _       _            = error "'<' requires two arguments"
+builtin_lt :: [SExpr] -> IO SExpr
+builtin_lt [arg1, arg2] = return . SBool $ arg1 < arg2
+builtin_lt _            = error "<: two arguments required"
 
-builtin_gt :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_gt eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 > expr2, context)
+builtin_gt :: [SExpr] -> IO SExpr
+builtin_gt [arg1, arg2] = return . SBool $ arg1 > arg2
+builtin_gt _            = error ">: two arguments required"
 
+builtin_le :: [SExpr] -> IO SExpr
+builtin_le [arg1, arg2] = return . SBool $ arg1 <= arg2
+builtin_le _            = error "<=: two arguments required"
 
-builtin_le :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_le eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 <= expr2, context)
-builtin_le _    _       _            = error "'<=' requires two arguments"
-
-builtin_ge :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_ge eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    (expr2, _) <- eval context arg2
-    return (SBool $ expr1 >= expr2, context)
-builtin_ge _    _       _            = error "'>=' requires two arguments"
+builtin_ge :: [SExpr] -> IO SExpr
+builtin_ge [arg1, arg2] = return . SBool $ arg1 >= arg2
+builtin_ge _            = error ">=: two arguments required"

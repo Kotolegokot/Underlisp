@@ -7,26 +7,18 @@ import System.IO (stdout, hFlush)
 import Expr
 import Lib.Internal
 
-builtin_print :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_print eval context [arg] = do
-    (expr, _) <- eval context arg
-    putStr $ show_sexpr expr
-    return (empty_list, context)
-builtin_print _    _       _     = error "'print' requires only one argument"
+builtin_print :: [SExpr] -> IO SExpr
+builtin_print [sexpr] = (putStr . show_sexpr $ sexpr) >> return empty_list
+builtin_print _       = error "'print' requires just one argument"
 
-builtin_print_ln :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_print_ln eval context [arg] = do
-    (expr, _) <- eval context arg 
-    putStrLn $ show_sexpr expr
-    return (empty_list, context)
-builtin_print_ln _    _       _     = error "'print-ln' requires only one argument"
+builtin_print_ln :: [SExpr] -> IO SExpr
+builtin_print_ln [sexpr] = (putStrLn . show_sexpr $ sexpr) >> return empty_list
+builtin_print_ln _       = error "'print-ln' requires just one argument"
 
-builtin_flush :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_flush eval context [] = hFlush stdout >> return (empty_list, context)
-builtin_flush _    _       _  = error "'flush' requires no arguments"
+builtin_flush :: [SExpr] -> IO SExpr
+builtin_flush [] = hFlush stdout >> return empty_list
+builtin_flush _  = error "'flush' requires no arguments"
 
-builtin_get_line :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_get_line eval context [] = do
-    line <- getLine
-    return (SString line, context)
-builtin_get_line _    _       _  = error "'get-line' requires no arguments"
+builtin_get_line :: [SExpr] -> IO SExpr
+builtin_get_line [] = getLine >>= (return . SString)
+builtin_get_line _  = error "'get-line' requires no arguments"

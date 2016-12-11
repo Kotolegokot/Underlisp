@@ -1,7 +1,7 @@
-module Lib.Main (builtin_let,
-                 builtin_lambda,
-                 builtin_defvar,
-                 builtin_define,
+module Lib.Main (spop_let,
+                 spop_lambda,
+                 spop_defvar,
+                 spop_define,
                  builtin_type) where
 
 import qualified Data.Map as Map
@@ -9,8 +9,9 @@ import Data.List (elemIndex, elemIndices, delete)
 import Expr
 import Lib.Internal
 
-builtin_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_let eval context ((SList pairs):body) = do
+-- special operator let
+spop_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_let eval context ((SList pairs):body) = do
     new_context <- handle_pairs pairs context
     eval new_context (SList (SSymbol "seq":body))
         where handle_pairs (x:xs) acc = case x of
@@ -20,10 +21,11 @@ builtin_let eval context ((SList pairs):body) = do
                                           (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
                                           _              -> error "a binding in 'let' must be of the following form: (var value)"
               handle_pairs []     acc = return acc
-builtin_let _    _       _               = error "list of bindings expected"
+spop_let _    _       _               = error "list of bindings expected"
 
-builtin_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_lambda eval context (first:body) = return (SCallable func, context)
+-- special operator lambda
+spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_lambda eval context (first:body) = return (SCallable func, context)
     where (args, args_list) = handle_lambda_list first
           func = UserDefinedFunction args (FList $ FKeyword "seq" : fmap handle_sexpr body)
           handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
@@ -31,7 +33,7 @@ builtin_lambda eval context (first:body) = return (SCallable func, context)
                                                 Just index -> FRef index
                                                 Nothing    -> FKeyword str
           handle_sexpr sexpr                = sexpr2fexpr sexpr
-builtin_lambda _    _       _     = error "'define' requires at least one argument"
+spop_lambda _    _       _     = error "'define' requires at least one argument"
 
 handle_lambda_list :: SExpr -> (Args, [String])
 handle_lambda_list (SList lambda_list)
@@ -47,20 +49,22 @@ handle_lambda_list (SList lambda_list)
           count = length lambda_list
 handle_lambda_list _                 = error "lambda list must be a list"
 
-builtin_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_defvar eval context [var, value]
+-- special operator defvar
+spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_defvar eval context [var, value]
   | not $ is_keyword var = error "first argument of 'defvar' must be a keyword"
   | otherwise            = do
       (expr, _) <- eval context value
       return (expr, Map.insert (from_keyword var) expr context)
-builtin_defvar _    _       _ = error "'defvar' requires two arguments"
+spop_defvar _    _       _ = error "'defvar' requires two arguments"
 
-builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
+-- special operator define
+-- (must be reimplemented as a macro later)
+spop_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
 
-builtin_type :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_type eval context [arg] = do
-    (expr, _) <- eval context arg
-    return (SString $ show_type expr, context)
-builtin_type _    _       _     = error "'type' requires just one argument"
+-- built-in function type
+builtin_type :: [SExpr] -> IO SExpr
+builtin_type [sexpr] = return . SString $ show_type sexpr
+builtin_type _       = error "'type' requires just one argument"
 

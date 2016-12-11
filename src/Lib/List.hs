@@ -10,73 +10,51 @@ module Lib.List (builtin_list,
 import Expr
 import Lib.Internal
 
-builtin_list :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_list eval context args = do
-    exprs <- mapM (eval context) args
-    return (SList . fmap fst $ exprs, context)
+builtin_list :: [SExpr] -> IO SExpr
+builtin_list = return . SList
 
-builtin_head :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_head eval context [arg] = do
-  (expr, _) <- eval context arg
-  case expr of
-    SList xs@(_:_) -> return (head xs, context)
-    SList []       -> error "head: empty list"
-    _              -> error "list expected"
+builtin_head :: [SExpr] -> IO SExpr
+builtin_head [SList (first:_)] = return first
+builtin_head [SList []]        = error "head: empty list"
+builtin_head [_]               = error "head: list expected"
+builtin_head _                 = error "head: just one argument required"
 
-builtin_head _    _       _     = error "'head' requires just one argument"
+builtin_tail :: [SExpr] -> IO SExpr
+builtin_tail [SList (_:rest)] = return . SList $ rest
+builtin_tail [SList []]       = error "tail: empty list"
+builtin_tail [_]              = error "tail: list expected"
+builtin_tail _                = error "tail: just one argument required"
 
-builtin_tail :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_tail eval context [arg] = do
-  (expr, _) <- eval context arg
-  case expr of
-    SList xs@(_:_)     -> return (SList $ tail xs, context)
-    SList []           -> error "tail: empty list"
-    _                  -> error "list expected"
-builtin_tail _    _       _     = error "'tail' requires just one argument"
+builtin_init :: [SExpr] -> IO SExpr
+builtin_init [SList list]
+  | null list = error "init: empty list"
+  | otherwise = return . SList . init $ list
+builtin_init [_] = error "init: list expected"
+builtin_init _   = error "init: just one argument required"
 
-builtin_init :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_init eval context [arg] = do
-  (expr, _) <- eval context arg
-  case expr of
-    SList xs@(_:_) -> return (SList $ init xs, context)
-    SList []       -> error "init: empty list"
-    _              -> error "list expected"
-builtin_init _    _       _     = error "'init' requires just one argument"
+builtin_last :: [SExpr] -> IO SExpr
+builtin_last [SList list]
+  | null list = error "last: empty list"
+  | otherwise = return $ last list
+builtin_last [_] = error "last: list expected"
+builtin_last _   = error "last: just one argument required"
 
-builtin_last :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_last eval context [arg] = do
-  (expr, _) <- eval context arg
-  case expr of
-    SList xs@(_:_) -> return (last xs, context)
-    SList []       -> error "last: empty list"
-    _              -> error "list expected"
-builtin_last _    _       _     = error "'last' requires just one argument"
+builtin_length :: [SExpr] -> IO SExpr
+builtin_length [SList list] = return . SInt . length $ list
+builtin_length [_]          = error "length: list expected"
+builtin_length _            = error "length: just one argument required"
 
-builtin_length :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_length eval context [arg] = do
-  (expr, _) <- eval context arg
-  case expr of
-    SList xs -> return (SInt $ length xs, context)
-    _        -> error "list expected"
-builtin_length _    _       _     = error "length requires just one argument"
+builtin_append :: [SExpr] -> IO SExpr
+builtin_append [list1, list2]
+  | not $ is_list list1 = error "append: first argument must be a list"
+  | not $ is_list list2 = error "append: second argument must be a list"
+  | otherwise           = return $ SList (from_list list1 ++ from_list list2)
+builtin_append _ = error "append: two arguments required"
 
-builtin_append :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_append eval context args = helper args []
-  where helper (x:xs) acc = do
-          (expr, _) <- eval context x
-          case expr of
-            SList list -> helper xs (acc ++ list)
-            _          -> error "list expected"
-        helper [] acc     = return (SList acc, context)
-
-builtin_nth :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_nth eval context [arg1, arg2] = do
-    (expr1, _) <- eval context arg1
-    case expr1 of
-      SInt n -> if n < 0 then error "nth: expect positive number" else do
-          (expr2, _) <- eval context arg2
-          case expr2 of
-            SList list -> if length list <= n then error "nth: out of bounds" else return (list !! n, context)
-            _          -> error "nth: second argument must be a list"
-      _      -> error "nth: first argument must be an int" 
-builtin_nth _    _       _            = error "'nth' requires two arguments"
+builtin_nth :: [SExpr] -> IO SExpr
+builtin_nth [list, index]
+  | not $ is_list list                        = error "nth: first argument must be a list"
+  | not $ is_int index                        = error "nth: second argument must be integer"
+  | length (from_list list) >= from_int index = error "nth: out of bounds"
+  | otherwise                                 = return $ from_list list !! from_int index
+builtin_nth _ = error "nth: two arguments requried"
