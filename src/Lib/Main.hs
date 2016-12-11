@@ -25,7 +25,7 @@ builtin_let _    _       _               = error "list of bindings expected"
 builtin_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_lambda eval context (first:body) = return (SCallable func, context)
     where (args, args_list) = handle_lambda_list first
-          func = UserDefined args (FList $ FKeyword "seq" : fmap handle_sexpr body)
+          func = UserDefinedFunction args (FList $ FKeyword "seq" : fmap handle_sexpr body)
           handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
           handle_sexpr (SSymbol str) = case elemIndex str args_list of
                                                 Just index -> FRef index
