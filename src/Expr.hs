@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 type Context = Map.Map String SExpr
 
 -- SExpr --
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SFunc Callable
+data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SCallable Callable
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -35,7 +35,7 @@ instance Ord SExpr where
     compare (SChar a)    (SChar b)    = compare a b
     compare (SBool a)    (SBool b)    = compare a b
     compare (SSymbol a) (SSymbol b) = compare a b
-    compare (SFunc a)    (SFunc b)    = error "can't compare two functions"
+    compare (SCallable a)    (SCallable b)    = error "can't compare two functions"
     compare _ _ = error "can't compare s-expressions of different types"
 
 show_sexpr :: SExpr -> String
@@ -49,7 +49,7 @@ show_sexpr (SString string)   = string
 show_sexpr (SChar char)       = [char]
 show_sexpr (SBool bool)       = show bool
 show_sexpr (SSymbol keyword) = keyword
-show_sexpr (SFunc func)       = show func
+show_sexpr (SCallable func)       = show func
 
 show_type :: SExpr -> String
 show_type (SList _)    = "List"
@@ -125,11 +125,11 @@ from_keyword (SSymbol keyword) = keyword
 from_keyword _                  = error "keyword expected"
 
 is_func :: SExpr -> Bool
-is_func (SFunc _) = True
+is_func (SCallable _) = True
 is_func _         = False
 
 from_func :: SExpr -> Callable
-from_func (SFunc f) = f
+from_func (SCallable f) = f
 from_func _         = error "function expected"
 
 str2atom :: String -> SExpr
@@ -158,7 +158,7 @@ sexpr2fexpr (SString string) = FString string
 sexpr2fexpr (SChar char)     = FChar char
 sexpr2fexpr (SBool bool)     = FBool bool
 sexpr2fexpr (SSymbol str)   = FKeyword str
-sexpr2fexpr (SFunc func)     = FCallable func
+sexpr2fexpr (SCallable func)     = FCallable func
 
 -- Callable --
 data Callable = UserDefinedFunction Args FExpr
@@ -198,7 +198,7 @@ apply (UserDefinedFunction (Args args_count rest) fexpr) args
           fexpr2sexpr (FChar char)     = SChar char
           fexpr2sexpr (FBool bool)     = SBool bool
           fexpr2sexpr (FKeyword kword) = SSymbol kword
-          fexpr2sexpr (FCallable func)     = SFunc func
+          fexpr2sexpr (FCallable func)     = SCallable func
           fexpr2sexpr (FRef index)     = args' !! index
 apply (BuiltInFunction _ _) _ = error "can't apply a built-in function"
 apply (SpecialOperator _ _) _ = error "can't apply a special operator"

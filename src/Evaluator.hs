@@ -15,10 +15,10 @@ eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:body)) = do
     (expr, _) <- eval_sexpr context first
     case expr of
-      SFunc func@(UserDefined count_args fexpr) -> do
+      SCallable func@(UserDefined count_args fexpr) -> do
           pairs <- mapM (eval_sexpr context) body
           eval_sexpr context (apply func (fmap fst pairs))
-      SFunc (BuiltIn _ f)                       -> f eval_sexpr context body
+      SCallable (BuiltIn _ f)                       -> f eval_sexpr context body
       _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SSymbol str) 
@@ -27,7 +27,7 @@ eval_sexpr context (SSymbol str)
 eval_sexpr context sexpr                = return (sexpr, context)
 
 start_context :: Context
-start_context = Map.fromList . fmap (\(name, f) -> (name, SFunc $ BuiltIn name f)) $ [
+start_context = Map.fromList . fmap (\(name, f) -> (name, SCallable $ BuiltIn name f)) $ [
   ("let",          builtin_let),
   ("lambda",       builtin_lambda),
   ("defvar",       builtin_defvar),

@@ -23,7 +23,7 @@ builtin_let eval context ((SList pairs):body) = do
 builtin_let _    _       _               = error "list of bindings expected"
 
 builtin_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_lambda eval context (first:body) = return (SFunc func, context)
+builtin_lambda eval context (first:body) = return (SCallable func, context)
     where (args, args_list) = handle_lambda_list first
           func = UserDefined args (FList $ FKeyword "seq" : fmap handle_sexpr body)
           handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
@@ -57,23 +57,6 @@ builtin_defvar _    _       _ = error "'defvar' requires two arguments"
 
 builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
-
-    {--
-builtin_define eval context (first:second:body)
-  | not $ is_keyword first                    = error "first argument of 'define' must be a keyword"
-  | not $ is_list second                      = error "second argument of 'define' must be a list"
-  | not . all is_keyword . from_list $ second = error "arguments in 'define' must be keywords"
-  | otherwise                                 = return (empty_list, Map.insert name (SFunc func) context)
-      where name = from_keyword first
-            args = from_list second
-            func = UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)
-            handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
-            handle_sexpr kword@(SSymbol str) = case elemIndex kword args of
-                                                  Just index -> FRef index
-                                                  Nothing    -> FKeyword str
-            handle_sexpr sexpr                = sexpr2fexpr sexpr
-builtin_define _    _       _                = error "'define' requires at least two arguments"
---}
 
 builtin_type :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_type eval context [arg] = do
