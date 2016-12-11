@@ -147,7 +147,7 @@ str2atom atom
         try_bool   = readMaybe atom :: Maybe Bool
 
 -- FExpr --
-data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Callable | FRef Int
+data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FCallable Callable | FRef Int
   deriving (Eq, Show)
 
 sexpr2fexpr :: SExpr -> FExpr
@@ -158,7 +158,7 @@ sexpr2fexpr (SString string) = FString string
 sexpr2fexpr (SChar char)     = FChar char
 sexpr2fexpr (SBool bool)     = FBool bool
 sexpr2fexpr (SSymbol str)   = FKeyword str
-sexpr2fexpr (SFunc func)     = FFunc func
+sexpr2fexpr (SFunc func)     = FCallable func
 
 -- Callable --
 data Callable = UserDefinedFunction Args FExpr
@@ -198,7 +198,7 @@ apply (UserDefinedFunction (Args args_count rest) fexpr) args
           fexpr2sexpr (FChar char)     = SChar char
           fexpr2sexpr (FBool bool)     = SBool bool
           fexpr2sexpr (FKeyword kword) = SSymbol kword
-          fexpr2sexpr (FFunc func)     = SFunc func
+          fexpr2sexpr (FCallable func)     = SFunc func
           fexpr2sexpr (FRef index)     = args' !! index
 apply (BuiltInFunction _ _) _ = error "can't apply a built-in function"
 apply (SpecialOperator _ _) _ = error "can't apply a special operator"
