@@ -1,6 +1,6 @@
 module Expr (SExpr (..),
              FExpr (..),
-             Function (..),
+             Callable (..),
              Args (..),
              Context,
              apply,
@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 type Context = Map.Map String SExpr
 
 -- SExpr --
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SFunc Function
+data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SFunc Callable
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -128,7 +128,7 @@ is_func :: SExpr -> Bool
 is_func (SFunc _) = True
 is_func _         = False
 
-from_func :: SExpr -> Function
+from_func :: SExpr -> Callable
 from_func (SFunc f) = f
 from_func _         = error "function expected"
 
@@ -145,9 +145,9 @@ str2atom atom
         try_char   = readMaybe atom :: Maybe Char
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
---
+
 -- FExpr --
-data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Function | FRef Int
+data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FFunc Callable | FRef Int
   deriving (Eq, Show)
 
 sexpr2fexpr :: SExpr -> FExpr
@@ -160,31 +160,37 @@ sexpr2fexpr (SBool bool)     = FBool bool
 sexpr2fexpr (SSymbol str)   = FKeyword str
 sexpr2fexpr (SFunc func)     = FFunc func
 
--- Function --
-data Function = UserDefined Args FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
+-- Callable --
+data Callable = UserDefinedFunction Args FExpr
+              | BuiltInFunction String ([SExpr] -> IO SExpr)
+              | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
-data Args = Args { num :: Int, rest :: Bool }
+data Args = Args { count :: Int, rest :: Bool }
   deriving (Eq, Show)
 
-instance Eq Function where
-    (==) (UserDefined a b) (UserDefined c d) = (a == c) && (b == d)
-    (==) (BuiltIn a _)     (BuiltIn b _)     = a == b
-    (==) _                 _                 = False
+instance Eq Callable where
+    (==) (UserDefinedFunction args1 fexpr1)
+         (UserDefinedFunction args2 fexpr2) = (args1 == args2) && (fexpr1 == fexpr2)
+    (==) (BuiltInFunction name1 _)
+         (BuiltInFunction name2 _)          = name1 == name2
+    (==) (SpecialOperator name1 _)
+         (SpecialOperator name2 _)          = name1 == name2
+    (==) _                 _                = False
 
-instance Show Function where
-    show (UserDefined a b) = "UserDefined " ++ show a ++ " " ++ show b
-    show (BuiltIn a _)     = "Built-In Function " ++ a
+instance Show Callable where
+    show (UserDefinedFunction (Args count rest) fexpr) = "User-defined function ("
+                                                      ++ show count ++ "parameters, rest is "
+                                                      ++ if rest then "on" else "off"
+                                                      ++ ", f-expression: " ++ show fexpr
+    show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
+    show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
 
-is_builtin :: Function -> Bool
-is_builtin (UserDefined _ _) = True
-is_builtin (BuiltIn _ _)     = False
-
-apply :: Function -> [SExpr] -> SExpr
-apply (UserDefined (Args args_count is_rest) fexpr) args
-  | not is_rest && length args > args_count = error "too many arguments"
-  | length args < args_count                = error "too little arguments"
-  | otherwise                               = fexpr2sexpr fexpr
-    where new_args = take args_count args ++ [SList (SSymbol "list" : drop args_count args)]
+apply :: Callable -> [SExpr] -> SExpr
+apply (UserDefinedFunction (Args args_count rest) fexpr) args
+  | not rest && length args > args_count = error "too many arguments"
+  | length args < args_count             = error "too little arguments"
+  | otherwise                            = fexpr2sexpr fexpr
+    where args' = take args_count args ++ [SList (SSymbol "list" : drop args_count args)]
           fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
           fexpr2sexpr (FInt int)       = SInt int
           fexpr2sexpr (FFloat float)   = SFloat float
@@ -193,6 +199,6 @@ apply (UserDefined (Args args_count is_rest) fexpr) args
           fexpr2sexpr (FBool bool)     = SBool bool
           fexpr2sexpr (FKeyword kword) = SSymbol kword
           fexpr2sexpr (FFunc func)     = SFunc func
-          fexpr2sexpr (FRef index)     = new_args !! index
-apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
-
+          fexpr2sexpr (FRef index)     = args' !! index
+apply (BuiltInFunction _ _) _ = error "can't apply a built-in function"
+apply (SpecialOperator _ _) _ = error "can't apply a special operator"
