@@ -7,7 +7,7 @@ import Expr
 import Lib.Everything
 
 evaluate :: SExpr -> IO ()
-evaluate (SList (SKeyword "program":body)) = void $ eval_list eval_sexpr start_context body
+evaluate (SList (SSymbol "program":body)) = void $ eval_list eval_sexpr start_context body
 evaluate (SList _)                         = error "program must start with calling 'program'"
 evaluate _                                 = error "program must be a list"
 
@@ -21,7 +21,7 @@ eval_sexpr context (SList (first:body)) = do
       SFunc (BuiltIn _ f)                       -> f eval_sexpr context body
       _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
-eval_sexpr context (SKeyword str) 
+eval_sexpr context (SSymbol str) 
   | str `Map.member` context = return (context Map.! str, context)
   | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
 eval_sexpr context sexpr                = return (sexpr, context)

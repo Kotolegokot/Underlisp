@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 type Context = Map.Map String SExpr
 
 -- SExpr --
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SKeyword String | SFunc Function
+data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SFunc Function
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -34,7 +34,7 @@ instance Ord SExpr where
     compare (SString a)  (SString b)  = compare a b
     compare (SChar a)    (SChar b)    = compare a b
     compare (SBool a)    (SBool b)    = compare a b
-    compare (SKeyword a) (SKeyword b) = compare a b
+    compare (SSymbol a) (SSymbol b) = compare a b
     compare (SFunc a)    (SFunc b)    = error "can't compare two functions"
     compare _ _ = error "can't compare s-expressions of different types"
 
@@ -48,7 +48,7 @@ show_sexpr (SFloat float)     = show float
 show_sexpr (SString string)   = string
 show_sexpr (SChar char)       = [char]
 show_sexpr (SBool bool)       = show bool
-show_sexpr (SKeyword keyword) = keyword
+show_sexpr (SSymbol keyword) = keyword
 show_sexpr (SFunc func)       = show func
 
 show_type :: SExpr -> String
@@ -58,7 +58,7 @@ show_type (SFloat _)   = "Float"
 show_type (SString _)  = "String"
 show_type (SChar _)    = "Char"
 show_type (SBool _)    = "Bool"
-show_type (SKeyword _) = "Keyword"
+show_type (SSymbol _) = "Keyword"
 
 is_list :: SExpr -> Bool
 is_list (SList _) = True
@@ -117,11 +117,11 @@ from_bool (SBool bool) = bool
 from_bool _            = error "bool expected"
 
 is_keyword :: SExpr -> Bool
-is_keyword (SKeyword _) = True
+is_keyword (SSymbol _) = True
 is_keyword _            = False
 
 from_keyword :: SExpr -> String
-from_keyword (SKeyword keyword) = keyword
+from_keyword (SSymbol keyword) = keyword
 from_keyword _                  = error "keyword expected"
 
 is_func :: SExpr -> Bool
@@ -139,7 +139,7 @@ str2atom atom
   | isJust try_char   = SChar    $ fromJust try_char
   | isJust try_string = SString  $ fromJust try_string
   | isJust try_bool   = SBool    $ fromJust try_bool
-  | otherwise         = SKeyword atom
+  | otherwise         = SSymbol atom
   where try_int    = readMaybe atom :: Maybe Int
         try_float  = readMaybe atom :: Maybe Float
         try_char   = readMaybe atom :: Maybe Char
@@ -157,11 +157,11 @@ sexpr2fexpr (SFloat float)   = FFloat float
 sexpr2fexpr (SString string) = FString string
 sexpr2fexpr (SChar char)     = FChar char
 sexpr2fexpr (SBool bool)     = FBool bool
-sexpr2fexpr (SKeyword str)   = FKeyword str
+sexpr2fexpr (SSymbol str)   = FKeyword str
 sexpr2fexpr (SFunc func)     = FFunc func
 
 -- Function --
-data Function = UserDefined Args FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context ->[SExpr] -> IO (SExpr, Context))
+data Function = UserDefined Args FExpr | BuiltIn String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
 data Args = Args { num :: Int, rest :: Bool }
   deriving (Eq, Show)
@@ -184,15 +184,15 @@ apply (UserDefined (Args args_count is_rest) fexpr) args
   | not is_rest && length args > args_count = error "too many arguments"
   | length args < args_count                = error "too little arguments"
   | otherwise                               = fexpr2sexpr fexpr
-    where new_args = take args_count args ++ [SList (SKeyword "list" : drop args_count args)]
-          fexpr2sexpr (FList flist)                   = SList $ fmap fexpr2sexpr flist
-          fexpr2sexpr (FInt int)                      = SInt int
-          fexpr2sexpr (FFloat float)                  = SFloat float
-          fexpr2sexpr (FString string)                = SString string
-          fexpr2sexpr (FChar char)                    = SChar char
-          fexpr2sexpr (FBool bool)                    = SBool bool
-          fexpr2sexpr (FKeyword kword)                = SKeyword kword
-          fexpr2sexpr (FFunc func)                    = SFunc func
-          fexpr2sexpr (FRef index)                    = new_args !! index
+    where new_args = take args_count args ++ [SList (SSymbol "list" : drop args_count args)]
+          fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
+          fexpr2sexpr (FInt int)       = SInt int
+          fexpr2sexpr (FFloat float)   = SFloat float
+          fexpr2sexpr (FString string) = SString string
+          fexpr2sexpr (FChar char)     = SChar char
+          fexpr2sexpr (FBool bool)     = SBool bool
+          fexpr2sexpr (FKeyword kword) = SSymbol kword
+          fexpr2sexpr (FFunc func)     = SFunc func
+          fexpr2sexpr (FRef index)     = new_args !! index
 apply (BuiltIn _ _)                  _    = error "can't apply a built-in function"
 

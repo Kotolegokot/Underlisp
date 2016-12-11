@@ -12,9 +12,9 @@ import Lib.Internal
 builtin_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 builtin_let eval context ((SList pairs):body) = do
     new_context <- handle_pairs pairs context
-    eval new_context (SList (SKeyword "seq":body))
+    eval new_context (SList (SSymbol "seq":body))
         where handle_pairs (x:xs) acc = case x of
-                                          (SList [SKeyword var, value]) -> do
+                                          (SList [SSymbol var, value]) -> do
                                               (expr, _) <- eval acc value
                                               handle_pairs xs (Map.insert var expr acc)
                                           (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
@@ -27,7 +27,7 @@ builtin_lambda eval context (first:body) = return (SFunc func, context)
     where (args, args_list) = handle_lambda_list first
           func = UserDefined args (FList $ FKeyword "seq" : fmap handle_sexpr body)
           handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
-          handle_sexpr (SKeyword str) = case elemIndex str args_list of
+          handle_sexpr (SSymbol str) = case elemIndex str args_list of
                                                 Just index -> FRef index
                                                 Nothing    -> FKeyword str
           handle_sexpr sexpr                = sexpr2fexpr sexpr
@@ -41,7 +41,7 @@ handle_lambda_list (SList lambda_list)
   | otherwise                        = if rest
                                           then (Args (count - 2) rest, delete "&rest" . fmap from_keyword $ lambda_list)
                                           else (Args count rest, fmap from_keyword lambda_list)
-    where ixs   = elemIndices (SKeyword "&rest") lambda_list
+    where ixs   = elemIndices (SSymbol "&rest") lambda_list
           ix    = head ixs
           rest  = length ixs == 1
           count = length lambda_list
@@ -56,7 +56,7 @@ builtin_defvar eval context [var, value]
 builtin_defvar _    _       _ = error "'defvar' requires two arguments"
 
 builtin_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-builtin_define eval context (name:rest) = eval context (SList [SKeyword "defvar", name, SList ([SKeyword "lambda"] ++ rest)])
+builtin_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
 
     {--
 builtin_define eval context (first:second:body)
@@ -68,7 +68,7 @@ builtin_define eval context (first:second:body)
             args = from_list second
             func = UserDefined (length args) (FList $ FKeyword "seq" : fmap handle_sexpr body)
             handle_sexpr (SList list)         = FList . fmap handle_sexpr $ list
-            handle_sexpr kword@(SKeyword str) = case elemIndex kword args of
+            handle_sexpr kword@(SSymbol str) = case elemIndex kword args of
                                                   Just index -> FRef index
                                                   Nothing    -> FKeyword str
             handle_sexpr sexpr                = sexpr2fexpr sexpr
