@@ -1,11 +1,9 @@
 module SExpr (Expr (..),
               SExpr (..),
-              FExpr (..),
               Callable (..),
               Args (..),
               Context,
               str2atom,
-              sexpr2fexpr,
               show_sexpr, show_type) where
 
 import Data.Maybe
@@ -143,20 +141,6 @@ str2atom atom
         try_char   = readMaybe atom :: Maybe Char
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
-
--- FExpr --
-data FExpr = FList [FExpr] | FInt Int | FFloat Float | FString String | FChar Char | FBool Bool | FKeyword String | FCallable Callable | FRef Int
-  deriving (Eq, Show)
-
-sexpr2fexpr :: SExpr -> FExpr
-sexpr2fexpr (SList list)     = FList $ fmap sexpr2fexpr list
-sexpr2fexpr (SInt int)       = FInt int
-sexpr2fexpr (SFloat float)   = FFloat float
-sexpr2fexpr (SString string) = FString string
-sexpr2fexpr (SChar char)     = FChar char
-sexpr2fexpr (SBool bool)     = FBool bool
-sexpr2fexpr (SSymbol str)   = FKeyword str
-sexpr2fexpr (SCallable func)     = FCallable func
 
 -- Callable --
 data Callable = UserDefinedFunction' [String] Bool SExpr
