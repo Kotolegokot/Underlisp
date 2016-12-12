@@ -37,11 +37,11 @@ eval_sexpr context sexpr                = return (sexpr, context)
 
 handle_args :: [String] -> Bool -> [SExpr] -> Context
 handle_args arg_names False args
-  | length arg_names < length args = error "too little arguments"
-  | length arg_names > length args = error "too many arguements"
+  | length arg_names > length args = error "too little arguments"
+  | length arg_names < length args = error "too many arguements"
   | otherwise                    = foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args)
 handle_args arg_names True args
-  | length arg_names < length args = error "too little arguments"
+  | length arg_names > length args = error "too little arguments"
   | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
                                       in let args' = left ++ [SList right]
                                           in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
