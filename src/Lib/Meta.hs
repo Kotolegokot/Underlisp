@@ -1,4 +1,5 @@
 module Lib.Meta (spop_macro,
+                 spop_macro_expand,
                  spop_defmacro,
                  spop_quote,
                  spop_backquote,
@@ -17,6 +18,28 @@ spop_macro eval context (lambda_list:body) = return (SCallable macro, context)
         macro = Macro arg_names rest (SList $ SSymbol "seq" : body)
 spop_macro _   _       _                   = error "macro: at least one argument required"
 
+-- special operator macro-expand
+spop_macro_expand :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_macro_expand eval context (name:args) = do
+  (expr, _) <- eval context name
+  case expr of
+    SCallable (Macro arg_name rest sexpr) -> do
+        let f_context = handle_args arg_name rest args
+        (expr, _) <- eval (f_context `Map.union` context) sexpr
+        return (expr, context)
+    _                                     -> error "macro-expand: macro expected"
+
+handle_args :: [String] -> Bool -> [SExpr] -> Context
+handle_args arg_names False args
+  | length arg_names > length args = error "too little arguments"
+  | length arg_names < length args = error "too many arguements"
+  | otherwise                    = foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args)
+handle_args arg_names True args
+  | length arg_names > length args = error "too little arguments"
+  | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
+                                      in let args' = left ++ [SList right]
+                                          in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
+
 -- special operator defmacro
 -- (must be reimplemented as a macro later)
 spop_defmacro :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
@@ -34,6 +57,7 @@ spop_backquote eval context [SList (SSymbol "interpolate" : rest)]
   | length rest /= 1 = error "interpolate: just one argument required"
   | otherwise        = do
       (expr, _) <- eval context $ head rest
+      putStrLn $ show_sexpr expr
       return (expr, context)
 spop_backquote eval context [SList list] = do
     pairs <- mapM' (spop_backquote eval context . return) list
