@@ -26,28 +26,23 @@ spop_let _    _       _               = error "list of bindings expected"
 -- special operator lambda
 spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_lambda eval context (first:body) = return (SCallable func, context)
-    where (args, args_list) = handle_lambda_list first
-          func = UserDefinedFunction args (FList $ FKeyword "seq" : fmap handle_sexpr body)
-          handle_sexpr (SList list)   = FList . fmap handle_sexpr $ list
-          handle_sexpr (SSymbol str) = case elemIndex str args_list of
-                                                Just index -> FRef index
-                                                Nothing    -> FKeyword str
-          handle_sexpr sexpr                = sexpr2fexpr sexpr
-spop_lambda _    _       _     = error "'define' requires at least one argument"
+  where (arg_names, rest) = handle_lambda_list first
+        func = UserDefinedFunction' arg_names rest (SList $ SSymbol "seq" : body)
+spop_lambda _    _       _            = error "lambda: at least one argument required"
 
-handle_lambda_list :: SExpr -> (Args, [String])
+handle_lambda_list :: SExpr -> ([String], Bool)
 handle_lambda_list (SList lambda_list)
   | not $ all is_symbol lambda_list = error "every item in lambda list must be a keyword"
-  | length ixs > 1                  = error "more than one &rest in lambda list"
+  | length ixs > 1                  = error "more than one &rest in lambda list is forbidden"
   | rest && ix /= count - 2         = error "&rest must be last but one"
   | otherwise                       = if rest
-                                         then (Args (count - 2) rest, delete "&rest" . fmap from_symbol $ lambda_list)
-                                         else (Args count rest, fmap from_symbol lambda_list)
-    where ixs   = elemIndices (SSymbol "&rest") lambda_list
-          ix    = head ixs
-          rest  = length ixs == 1
-          count = length lambda_list
-handle_lambda_list _ = error "lambda list must be a list"
+                                         then (delete "&rest" . map from_symbol $ lambda_list, rest)
+                                         else (map from_symbol $ lambda_list, rest)
+  where ixs   = elemIndices (SSymbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+handle_lambda_list' _ = error "lambda list must be a list"
 
 -- special operator defvar
 spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
