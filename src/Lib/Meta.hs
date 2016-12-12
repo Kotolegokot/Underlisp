@@ -66,10 +66,9 @@ spop_backquote eval context [SList list] = do
               mapM' f (x:xs) = case x of
                                  SList [SSymbol "unfold", arg] -> do
                                      (expr, _) <- eval context arg
-                                     putStrLn $ show_sexpr expr
                                      case expr of
                                        SList list -> do
-                                         exprs <- mapM' f list
+                                         exprs <- mapM (\sexpr -> return (sexpr, context)) list
                                          rest <- mapM' f xs
                                          return $ exprs ++ rest
                                        _           -> error "unfold: list expected"
