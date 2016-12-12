@@ -4,7 +4,6 @@ module SExpr (Expr (..),
               Callable (..),
               Args (..),
               Context,
-              apply,
               str2atom,
               sexpr2fexpr,
               show_sexpr, show_type) where
@@ -160,8 +159,7 @@ sexpr2fexpr (SSymbol str)   = FKeyword str
 sexpr2fexpr (SCallable func)     = FCallable func
 
 -- Callable --
-data Callable = UserDefinedFunction Args FExpr
-              | UserDefinedFunction' [String] Bool SExpr
+data Callable = UserDefinedFunction' [String] Bool SExpr
               | BuiltInFunction String ([SExpr] -> IO SExpr)
               | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
@@ -169,8 +167,6 @@ data Args = Args { count :: Int, rest :: Bool }
   deriving (Eq, Show)
 
 instance Eq Callable where
-    (==) (UserDefinedFunction args1 fexpr1)
-         (UserDefinedFunction args2 fexpr2)        = (args1 == args2) && (fexpr1 == fexpr2)
     (==) (UserDefinedFunction' args1 rest1 sexpr1)
          (UserDefinedFunction' args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
     (==) (BuiltInFunction name1 _)
@@ -180,31 +176,8 @@ instance Eq Callable where
     (==) _                 _                       = False
 
 instance Show Callable where
-    show (UserDefinedFunction (Args count rest) fexpr) = "User-defined function ("
-                                                      ++ show count ++ "parameters, rest is "
-                                                      ++ if rest then "on" else "off"
-                                                      ++ ", f-expression: " ++ show fexpr
-
     show (UserDefinedFunction' args rest sexpr)        = "User-defined function (args: "
-                                                      ++ show args ++ ", rest: " ++ show rest
+                                                      ++ show args ++ ", &rest: " ++ if rest then "on" else "off"
                                                       ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
     show (BuiltInFunction name _)                      = "Built-in function '" ++ name ++ "'"
     show (SpecialOperator name _)                      = "Special operator '" ++ name ++ "'"
-
-apply :: Callable -> [SExpr] -> SExpr
-apply (UserDefinedFunction (Args args_count rest) fexpr) args
-  | not rest && length args > args_count = error "too many arguments"
-  | length args < args_count             = error "too little arguments"
-  | otherwise                            = fexpr2sexpr fexpr
-    where args' = take args_count args ++ [SList (SSymbol "list" : drop args_count args)]
-          fexpr2sexpr (FList flist)    = SList $ fmap fexpr2sexpr flist
-          fexpr2sexpr (FInt int)       = SInt int
-          fexpr2sexpr (FFloat float)   = SFloat float
-          fexpr2sexpr (FString string) = SString string
-          fexpr2sexpr (FChar char)     = SChar char
-          fexpr2sexpr (FBool bool)     = SBool bool
-          fexpr2sexpr (FKeyword kword) = SSymbol kword
-          fexpr2sexpr (FCallable func)     = SCallable func
-          fexpr2sexpr (FRef index)     = args' !! index
-apply (BuiltInFunction _ _) _ = error "can't apply a built-in function"
-apply (SpecialOperator _ _) _ = error "can't apply a special operator"
