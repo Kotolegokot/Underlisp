@@ -72,7 +72,7 @@ show_type (SFloat _)   = "Float"
 show_type (SString _)  = "String"
 show_type (SChar _)    = "Char"
 show_type (SBool _)    = "Bool"
-show_type (SSymbol _) = "Keyword"
+show_type (SSymbol _)  = "Symbol"
 
 instance Expr SExpr where
     is_list (SList _) = True
