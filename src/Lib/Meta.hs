@@ -57,7 +57,6 @@ spop_backquote eval context [SList (SSymbol "interpolate" : rest)]
   | length rest /= 1 = error "interpolate: just one argument required"
   | otherwise        = do
       (expr, _) <- eval context $ head rest
-      putStrLn $ show_sexpr expr
       return (expr, context)
 spop_backquote eval context [SList list] = do
     pairs <- mapM' (spop_backquote eval context . return) list
@@ -67,11 +66,12 @@ spop_backquote eval context [SList list] = do
               mapM' f (x:xs) = case x of
                                  SList [SSymbol "unfold", arg] -> do
                                      (expr, _) <- eval context arg
+                                     putStrLn $ show_sexpr expr
                                      case expr of
                                        SList list -> do
                                          exprs <- mapM' f list
                                          rest <- mapM' f xs
-                                         return $ exprs
+                                         return $ exprs ++ rest
                                        _           -> error "unfold: list expected"
                                  SList (SSymbol "unfold":_)           -> error "unfold: just one argument required"
                                  other                                -> do
