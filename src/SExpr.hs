@@ -144,6 +144,7 @@ str2atom atom
 
 -- Callable --
 data Callable = UserDefinedFunction [String] Bool SExpr
+              | Macro [String] Bool SExpr
               | BuiltInFunction String ([SExpr] -> IO SExpr)
               | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
@@ -153,15 +154,21 @@ data Args = Args { count :: Int, rest :: Bool }
 instance Eq Callable where
     (==) (UserDefinedFunction args1 rest1 sexpr1)
          (UserDefinedFunction args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
+    (==) (Macro args1 rest1 sexpr1)
+         (Macro args2 rest2 sexpr2)               = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
     (==) (BuiltInFunction name1 _)
-         (BuiltInFunction name2 _)                 = name1 == name2
+         (BuiltInFunction name2 _)                = name1 == name2
     (==) (SpecialOperator name1 _)
-         (SpecialOperator name2 _)                 = name1 == name2
-    (==) _                 _                       = False
+         (SpecialOperator name2 _)                = name1 == name2
+    (==) _                 _                      = False
 
 instance Show Callable where
     show (UserDefinedFunction args rest sexpr)        = "User-defined function (args: "
                                                      ++ show args ++ ", &rest: " ++ if rest then "on" else "off"
+                                                     ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
+
+    show (Macro args rest sexpr)                      = "Macro (args: " ++ show args
+                                                     ++ ", &rest: " ++ if rest then "on" else "off"
                                                      ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
     show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
     show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
