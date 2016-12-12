@@ -1,4 +1,4 @@
-macro
+is_keyword -> is_symbol
 defmacro
 packages (modules, libs?)
 synactic sugar:

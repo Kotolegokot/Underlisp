@@ -1,4 +1,5 @@
-module Expr (SExpr (..),
+module Expr (Expr (..),
+             SExpr (..),
              FExpr (..),
              Callable (..),
              Args (..),
@@ -6,16 +7,7 @@ module Expr (SExpr (..),
              apply,
              str2atom,
              sexpr2fexpr,
-             show_sexpr, show_type,
-             is_list, from_list, empty_list,
-             is_int, from_int,
-             is_float, from_float,
-             is_number, from_number,
-             is_string, from_string,
-             is_char, from_char,
-             is_bool, from_bool,
-             is_keyword, from_keyword,
-             is_func, from_func) where
+             show_sexpr, show_type) where
 
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -37,6 +29,27 @@ instance Ord SExpr where
     compare (SSymbol a) (SSymbol b) = compare a b
     compare (SCallable a)    (SCallable b)    = error "can't compare two functions"
     compare _ _ = error "can't compare s-expressions of different types"
+
+class Expr a where
+    is_list       :: a -> Bool
+    from_list     :: a -> [a]
+    is_int        :: a -> Bool
+    from_int      :: a -> Int
+    is_float      :: a -> Bool
+    from_float    :: a -> Float
+    is_number     :: a -> Bool
+    from_number   :: a -> Float
+    is_string     :: a -> Bool
+    from_string   :: a -> String
+    is_char       :: a -> Bool
+    from_char     :: a -> Char
+    is_bool       :: a -> Bool
+    from_bool     :: a -> Bool
+    is_symbol     :: a -> Bool
+    from_symbol   :: a -> String
+    is_callable   :: a -> Bool
+    from_callable :: a -> Callable
+    empty_list    :: a
 
 show_sexpr :: SExpr -> String
 show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
@@ -60,80 +73,62 @@ show_type (SChar _)    = "Char"
 show_type (SBool _)    = "Bool"
 show_type (SSymbol _) = "Keyword"
 
-is_list :: SExpr -> Bool
-is_list (SList _) = True
-is_list _         = False
+instance Expr SExpr where
+    is_list (SList _) = True
+    is_list _         = False
 
-from_list :: SExpr -> [SExpr]
-from_list (SList list) = list
-from_list _            = error "list expected"
+    from_list (SList list) = list
+    from_list _            = error "list expected"
 
-empty_list :: SExpr
-empty_list = SList []
+    empty_list = SList []
 
-is_int :: SExpr -> Bool
-is_int (SInt _) = True
-is_int _        = False
+    is_int (SInt _) = True
+    is_int _        = False
 
-from_int :: SExpr -> Int
-from_int (SInt int) = int
-from_int _          = error "int expected"
+    from_int (SInt int) = int
+    from_int _          = error "int expected"
 
-is_float :: SExpr -> Bool
-is_float (SFloat _) = True
-is_float _          = False
+    is_float (SFloat _) = True
+    is_float _          = False
 
-from_float :: SExpr -> Float
-from_float (SFloat float) = float
-from_float _              = error "float expected"
+    from_float (SFloat float) = float
+    from_float _              = error "float expected"
 
-is_number :: SExpr -> Bool
-is_number sexpr = is_int sexpr || is_float sexpr
+    is_number sexpr = is_int sexpr || is_float sexpr
 
-from_number :: SExpr -> Float
-from_number (SFloat float) = float
-from_number (SInt int)     = fromIntegral int
-from_number _              = error "int or float expected"
+    from_number (SFloat float) = float
+    from_number (SInt int)     = fromIntegral int
+    from_number _              = error "int or float expected"
 
-is_string :: SExpr -> Bool
-is_string (SString _) = True
-is_string _           = False
+    is_string (SString _) = True
+    is_string _           = False
 
-from_string :: SExpr -> String
-from_string (SString string) = string
-from_string _                = error "string expected"
+    from_string (SString string) = string
+    from_string _                = error "string expected"
 
-is_char :: SExpr -> Bool
-is_char (SChar _) = True
-is_char _         = False
+    is_char (SChar _) = True
+    is_char _         = False
 
-from_char :: SExpr -> Char
-from_char (SChar char) = char
-from_char _            = error "char expected"
+    from_char (SChar char) = char
+    from_char _            = error "char expected"
 
-is_bool :: SExpr -> Bool
-is_bool (SBool _) = True
-is_bool _         = False
+    is_bool (SBool _) = True
+    is_bool _         = False
 
-from_bool :: SExpr -> Bool
-from_bool (SBool bool) = bool
-from_bool _            = error "bool expected"
+    from_bool (SBool bool) = bool
+    from_bool _            = error "bool expected"
 
-is_keyword :: SExpr -> Bool
-is_keyword (SSymbol _) = True
-is_keyword _            = False
+    is_symbol (SSymbol _) = True
+    is_symbol _           = False
 
-from_keyword :: SExpr -> String
-from_keyword (SSymbol keyword) = keyword
-from_keyword _                  = error "keyword expected"
+    from_symbol (SSymbol keyword) = keyword
+    from_symbol _                  = error "keyword expected"
 
-is_func :: SExpr -> Bool
-is_func (SCallable _) = True
-is_func _         = False
+    is_callable (SCallable _) = True
+    is_callable _         = False
 
-from_func :: SExpr -> Callable
-from_func (SCallable f) = f
-from_func _         = error "function expected"
+    from_callable (SCallable f) = f
+    from_callable _         = error "function expected"
 
 str2atom :: String -> SExpr
 str2atom atom

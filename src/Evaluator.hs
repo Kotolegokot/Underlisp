@@ -7,7 +7,7 @@ import Expr
 import Lib.Everything
 
 evaluate :: SExpr -> IO ()
-evaluate (SList (SSymbol "program":body)) = void $ eval_list eval_sexpr start_context body
+evaluate (SList (SSymbol "program":body))  = void $ eval_list eval_sexpr start_context body
 evaluate (SList _)                         = error "program must start with calling 'program'"
 evaluate _                                 = error "program must be a list"
 

@@ -37,25 +37,25 @@ spop_lambda _    _       _     = error "'define' requires at least one argument"
 
 handle_lambda_list :: SExpr -> (Args, [String])
 handle_lambda_list (SList lambda_list)
-  | not $ all is_keyword lambda_list = error "every item in lambda list must be a keyword"
-  | length ixs > 1                   = error "more than one &rest in lambda list"
-  | rest && ix /= count - 2          = error "&rest must be last but one"
-  | otherwise                        = if rest
-                                          then (Args (count - 2) rest, delete "&rest" . fmap from_keyword $ lambda_list)
-                                          else (Args count rest, fmap from_keyword lambda_list)
+  | not $ all is_symbol lambda_list = error "every item in lambda list must be a keyword"
+  | length ixs > 1                  = error "more than one &rest in lambda list"
+  | rest && ix /= count - 2         = error "&rest must be last but one"
+  | otherwise                       = if rest
+                                         then (Args (count - 2) rest, delete "&rest" . fmap from_symbol $ lambda_list)
+                                         else (Args count rest, fmap from_symbol lambda_list)
     where ixs   = elemIndices (SSymbol "&rest") lambda_list
           ix    = head ixs
           rest  = length ixs == 1
           count = length lambda_list
-handle_lambda_list _                 = error "lambda list must be a list"
+handle_lambda_list _ = error "lambda list must be a list"
 
 -- special operator defvar
 spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_defvar eval context [var, value]
-  | not $ is_keyword var = error "first argument of 'defvar' must be a keyword"
-  | otherwise            = do
+  | not $ is_symbol var = error "first argument of 'defvar' must be a keyword"
+  | otherwise           = do
       (expr, _) <- eval context value
-      return (expr, Map.insert (from_keyword var) expr context)
+      return (expr, Map.insert (from_symbol var) expr context)
 spop_defvar _    _       _ = error "'defvar' requires two arguments"
 
 -- special operator define
