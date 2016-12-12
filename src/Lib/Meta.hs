@@ -1,5 +1,7 @@
 module Lib.Meta (spop_quote,
+                 spop_backquote,
                  spop_interprete,
+                 spop_interpolate,
                  spop_eval) where
 
 import qualified Reader
@@ -9,6 +11,21 @@ import Lib.Internal
 spop_quote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_quote eval context [arg] = return (arg, context)
 spop_quote _    _       _     = error "'quote' requires just one argument"
+
+spop_backquote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_backquote eval context [list@(SList (SSymbol "interpolate" : i_rest))] = do
+    (expr, _) <- eval context list
+    return (expr, context)
+spop_backquote eval context [(SList list)] = do
+    pairs <- mapM (spop_backquote eval context . return) list
+    return (SList (map fst pairs), context)
+spop_backquote eval context [arg] = return (arg, context)
+spop_backquote eval context _     = error "backquote: just one argument required"
+
+spop_interpolate :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_interpolate eval context [arg] = do
+    (expr, _) <- eval context arg
+    return (expr, context)
 
 spop_interprete :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_interprete eval context [arg] = do
