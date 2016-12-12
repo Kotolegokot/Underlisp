@@ -4,7 +4,6 @@ import Prelude hiding (read)
 import SExpr
 import Lexer
 import Parser
-import MacroExpander
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression

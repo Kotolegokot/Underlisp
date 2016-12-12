@@ -12,23 +12,24 @@ module SExpr (Expr (..),
 import Data.Maybe
 import Text.Read (readMaybe)
 import qualified Data.Map as Map
+import Data.Map (Map)
 
-type Context = Map.Map String SExpr
+type Context = Map String SExpr
 
 -- SExpr --
 data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SCallable Callable
   deriving (Eq, Show)
 
 instance Ord SExpr where
-    compare (SList a)    (SList b)    = compare a b
-    compare (SInt a)     (SInt b)     = compare a b
-    compare (SFloat a)   (SFloat b)   = compare a b
-    compare (SString a)  (SString b)  = compare a b
-    compare (SChar a)    (SChar b)    = compare a b
-    compare (SBool a)    (SBool b)    = compare a b
-    compare (SSymbol a) (SSymbol b) = compare a b
+    compare (SList a)        (SList b)        = compare a b
+    compare (SInt a)         (SInt b)         = compare a b
+    compare (SFloat a)       (SFloat b)       = compare a b
+    compare (SString a)      (SString b)      = compare a b
+    compare (SChar a)        (SChar b)        = compare a b
+    compare (SBool a)        (SBool b)        = compare a b
+    compare (SSymbol a)      (SSymbol b)      = compare a b
     compare (SCallable a)    (SCallable b)    = error "can't compare two functions"
-    compare _ _ = error "can't compare s-expressions of different types"
+    compare _                 _               = error "can't compare s-expressions of different types"
 
 class Expr a where
     is_list       :: a -> Bool
@@ -160,6 +161,7 @@ sexpr2fexpr (SCallable func)     = FCallable func
 
 -- Callable --
 data Callable = UserDefinedFunction Args FExpr
+              | UserDefinedFunction' [String] Bool SExpr
               | BuiltInFunction String ([SExpr] -> IO SExpr)
               | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
@@ -168,20 +170,26 @@ data Args = Args { count :: Int, rest :: Bool }
 
 instance Eq Callable where
     (==) (UserDefinedFunction args1 fexpr1)
-         (UserDefinedFunction args2 fexpr2) = (args1 == args2) && (fexpr1 == fexpr2)
+         (UserDefinedFunction args2 fexpr2)        = (args1 == args2) && (fexpr1 == fexpr2)
+    (==) (UserDefinedFunction' args1 rest1 sexpr1)
+         (UserDefinedFunction' args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
     (==) (BuiltInFunction name1 _)
-         (BuiltInFunction name2 _)          = name1 == name2
+         (BuiltInFunction name2 _)                 = name1 == name2
     (==) (SpecialOperator name1 _)
-         (SpecialOperator name2 _)          = name1 == name2
-    (==) _                 _                = False
+         (SpecialOperator name2 _)                 = name1 == name2
+    (==) _                 _                       = False
 
 instance Show Callable where
     show (UserDefinedFunction (Args count rest) fexpr) = "User-defined function ("
                                                       ++ show count ++ "parameters, rest is "
                                                       ++ if rest then "on" else "off"
                                                       ++ ", f-expression: " ++ show fexpr
-    show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
-    show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
+
+    show (UserDefinedFunction' args rest sexpr)        = "User-defined function (args: "
+                                                      ++ show args ++ ", rest: " ++ show rest
+                                                      ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
+    show (BuiltInFunction name _)                      = "Built-in function '" ++ name ++ "'"
+    show (SpecialOperator name _)                      = "Special operator '" ++ name ++ "'"
 
 apply :: Callable -> [SExpr] -> SExpr
 apply (UserDefinedFunction (Args args_count rest) fexpr) args
