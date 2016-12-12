@@ -15,7 +15,7 @@ eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
     (expr, _) <- eval_sexpr context first
     case expr of
-      SCallable (UserDefinedFunction' arg_names rest sexpr) -> do
+      SCallable (UserDefinedFunction arg_names rest sexpr) -> do
           pairs <- mapM (eval_sexpr context) args
           let f_context = handle_args arg_names rest (fmap fst pairs)
           eval_sexpr (f_context `Map.union` context) sexpr

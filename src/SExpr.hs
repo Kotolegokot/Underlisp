@@ -143,7 +143,7 @@ str2atom atom
         try_bool   = readMaybe atom :: Maybe Bool
 
 -- Callable --
-data Callable = UserDefinedFunction' [String] Bool SExpr
+data Callable = UserDefinedFunction [String] Bool SExpr
               | BuiltInFunction String ([SExpr] -> IO SExpr)
               | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
 
@@ -151,8 +151,8 @@ data Args = Args { count :: Int, rest :: Bool }
   deriving (Eq, Show)
 
 instance Eq Callable where
-    (==) (UserDefinedFunction' args1 rest1 sexpr1)
-         (UserDefinedFunction' args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
+    (==) (UserDefinedFunction args1 rest1 sexpr1)
+         (UserDefinedFunction args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
     (==) (BuiltInFunction name1 _)
          (BuiltInFunction name2 _)                 = name1 == name2
     (==) (SpecialOperator name1 _)
@@ -160,8 +160,8 @@ instance Eq Callable where
     (==) _                 _                       = False
 
 instance Show Callable where
-    show (UserDefinedFunction' args rest sexpr)        = "User-defined function (args: "
-                                                      ++ show args ++ ", &rest: " ++ if rest then "on" else "off"
-                                                      ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
-    show (BuiltInFunction name _)                      = "Built-in function '" ++ name ++ "'"
-    show (SpecialOperator name _)                      = "Special operator '" ++ name ++ "'"
+    show (UserDefinedFunction args rest sexpr)        = "User-defined function (args: "
+                                                     ++ show args ++ ", &rest: " ++ if rest then "on" else "off"
+                                                     ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
+    show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
+    show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
