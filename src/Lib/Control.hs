@@ -1,5 +1,4 @@
 module Lib.Control (spop_if,
-                    spop_unless,
                     spop_seq) where
 
 import SExpr
@@ -14,12 +13,6 @@ spop_if eval context [cond_sexpr, true_sexpr, false_sexpr] = do
        then eval context true_sexpr
        else eval context false_sexpr
 spop_if _    _       _                                     = error "'if' requires 1 to 3 arguments"
-
-spop_unless :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_unless eval context [cond_sexpr]                          = spop_if eval context [cond_sexpr]
-spop_unless eval context [cond_sexpr, false_sexpr]             = spop_if eval context [cond_sexpr, empty_list, false_sexpr]
-spop_unless eval context [cond_sexpr, false_sexpr, true_sexpr] = spop_if eval context [cond_sexpr, true_sexpr, false_sexpr]
-spop_unless _    _       _                                     = error "'unless' requires 1 to 3 arguments"
 
 spop_seq :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_seq eval context args = do
