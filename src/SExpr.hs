@@ -31,7 +31,7 @@ instance Ord SExpr where
     compare (SCallable a)    (SCallable b)    = error "can't compare two functions"
     compare _                 _               = error "can't compare s-expressions of different types"
 
-class Expr a where
+class (Eq a, Show a, Ord a) => Expr a where
     is_list       :: a -> Bool
     from_list     :: a -> [a]
     is_int        :: a -> Bool
@@ -53,17 +53,17 @@ class Expr a where
     empty_list    :: a
 
 show_sexpr :: SExpr -> String
-show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
+show_sexpr (SList list)     = "(" ++ show_list list ++ ")"
     where show_list [x]    = show_sexpr x
           show_list (x:xs) = show_sexpr x ++ " " ++ show_list xs
           show_list []     = ""
-show_sexpr (SInt int)         = show int
-show_sexpr (SFloat float)     = show float
-show_sexpr (SString string)   = string
-show_sexpr (SChar char)       = [char]
-show_sexpr (SBool bool)       = show bool
-show_sexpr (SSymbol keyword) = keyword
-show_sexpr (SCallable func)       = show func
+show_sexpr (SInt int)       = show int
+show_sexpr (SFloat float)   = show float
+show_sexpr (SString string) = string
+show_sexpr (SChar char)     = [char]
+show_sexpr (SBool bool)     = show bool
+show_sexpr (SSymbol symbol) = symbol
+show_sexpr (SCallable func) = show func
 
 show_type :: SExpr -> String
 show_type (SList _)    = "List"
