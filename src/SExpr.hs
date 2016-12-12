@@ -164,11 +164,11 @@ instance Eq Callable where
 
 instance Show Callable where
     show (UserDefinedFunction args rest sexpr)        = "User-defined function (args: "
-                                                     ++ show args ++ ", &rest: " ++ if rest then "on" else "off"
+                                                     ++ show args ++ ", &rest: " ++ (if rest then "on" else "off")
                                                      ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
 
     show (Macro args rest sexpr)                      = "Macro (args: " ++ show args
-                                                     ++ ", &rest: " ++ if rest then "on" else "off"
+                                                     ++ ", &rest: " ++ (if rest then "on" else "off")
                                                      ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
     show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
     show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
