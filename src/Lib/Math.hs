@@ -4,7 +4,7 @@ module Lib.Math (builtin_sum,
                  builtin_divide,
                  builtin_float) where
             
-import Expr
+import SExpr
 import Lib.Internal
 
 builtin_sum :: [SExpr] -> IO SExpr

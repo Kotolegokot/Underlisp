@@ -5,7 +5,7 @@ module Lib.Ord (builtin_eq,
                 builtin_le,
                 builtin_ge) where
 
-import Expr
+import SExpr
 import Lib.Internal
 
 builtin_eq :: [SExpr] -> IO SExpr

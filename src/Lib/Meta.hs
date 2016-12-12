@@ -3,7 +3,7 @@ module Lib.Meta (spop_quote,
                  spop_eval) where
 
 import qualified Reader
-import Expr
+import SExpr
 import Lib.Internal
 
 spop_quote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

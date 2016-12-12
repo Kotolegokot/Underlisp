@@ -2,7 +2,7 @@ module Lib.Control (spop_if,
                     spop_unless,
                     spop_seq) where
 
-import Expr
+import SExpr
 import Lib.Internal
 
 spop_if :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

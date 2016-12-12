@@ -1,6 +1,6 @@
 module Parser (parse) where
 
-import Expr
+import SExpr
 import Lexer
 
 -- | takes a list of lexemes and generates a complete s-expression

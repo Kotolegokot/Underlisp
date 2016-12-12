@@ -7,7 +7,7 @@ module Lib.List (builtin_list,
                  builtin_append,
                  builtin_nth) where
 
-import Expr
+import SExpr
 import Lib.Internal
 
 builtin_list :: [SExpr] -> IO SExpr

@@ -1,7 +1,7 @@
 module Lexer (Lexeme (..), tokenize) where
 
 import Data.Char (isSpace)
-import Expr
+import SExpr
 
 -- | a lexeme is either a paren or a single atom
 data Lexeme = LeftParen | RightParen | Atom SExpr

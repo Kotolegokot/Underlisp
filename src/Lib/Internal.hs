@@ -2,7 +2,7 @@ module Lib.Internal (Eval,
                      eval_list) where
 
 import Control.Monad (foldM)
-import Expr
+import SExpr
 
 type Eval = Context -> SExpr -> IO (SExpr, Context)
 

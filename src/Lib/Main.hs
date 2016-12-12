@@ -6,7 +6,7 @@ module Lib.Main (spop_let,
 
 import qualified Data.Map as Map
 import Data.List (elemIndex, elemIndices, delete)
-import Expr
+import SExpr
 import Lib.Internal
 
 -- special operator let

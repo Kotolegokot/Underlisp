@@ -4,7 +4,7 @@ module Lib.String (builtin_concat,
                    builtin_str_length) where
 
 import Text.Read (readMaybe)
-import Expr
+import SExpr
 import Lib.Internal
 
 builtin_concat :: [SExpr] -> IO SExpr

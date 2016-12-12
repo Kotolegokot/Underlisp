@@ -1,9 +1,10 @@
 module Reader (read) where
 
 import Prelude hiding (read)
-import Expr
+import SExpr
 import Lexer
 import Parser
+import MacroExpander
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
