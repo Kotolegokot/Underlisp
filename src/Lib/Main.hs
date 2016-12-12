@@ -1,7 +1,6 @@
 module Lib.Main (spop_let,
                  spop_lambda,
                  spop_defvar,
-                 spop_define,
                  builtin_type) where
 
 import qualified Data.Map as Map
@@ -37,12 +36,6 @@ spop_defvar eval context [var, value]
       (expr, _) <- eval context value
       return (expr, Map.insert (from_symbol var) expr context)
 spop_defvar _    _       _ = error "'defvar' requires two arguments"
-
--- special operator define
--- (must be reimplemented as a macro later)
-spop_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
-spop_define _    _       _           = error "define: at least one argument required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr

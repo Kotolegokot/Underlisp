@@ -1,6 +1,5 @@
 module Lib.Meta (spop_macro,
                  spop_macro_expand,
-                 spop_defmacro,
                  spop_quote,
                  spop_backquote,
                  spop_interprete,
@@ -39,12 +38,6 @@ handle_args arg_names True args
   | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
                                       in let args' = left ++ [SList right]
                                           in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
-
--- special operator defmacro
--- (must be reimplemented as a macro later)
-spop_defmacro :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_defmacro eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "macro"] ++ rest)])
-spop_defmacro _    _       _           = error "defmacro: at least one argument required"
 
 -- special operator quote
 spop_quote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

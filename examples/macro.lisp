@@ -1,8 +1,8 @@
 (program
-  (defvar defmacro' (macro (name args &rest body)
+  (defvar defmacro (macro (name args &rest body)
     (backquote (defvar (interpolate name) (macro (interpolate args) (unfold body))))))
 
-  (defmacro' when (cond &rest body)
+  (defmacro when (cond &rest body)
                      (backquote (if (interpolate cond) (seq (unfold body)))))
 
   (print-ln (macro-expand defmacro' when (cond &rest body) (backquote (if (interpolate cond) (seq (unfold body))))))
@@ -10,7 +10,7 @@
   (print-ln when)
 
 
-  (defmacro' unless (cond &rest body)
+  (defmacro unless (cond &rest body)
              (backquote (when (not (interpolate cond)) (seq (unfold body)))))
 
   (when True (print-ln "MEOW") (print-ln "MEOW2"))

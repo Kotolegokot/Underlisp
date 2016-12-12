@@ -1,4 +1,10 @@
 (program
+  (defvar defmacro (macro (name args &rest body)
+    (backquote (defvar (interpolate name) (macro (interpolate args) (unfold body))))))
+
+  (defmacro define (name args &rest body)
+    (backquote (defvar (interpolate name) (lambda (interpolate args) (unfold body)))))
+
   (define outer-1 () (inner))
 
   (define outer-2 ()

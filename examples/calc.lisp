@@ -1,4 +1,10 @@
 (program
+  (defvar defmacro (macro (name args &rest body)
+    (backquote (defvar (interpolate name) (macro (interpolate args) (unfold body))))))
+
+  (defmacro define (name args &rest body)
+    (backquote (defvar (interpolate name) (lambda (interpolate args) (unfold body)))))
+
   (print-ln "Hi! I'm a stupid calculator. I can either multiply or add two numbers or calculate a factorial.")
   (print-ln "Please, type either '+' or '*', and then two numbers, or 'factorial' and then one number")
 
