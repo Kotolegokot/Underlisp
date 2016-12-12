@@ -42,6 +42,7 @@ spop_defvar _    _       _ = error "'defvar' requires two arguments"
 -- (must be reimplemented as a macro later)
 spop_define :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_define eval context (name:rest) = eval context (SList [SSymbol "defvar", name, SList ([SSymbol "lambda"] ++ rest)])
+spop_define _    _       _           = error "define: at least one argument required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr

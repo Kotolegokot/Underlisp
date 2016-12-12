@@ -55,6 +55,7 @@ start_context = Map.fromList $
     ("define",       spop_define),
     ("if",           spop_if),
     ("macro",        spop_macro),
+    ("defmacro",     spop_defmacro),
     ("quote",        spop_quote),
     ("backquote",    spop_backquote),
     ("interprete",   spop_interprete),
