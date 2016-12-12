@@ -53,7 +53,6 @@ start_context = Map.fromList $
     ("unless",       spop_unless),
     ("quote",        spop_quote),
     ("backquote",    spop_backquote),
-    ("interpolate",  spop_interpolate),
     ("interprete",   spop_interprete),
     ("eval",         spop_eval),
     ("and",          spop_and),
