@@ -10,8 +10,8 @@
   (print-ln when)
 
 
-  (defmacro unless (cond &rest body)
-                        (backquote (if (interpolate cond) (interpolate (list)) (seq (unfold body)))))
+  (defmacro' unless (cond &rest body)
+             (backquote (when (not (interpolate cond)) (seq (unfold body)))))
 
   (when True (print-ln "MEOW") (print-ln "MEOW2"))
   ; becomes (if True (seq (print-ln "MEOW") (print-ln "MEOW2")))
