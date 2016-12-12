@@ -5,7 +5,6 @@ module Lib.Main (spop_let,
                  builtin_type) where
 
 import qualified Data.Map as Map
-import Data.List (elemIndex, elemIndices, delete)
 import SExpr
 import Lib.Internal
 
@@ -25,23 +24,10 @@ spop_let _    _       _               = error "list of bindings expected"
 
 -- special operator lambda
 spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_lambda eval context (first:body) = return (SCallable func, context)
-  where (arg_names, rest) = handle_lambda_list first
+spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
+  where (arg_names, rest) = handle_lambda_list lambda_list
         func = UserDefinedFunction arg_names rest (SList $ SSymbol "seq" : body)
 spop_lambda _    _       _            = error "lambda: at least one argument required"
-
-handle_lambda_list :: SExpr -> ([String], Bool)
-handle_lambda_list (SList lambda_list)
-  | not $ all is_symbol lambda_list = error "every item in lambda list must be a keyword"
-  | length ixs > 1                  = error "more than one &rest in lambda list is forbidden"
-  | rest && ix /= count - 2         = error "&rest must be last but one"
-  | otherwise                       = if rest then (delete "&rest" . map from_symbol $ lambda_list, rest)
-                                              else (map from_symbol $ lambda_list, rest)
-  where ixs   = elemIndices (SSymbol "&rest") lambda_list
-        ix    = head ixs
-        rest  = length ixs == 1
-        count = length lambda_list
-handle_lambda_list' _ = error "lambda list must be a list"
 
 -- special operator defvar
 spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)

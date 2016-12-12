@@ -1,4 +1,5 @@
-module Lib.Meta (spop_quote,
+module Lib.Meta (spop_macro,
+                 spop_quote,
                  spop_backquote,
                  spop_interprete,
                  spop_eval) where
@@ -6,6 +7,12 @@ module Lib.Meta (spop_quote,
 import qualified Reader
 import SExpr
 import Lib.Internal
+
+spop_macro :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_macro eval context (lambda_list:body) = return (SCallable macro, context)
+  where (arg_names, rest) = handle_lambda_list lambda_list
+        macro = Macro arg_names rest (SList $ SSymbol "seq" : body)
+spop_macro _   _       _                   = error "macro: at least one argument required"
 
 spop_quote :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_quote eval context [arg] = return (arg, context)
