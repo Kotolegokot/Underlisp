@@ -12,23 +12,38 @@ evaluate (SList _)                         = error "program must start with call
 evaluate _                                 = error "program must be a list"
 
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
-eval_sexpr context (SList (first:body)) = do
+eval_sexpr context (SList (first:args)) = do
     (expr, _) <- eval_sexpr context first
     case expr of
       SCallable func@(UserDefinedFunction count_args fexpr) -> do
-          pairs <- mapM (eval_sexpr context) body
+          pairs <- mapM (eval_sexpr context) args
           eval_sexpr context (apply func (fmap fst pairs))
+      SCallable (UserDefinedFunction' arg_names rest sexpr) -> do
+          pairs <- mapM (eval_sexpr context) args
+          let f_context = handle_args arg_names rest (fmap fst pairs)
+          eval_sexpr (f_context `Map.union` context) sexpr
       SCallable (BuiltInFunction _ f)                       -> do
-          pairs <- mapM (eval_sexpr context) body
+          pairs <- mapM (eval_sexpr context) args
           result <- f (fmap fst pairs)
           return (result, context)
-      SCallable (SpecialOperator _ f)                       -> f eval_sexpr context body
+      SCallable (SpecialOperator _ f)                       -> f eval_sexpr context args
       _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SSymbol str) 
   | str `Map.member` context = return (context Map.! str, context)
   | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
 eval_sexpr context sexpr                = return (sexpr, context)
+
+handle_args :: [String] -> Bool -> [SExpr] -> Context
+handle_args arg_names False args
+  | length arg_names < length args = error "too little arguments"
+  | length arg_names > length args = error "too many arguements"
+  | otherwise                    = foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args)
+handle_args arg_names True args
+  | length arg_names < length args = error "too little arguments"
+  | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
+                                      in let args' = left ++ [SList right]
+                                          in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
 
 start_context :: Context
 start_context = Map.fromList $
