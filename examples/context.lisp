@@ -7,13 +7,13 @@
 
   ; the program itself
   (define f (x) (* x x))
-  (defvar +context (context (quote f)))
+  (defvar previous-context (current-context))
 
   (define f (x) (+ x x))
   (print "f 12.45 = ")
   (print-ln (f 12.45))
 
-  (load-context +context)
+  (load-context previous-context)
   (print-ln "loading previous context...")
   (print "f 12.45 = ")
   (print-ln (f 12.45))

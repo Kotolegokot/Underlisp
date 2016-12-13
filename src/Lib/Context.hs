@@ -1,5 +1,6 @@
 module Lib.Context (spop_context,
-                    spop_load_context) where
+                    spop_load_context,
+                    spop_current_context) where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -27,3 +28,8 @@ spop_load_context eval context [arg] = do
   return $ case sexpr of
              SContext add_context -> (sexpr, add_context `Map.union` context)
              _                    -> error "load-context: context expected"
+spop_load_context eval context []    = error "load-context: just one argument required"
+
+spop_current_context :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_current_context _ context [] = return (SContext context, context)
+spop_current_context _ _       _  = error "current-context: no arguments required"
