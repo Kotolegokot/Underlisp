@@ -1,9 +1,11 @@
 module Lib.Context (spop_context,
                     spop_load_context,
-                    spop_current_context) where
+                    spop_current_context,
+                    spop_context_from_file) where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
+import qualified Reader
 import Lib.Internal
 import SExpr
 
@@ -33,3 +35,14 @@ spop_load_context eval context []    = error "load-context: just one argument re
 spop_current_context :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_current_context _ context [] = return (SContext context, context)
 spop_current_context _ _       _  = error "current-context: no arguments required"
+
+spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_context_from_file eval context [args] = do
+  (sexpr, _) <- eval context args
+  case sexpr of
+    SString filename -> do
+      text <- readFile filename
+      (_, new_context) <- eval context $ Reader.read text
+      return (SContext new_context, context)
+    _                -> error "context-from-file: string expected"
+spop_context_from_file _    _       _      = error "context-from-file: just one argument required"

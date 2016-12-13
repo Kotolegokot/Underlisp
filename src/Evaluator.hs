@@ -2,7 +2,7 @@ module Evaluator (evaluate) where
 
 import qualified Data.Map as Map
 import qualified Reader
-import Control.Monad (void)
+import Control.Monad (void, foldM)
 import SExpr
 import Lib.Everything
 
@@ -49,23 +49,25 @@ handle_args arg_names True args
 start_context :: Context
 start_context = Map.fromList $
   (fmap (\(name, f) -> (name, SCallable $ SpecialOperator name f)) [
-    ("let",             spop_let),
-    ("lambda",          spop_lambda),
-    ("defvar",          spop_defvar),
-    ("if",              spop_if),
-    ("macro",           spop_macro),
-    ("macro-expand",    spop_macro_expand),
-    ("quote",           spop_quote),
-    ("backquote",       spop_backquote),
-    ("interprete",      spop_interprete),
-    ("eval",            spop_eval),
-    ("and",             spop_and),
-    ("or",              spop_or),
-    ("->",              spop_impl),
-    ("context",         spop_context),
-    ("load-context",    spop_load_context),
-    ("current-context", spop_current_context),
-    ("seq",             spop_seq) ]) ++
+    ("let",               spop_let),
+    ("lambda",            spop_lambda),
+    ("defvar",            spop_defvar),
+    ("if",                spop_if),
+    ("macro",             spop_macro),
+    ("macro-expand",      spop_macro_expand),
+    ("quote",             spop_quote),
+    ("backquote",         spop_backquote),
+    ("interprete",        spop_interprete),
+    ("eval",              spop_eval),
+    ("and",               spop_and),
+    ("or",                spop_or),
+    ("->",                spop_impl),
+    ("context",           spop_context),
+    ("load-context",      spop_load_context),
+    ("current-context",   spop_current_context),
+    ("context-from-file", spop_context_from_file),
+    ("module",            spop_module),
+    ("seq",               spop_seq) ]) ++
   (fmap (\(name, f) -> (name, SCallable $ BuiltInFunction name f)) [
     ("type",         builtin_type),
     ("print",        builtin_print),
@@ -96,3 +98,6 @@ start_context = Map.fromList $
     ("str-to-int",   builtin_str_to_int),
     ("str-to-float", builtin_str_to_float),
     ("str-length",   builtin_str_length) ])
+
+spop_module :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_module eval context args = foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, start_context) args
