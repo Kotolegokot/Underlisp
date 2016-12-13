@@ -1,7 +1,9 @@
-is_keyword -> is_symbol
-defmacro
 packages (modules, libs?)
+pattern matching
+standard library
 synactic sugar:
   [...] for (bind ...)
   's-expr for (quote s-expr)
-  @(...) for (unfold (...))
+  `s-expr for (backquote s-expr)
+  ~s-expr for (interpolate s-expr)
+  @s-expr for (unfold s-expr)
