@@ -7,7 +7,9 @@ import SExpr
 import Lib.Everything
 
 evaluate :: SExpr -> IO ()
-evaluate (SList (SSymbol "program":body))  = void $ eval_list eval_sexpr start_context body
+evaluate (SList (SSymbol "program":body))  = do
+    prelude <- load_prelude
+    void $ eval_list eval_sexpr prelude body
 evaluate (SList _)                         = error "program must start with calling 'program'"
 evaluate _                                 = error "program must be a list"
 
@@ -45,6 +47,12 @@ handle_args arg_names True args
   | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
                                       in let args' = left ++ [SList right]
                                           in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
+
+load_prelude :: IO Context
+load_prelude = do
+  (SContext context, _) <- spop_context_from_file eval_sexpr start_context [SString "examples/prelude.lisp"]
+  return context
+
 
 start_context :: Context
 start_context = Map.fromList $
@@ -100,4 +108,4 @@ start_context = Map.fromList $
     ("str-length",   builtin_str_length) ])
 
 spop_module :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_module eval context args = foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, start_context) args
+spop_module eval _ args = foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, start_context) args

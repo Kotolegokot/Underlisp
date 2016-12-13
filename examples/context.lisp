@@ -1,7 +1,4 @@
 (program
-  (defvar macros (context-from-file "examples/util.lisp"))
-  (load-context macros)
-
   ; the program itself
   (define f (x) (* x x))
   (defvar previous-context (current-context))
