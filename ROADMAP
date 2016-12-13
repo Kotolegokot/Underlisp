@@ -1,10 +1,8 @@
-append -> ++
-packages (modules, libs?)
 pattern matching
 fractional
 long numbers
 standard library
-synactic sugar:
+syntactic sugar:
   [...] for (bind ...)
   's-expr for (quote s-expr)
   `s-expr for (backquote s-expr)
