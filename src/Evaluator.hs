@@ -62,6 +62,8 @@ start_context = Map.fromList $
     ("and",          spop_and),
     ("or",           spop_or),
     ("->",           spop_impl),
+    ("context",      spop_context),
+    ("load-context", spop_load_context),
     ("seq",          spop_seq) ]) ++
   (fmap (\(name, f) -> (name, SCallable $ BuiltInFunction name f)) [
     ("type",         builtin_type),

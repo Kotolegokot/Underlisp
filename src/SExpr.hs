@@ -14,7 +14,15 @@ import Data.Map (Map)
 type Context = Map String SExpr
 
 -- SExpr --
-data SExpr = SList [SExpr] | SInt Int | SFloat Float | SString String | SChar Char | SBool Bool | SSymbol String | SCallable Callable
+data SExpr = SList     [SExpr]
+           | SInt      Int
+           | SFloat    Float
+           | SString   String
+           | SChar     Char
+           | SBool     Bool
+           | SSymbol   String
+           | SCallable Callable
+           | SContext  Context
   deriving (Eq, Show)
 
 instance Ord SExpr where
@@ -50,17 +58,18 @@ class (Eq a, Show a, Ord a) => Expr a where
     empty_list    :: a
 
 show_sexpr :: SExpr -> String
-show_sexpr (SList list)     = "(" ++ show_list list ++ ")"
+show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
     where show_list [x]    = show_sexpr x
           show_list (x:xs) = show_sexpr x ++ " " ++ show_list xs
           show_list []     = ""
-show_sexpr (SInt int)       = show int
-show_sexpr (SFloat float)   = show float
-show_sexpr (SString string) = string
-show_sexpr (SChar char)     = [char]
-show_sexpr (SBool bool)     = show bool
-show_sexpr (SSymbol symbol) = symbol
-show_sexpr (SCallable func) = show func
+show_sexpr (SInt int)         = show int
+show_sexpr (SFloat float)     = show float
+show_sexpr (SString string)   = string
+show_sexpr (SChar char)       = [char]
+show_sexpr (SBool bool)       = show bool
+show_sexpr (SSymbol symbol)   = symbol
+show_sexpr (SCallable func)   = show func
+show_sexpr (SContext context) = "Context " ++ (show $ Map.toList context)
 
 show_type :: SExpr -> String
 show_type (SList _)    = "List"

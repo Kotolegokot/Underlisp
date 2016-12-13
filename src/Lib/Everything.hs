@@ -1,4 +1,5 @@
 module Lib.Everything (module Lib.Boolean,
+                       module Lib.Context,
                        module Lib.Control,
                        module Lib.Internal,
                        module Lib.IO,
@@ -10,6 +11,7 @@ module Lib.Everything (module Lib.Boolean,
                        module Lib.String) where
 
 import Lib.Boolean
+import Lib.Context
 import Lib.Control
 import Lib.Internal
 import Lib.IO
