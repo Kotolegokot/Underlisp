@@ -5,7 +5,7 @@ import System.Environment
 import Interpreter
 
 main :: IO ()
-main = getArgs >>= handle_args >>= interprete
+main = getArgs >>= handle_args >>= interprete_program
 
 handle_args :: [String] -> IO String
 handle_args []     = getLine

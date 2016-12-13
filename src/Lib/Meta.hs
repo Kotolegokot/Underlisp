@@ -78,7 +78,7 @@ spop_interprete :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_interprete eval context [arg] = do
     (expr, _) <- eval context arg
     case expr of
-      SString str -> eval context . Reader.read $ str
+      SString str -> eval_list eval context . Reader.read $ str
       _           -> error "interprete: string expected"
 spop_interprete _    _       _     = error "interprete: just one argument required"
 

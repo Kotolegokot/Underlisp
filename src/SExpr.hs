@@ -1,7 +1,6 @@
 module SExpr (Expr (..),
               SExpr (..),
               Callable (..),
-              Args (..),
               Context,
               str2atom,
               show_sexpr, show_type) where
@@ -151,14 +150,14 @@ str2atom atom
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
 
--- Callable --
-data Callable = UserDefinedFunction [String] Bool SExpr
-              | Macro [String] Bool SExpr
-              | BuiltInFunction String ([SExpr] -> IO SExpr)
-              | SpecialOperator String ((Context -> SExpr -> IO (SExpr, Context)) -> Context -> [SExpr] -> IO (SExpr, Context))
+type Eval = Context -> SExpr -> IO (SExpr, Context)
+type Rest = Bool
 
-data Args = Args { count :: Int, rest :: Bool }
-  deriving (Eq, Show)
+-- Callable --
+data Callable = UserDefinedFunction [String] Rest SExpr
+              | Macro [String] Rest SExpr
+              | BuiltInFunction String ([SExpr] -> IO SExpr)
+              | SpecialOperator String (Eval -> Context -> [SExpr] -> IO (SExpr, Context))
 
 instance Eq Callable where
     (==) (UserDefinedFunction args1 rest1 sexpr1)

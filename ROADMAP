@@ -1,5 +1,8 @@
+append -> ++
 packages (modules, libs?)
 pattern matching
+fractional
+long numbers
 standard library
 synactic sugar:
   [...] for (bind ...)

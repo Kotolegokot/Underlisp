@@ -1,4 +1,4 @@
-module Evaluator (evaluate) where
+module Evaluator (evaluate_program, evalute_module) where
 
 import qualified Data.Map as Map
 import qualified Reader
@@ -6,12 +6,16 @@ import Control.Monad (void, foldM)
 import SExpr
 import Lib.Everything
 
-evaluate :: SExpr -> IO ()
-evaluate (SList (SSymbol "program":body))  = do
-    prelude <- load_prelude
-    void $ eval_list eval_sexpr prelude body
-evaluate (SList _)                         = error "program must start with calling 'program'"
-evaluate _                                 = error "program must be a list"
+evaluate_program :: [SExpr] -> IO ()
+evaluate_program body = do
+  prelude <- load_prelude
+  void $ eval_list eval_sexpr prelude body
+
+evalute_module :: [SExpr] -> IO Context
+evalute_module body = do
+  prelude <- load_prelude
+  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (empty_list, prelude) body
+  return context
 
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
@@ -41,18 +45,18 @@ handle_args :: [String] -> Bool -> [SExpr] -> Context
 handle_args arg_names False args
   | length arg_names > length args = error "too little arguments"
   | length arg_names < length args = error "too many arguements"
-  | otherwise                    = foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args)
+  | otherwise                    = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
 handle_args arg_names True args
   | length arg_names > length args = error "too little arguments"
   | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
                                       in let args' = left ++ [SList right]
-                                          in foldr (\(name, value) context -> Map.insert name value context) Map.empty (zip arg_names args')
+                                          in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
 
 load_prelude :: IO Context
 load_prelude = do
-  (SContext context, _) <- spop_context_from_file eval_sexpr start_context [SString "examples/prelude.lisp"]
+  text <- readFile "examples/prelude.lisp"
+  (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read text
   return context
-
 
 start_context :: Context
 start_context = Map.fromList $
@@ -74,7 +78,6 @@ start_context = Map.fromList $
     ("load-context",      spop_load_context),
     ("current-context",   spop_current_context),
     ("context-from-file", spop_context_from_file),
-    ("module",            spop_module),
     ("seq",               spop_seq) ]) ++
   (fmap (\(name, f) -> (name, SCallable $ BuiltInFunction name f)) [
     ("type",         builtin_type),
@@ -107,5 +110,13 @@ start_context = Map.fromList $
     ("str-to-float", builtin_str_to_float),
     ("str-length",   builtin_str_length) ])
 
-spop_module :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_module eval _ args = foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, start_context) args
+spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_context_from_file eval context [args] = do
+  (sexpr, _) <- eval context args
+  case sexpr of
+    SString filename -> do
+      text <- readFile filename
+      new_context <- evalute_module $ Reader.read text
+      return (SContext new_context, context)
+    _                -> error "context-from-file: string expected"
+spop_context_from_file _    _       _      = error "context-from-file: just one argument required"

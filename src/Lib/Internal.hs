@@ -1,5 +1,6 @@
 module Lib.Internal (Eval,
                      eval_list,
+                     eval_list_with_context,
                      handle_lambda_list) where
 
 import Data.List (elemIndex, elemIndices, delete)
@@ -12,6 +13,9 @@ eval_list :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 eval_list eval context sexprs = do
     (expr, _) <- foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, context) sexprs
     return (expr, context)
+
+eval_list_with_context :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+eval_list_with_context eval context sexprs = foldM (\(_, prev_context) sexpr -> eval prev_context sexpr) (empty_list, context) sexprs
 
 handle_lambda_list :: SExpr -> ([String], Bool)
 handle_lambda_list (SList lambda_list)

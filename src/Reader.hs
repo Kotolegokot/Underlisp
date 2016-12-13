@@ -7,5 +7,5 @@ import Parser
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
-read :: String -> SExpr
+read :: String -> [SExpr]
 read = parse . tokenize
