@@ -1,14 +1,14 @@
 (defvar defmacro (macro (name args &rest body)
-  (backquote (defvar (interpolate name) (macro (interpolate args) (unfold body))))))
+  `(defvar ~name (macro ~args @body))))
 
 (defmacro when (cond &rest body)
-  (backquote (if (interpolate cond) (seq (unfold body)))))
+  `(if ~cond (seq @body)))
 
 (defmacro unless (cond &rest body)
-  (backquote (when (not (interpolate cond)) (unfold body))))
+  `(when (not ~cond) @body))
 
 (defmacro define (name args &rest body)
-  (backquote (defvar (interpolate name) (lambda (interpolate args) (unfold body)))))
+  `(defvar ~name (lambda ~args @body)))
 
 (defmacro load-module (filename)
-  (backquote (load-context (context-from-file (interpolate filename)))))
+  `(load-context (context-from-file ~filename)))

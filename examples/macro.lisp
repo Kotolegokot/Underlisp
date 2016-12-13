@@ -1,12 +1,4 @@
-(defvar defmacro (macro (name args &rest body)
-  (backquote (defvar (interpolate name) (macro (interpolate args) (unfold body))))))
-
-(defmacro when (cond &rest body)
-                   (backquote (if (interpolate cond) (seq (unfold body)))))
-
-`(if ,cond (seq ,@body))
-
-(print-ln (macro-expand defmacro when (cond &rest body) (backquote (if (interpolate cond) (seq (unfold body))))))
+(print-ln (macro-expand defmacro when (cond &rest body) `(if ~cond (seq @body))))
 ;(print-ln defmacro')
 ;(print-ln when)
 

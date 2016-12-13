@@ -4,7 +4,7 @@ import Data.Char (isSpace)
 import SExpr
 
 -- | a lexeme is either a paren or a single atom
-data Lexeme = LeftParen | RightParen | Atom SExpr | Quote | Backquote | Interpolate | Unfold
+data Lexeme = LeftParen | RightParen | Atom SExpr | Sugar String
     deriving (Eq, Show)
 
 data State = None | Comment | String | OtherAtom
@@ -15,10 +15,10 @@ tokenize sequence = helper [] None sequence
     where helper lexemes None xs@(x:rest)
             | x == '('  = helper (LeftParen : lexemes) None rest
             | x == ')'  = helper (RightParen : lexemes) None rest
-            | x == '\'' = helper (Quote : lexemes) None rest
-            | x == '`'  = helper (Backquote : lexemes) None rest
-            | x == '~'  = helper (Interpolate : lexemes) None rest
-            | x == '@'  = helper (Unfold : lexemes) None rest
+            | x == '\'' = helper (Sugar "quote" : lexemes) None rest
+            | x == '`'  = helper (Sugar "backquote" : lexemes) None rest
+            | x == '~'  = helper (Sugar "interpolate" : lexemes) None rest
+            | x == '@'  = helper (Sugar "unfold" : lexemes) None rest
             | isSpace x = helper lexemes None rest
             | x == '"'  = helper lexemes String rest
             | x == ';'  = helper lexemes Comment rest
