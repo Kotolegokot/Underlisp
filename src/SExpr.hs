@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
 module SExpr (Expr (..),
               SExpr (..),
               Callable (..),
@@ -151,32 +153,38 @@ str2atom atom
         try_bool   = readMaybe atom :: Maybe Bool
 
 type Eval = Context -> SExpr -> IO (SExpr, Context)
-type Rest = Bool
 
--- Callable --
-data Callable = UserDefinedFunction [String] Rest SExpr
-              | Macro [String] Rest SExpr
-              | BuiltInFunction String ([SExpr] -> IO SExpr)
-              | SpecialOperator String (Eval -> Context -> [SExpr] -> IO (SExpr, Context))
+data Callable where
+  -- arg names -> rest -> s-expression -> bound args
+  UserDefined :: [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  -- arg names -> rest -> s-expression -> bound args
+  Macro       :: [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  -- name -> function -> bound args
+  BuiltIn     :: String -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
+  -- name -> function -> bound args
+  SpecialOp   :: String -> (Eval -> Context -> [SExpr] -> IO (SExpr, Context)) -> [SExpr] -> Callable
 
 instance Eq Callable where
-    (==) (UserDefinedFunction args1 rest1 sexpr1)
-         (UserDefinedFunction args2 rest2 sexpr2) = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
-    (==) (Macro args1 rest1 sexpr1)
-         (Macro args2 rest2 sexpr2)               = (args1 == args2) && (rest1 == rest2) && (sexpr1 == sexpr2)
-    (==) (BuiltInFunction name1 _)
-         (BuiltInFunction name2 _)                = name1 == name2
-    (==) (SpecialOperator name1 _)
-         (SpecialOperator name2 _)                = name1 == name2
-    (==) _                 _                      = False
+  (==) (UserDefined a1 b1 c1 d1)
+       (UserDefined a2 b2 c2 d2)  = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
+  (==) (Macro a1 b1 c1 d1)
+       (Macro a2 b2 c2 d2)        = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
+  (==) (BuiltIn name1 _ bound1)
+       (BuiltIn name2 _ bound2)   = (name1 == name2) && (bound1 == bound2)
+  (==) (SpecialOp name1 _ bound1)
+       (SpecialOp name2 _ bound2) = (name1 == name2) && (bound1 == bound2)
+  (==) _ _                        = False
 
 instance Show Callable where
-    show (UserDefinedFunction args rest sexpr)        = "User-defined function (args: "
-                                                     ++ show args ++ ", &rest: " ++ (if rest then "on" else "off")
-                                                     ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
-
-    show (Macro args rest sexpr)                      = "Macro (args: " ++ show args
-                                                     ++ ", &rest: " ++ (if rest then "on" else "off")
-                                                     ++ ", sexpr = " ++ show_sexpr sexpr ++ ")"
-    show (BuiltInFunction name _)                     = "Built-in function '" ++ name ++ "'"
-    show (SpecialOperator name _)                     = "Special operator '" ++ name ++ "'"
+  show (UserDefined args rest sexpr bound)  = "User-defined function (args: "
+                                                ++ show args ++ ", &rest: " ++ (if rest then "on" else "off")
+                                                ++ ", sexpr: " ++ show_sexpr sexpr
+                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+  show (Macro args rest sexpr bound)        = "Macro (args: " ++ show args
+                                                ++ ", &rest: " ++ (if rest then "on" else "off")
+                                                ++ ", sexpr: " ++ show_sexpr sexpr
+                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+  show (BuiltIn name _ bound)               = "Built-in function (name: '" ++ name ++ "'"
+                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+  show (SpecialOp name _ bound)             = "Special operator (name: '" ++ name ++ "'"
+                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"

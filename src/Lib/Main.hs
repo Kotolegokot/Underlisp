@@ -25,7 +25,7 @@ spop_let _    _       _               = error "list of bindings expected"
 spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
   where (arg_names, rest) = handle_lambda_list lambda_list
-        func = UserDefinedFunction arg_names rest (SList $ SSymbol "seq" : body)
+        func = UserDefined arg_names rest (SList $ SSymbol "seq" : body) []
 spop_lambda _    _       _            = error "lambda: at least one argument required"
 
 -- special operator defvar

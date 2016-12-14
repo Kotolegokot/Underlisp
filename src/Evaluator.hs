@@ -19,22 +19,22 @@ evalute_module body = do
 
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
-    (expr, _) <- eval_sexpr context first
-    case expr of
-      SCallable (UserDefinedFunction arg_names rest sexpr) -> do
-          pairs <- mapM (eval_sexpr context) args
-          let f_context = handle_args arg_names rest (fmap fst pairs)
-          eval_sexpr (f_context `Map.union` context) sexpr
-      SCallable (Macro arg_names rest sexpr) -> do
-          let f_context = handle_args arg_names rest args
-          (expr, _) <- eval_sexpr (f_context `Map.union` context) sexpr
-          eval_sexpr context expr
-      SCallable (BuiltInFunction _ f)                       -> do
-          pairs <- mapM (eval_sexpr context) args
-          result <- f (fmap fst pairs)
-          return (result, context)
-      SCallable (SpecialOperator _ f)                       -> f eval_sexpr context args
-      _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
+  (expr, _) <- eval_sexpr context first
+  case expr of
+    SCallable (UserDefined arg_names rest sexpr bound) -> do
+        pairs <- mapM (eval_sexpr context) args
+        let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
+        eval_sexpr (f_context `Map.union` context) sexpr
+    SCallable (Macro arg_names rest sexpr bound) -> do
+        let f_context = handle_args arg_names rest (bound ++ args)
+        (expr, _) <- eval_sexpr (f_context `Map.union` context) sexpr
+        eval_sexpr context expr
+    SCallable (BuiltIn _ f bound)                       -> do
+        pairs <- mapM (eval_sexpr context) args
+        result <- f (bound ++ (fmap fst pairs))
+        return (result, context)
+    SCallable (SpecialOp _ f bound)                       -> f eval_sexpr context (bound ++ args)
+    _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SSymbol str) 
   | str `Map.member` context = return (context Map.! str, context)
@@ -60,7 +60,7 @@ load_prelude = do
 
 start_context :: Context
 start_context = Map.fromList $
-  (fmap (\(name, f) -> (name, SCallable $ SpecialOperator name f)) [
+    (fmap (\(name, f) -> (name, SCallable $ SpecialOp name f [])) [
     ("let",               spop_let),
     ("lambda",            spop_lambda),
     ("defvar",            spop_defvar),
@@ -79,7 +79,7 @@ start_context = Map.fromList $
     ("current-context",   spop_current_context),
     ("context-from-file", spop_context_from_file),
     ("seq",               spop_seq) ]) ++
-  (fmap (\(name, f) -> (name, SCallable $ BuiltInFunction name f)) [
+  (fmap (\(name, f) -> (name, SCallable $ BuiltIn name f [])) [
     ("type",         builtin_type),
     ("print",        builtin_print),
     ("print-ln",     builtin_print_ln),
