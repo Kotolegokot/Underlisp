@@ -28,7 +28,7 @@
 
 ; (apply function list)
 (defmacro apply (f xs)
-  `(~f @xs))
+  `(~f @(eval xs)))
 
 ; otherwise is used with `cond` macro
 (defvar otherwise True)

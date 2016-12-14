@@ -28,7 +28,7 @@
   (if (null xs)
       (error "nth: empty list")
     (if (>= n (length xs))
-	(error "nth: out of bounds")
+    	(error "nth: out of bounds")
       (if (< n 0)
 	  (error "nth: negative index")
 	(if (= n 0)
