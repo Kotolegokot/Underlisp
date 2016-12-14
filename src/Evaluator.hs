@@ -47,10 +47,10 @@ handle_args arg_names False args
   | length arg_names < length args = error "too many arguements"
   | otherwise                    = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
 handle_args arg_names True args
-  | length arg_names > length args = error "too little arguments"
-  | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
-                                      in let args' = left ++ [SList right]
-                                          in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+  | length arg_names - 1 > length args = error "too little arguments"
+  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
+                                          in let args' = left ++ [SList right]
+                                              in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
 
 load_prelude :: IO Context
 load_prelude = do
