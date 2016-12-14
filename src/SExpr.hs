@@ -191,13 +191,13 @@ instance Show Callable where
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
 
 bind :: Callable -> [SExpr] -> Callable
+bind (UserDefined arg_names True sexpr bound) args = UserDefined arg_names True sexpr (bound ++ args)
 bind (UserDefined arg_names False sexpr bound) args
   | length arg_names < (length bound + length args) = error "too many arguments"
   | otherwise                                       = UserDefined arg_names False sexpr (bound ++ args)
-bind (UserDefined arg_names True sexpr bound) args = UserDefined arg_names True sexpr (bound ++ args)
+bind (Macro arg_names True sexpr bound) args = Macro arg_names True sexpr (bound ++ args)
 bind (Macro arg_names False sexpr bound) args
   | length arg_names < (length bound + length args) = error "too many arguments"
   | otherwise                                       = Macro arg_names False sexpr (bound ++ args)
-bind (Macro arg_names True sexpr bound) args = Macro arg_names True sexpr (bound ++ args)
-bind (BuiltIn name f bound) args             = BuiltIn name f (bound ++ args)
-bind (SpecialOp name f bound) args           = SpecialOp name f (bound ++ args)
+bind (BuiltIn name f bound) args   = BuiltIn name f (bound ++ args)
+bind (SpecialOp name f bound) args = SpecialOp name f (bound ++ args)
