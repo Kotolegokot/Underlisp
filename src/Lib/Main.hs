@@ -2,9 +2,11 @@ module Lib.Main (spop_let,
                  spop_lambda,
                  spop_defvar,
                  builtin_type,
-                 builtin_bind) where
+                 builtin_bind,
+                 builtin_error ) where
 
 import qualified Data.Map as Map
+import Data.Char (toUpper)
 import SExpr
 import Lib.Internal
 
@@ -40,7 +42,7 @@ spop_defvar _    _       _ = error "defvar: two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr
-builtin_type [sexpr] = return . SString $ show_type sexpr
+builtin_type [sexpr] = return . SSymbol . map toUpper . show_type $ sexpr
 builtin_type _       = error "type: just one argument required"
 
 builtin_bind :: [SExpr] -> IO SExpr
@@ -48,3 +50,9 @@ builtin_bind (first:args) = return $ case first of
                                        SCallable callable -> SCallable $ bind callable args
                                        _                  -> error "bind: callable expected"
 builtin_bind _            = error "bind: at least one argument required"
+
+-- built-in function error
+builtin_error :: [SExpr] -> IO SExpr
+builtin_error [SString err] = error err
+builtin_error [_]           = error "error: string expected"
+builtin_error _             = error "error: just one argument required"
