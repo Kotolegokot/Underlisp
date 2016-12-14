@@ -54,7 +54,7 @@ handle_args arg_names True args
 
 load_prelude :: IO Context
 load_prelude = do
-  text <- readFile "examples/prelude.lisp"
+  text <- readFile "stdlib/prelude.lisp"
   (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read text
   return context
 
