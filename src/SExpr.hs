@@ -160,21 +160,21 @@ data Callable where
   UserDefined :: [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- arg names -> rest -> s-expression -> bound args
   Macro       :: [String] -> Bool -> SExpr -> [SExpr] -> Callable
-  -- name -> function -> bound args
-  BuiltIn     :: String -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
-  -- name -> function -> bound args
-  SpecialOp   :: String -> (Eval -> Context -> [SExpr] -> IO (SExpr, Context)) -> [SExpr] -> Callable
+  -- name -> args count or rest -> function -> bound args
+  BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
+  -- name -> args count or rest -> function -> bound args
+  SpecialOp   :: String -> Maybe Int -> (Eval -> Context -> [SExpr] -> IO (SExpr, Context)) -> [SExpr] -> Callable
 
 instance Eq Callable where
   (==) (UserDefined a1 b1 c1 d1)
-       (UserDefined a2 b2 c2 d2)  = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
+       (UserDefined a2 b2 c2 d2)    = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
   (==) (Macro a1 b1 c1 d1)
-       (Macro a2 b2 c2 d2)        = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
-  (==) (BuiltIn name1 _ bound1)
-       (BuiltIn name2 _ bound2)   = (name1 == name2) && (bound1 == bound2)
-  (==) (SpecialOp name1 _ bound1)
-       (SpecialOp name2 _ bound2) = (name1 == name2) && (bound1 == bound2)
-  (==) _ _                        = False
+       (Macro a2 b2 c2 d2)          = (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2)
+  (==) (BuiltIn name1 _ _ bound1)
+       (BuiltIn name2 _ _ bound2)   = (name1 == name2) && (bound1 == bound2)
+  (==) (SpecialOp name1 _ _ bound1)
+       (SpecialOp name2 _ _ bound2) = (name1 == name2) && (bound1 == bound2)
+  (==) _ _                          = False
 
 instance Show Callable where
   show (UserDefined args rest sexpr bound)  = "User-defined function (args: "
@@ -185,19 +185,23 @@ instance Show Callable where
                                                 ++ ", &rest: " ++ (if rest then "on" else "off")
                                                 ++ ", sexpr: " ++ show_sexpr sexpr
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-  show (BuiltIn name _ bound)               = "Built-in function (name: '" ++ name ++ "'"
+  show (BuiltIn name _ _ bound)             = "Built-in function (name: '" ++ name ++ "'"
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-  show (SpecialOp name _ bound)             = "Special operator (name: '" ++ name ++ "'"
+  show (SpecialOp name _ _ bound)           = "Special operator (name: '" ++ name ++ "'"
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
 
 bind :: Callable -> [SExpr] -> Callable
-bind (UserDefined arg_names True sexpr bound) args = UserDefined arg_names True sexpr (bound ++ args)
-bind (UserDefined arg_names False sexpr bound) args
-  | length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                       = UserDefined arg_names False sexpr (bound ++ args)
-bind (Macro arg_names True sexpr bound) args = Macro arg_names True sexpr (bound ++ args)
-bind (Macro arg_names False sexpr bound) args
-  | length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                       = Macro arg_names False sexpr (bound ++ args)
-bind (BuiltIn name f bound) args   = BuiltIn name f (bound ++ args)
-bind (SpecialOp name f bound) args = SpecialOp name f (bound ++ args)
+bind (UserDefined arg_names rest sexpr bound) args
+  | rest && length arg_names < (length bound + length args) = error "too many arguments"
+  | otherwise                                               = UserDefined arg_names rest sexpr (bound ++ args)
+bind (Macro arg_names rest sexpr bound) args
+  | rest && length arg_names < (length bound + length args) = error "too many arguments"
+  | otherwise                                               = Macro arg_names rest sexpr (bound ++ args)
+bind (BuiltIn name (Just args_count) f bound) args
+  | args_count < (length bound + length args) = error "too many arguments"
+  | otherwise                                 = BuiltIn name (Just args_count) f (bound ++ args)
+bind (BuiltIn name Nothing f bound) args = BuiltIn name Nothing f (bound ++ args)
+bind (SpecialOp name (Just args_count) f bound) args
+  | args_count < (length bound + length args) = error "too many arguments"
+  | otherwise                                 = SpecialOp name (Just args_count) f (bound ++ args)
+bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)

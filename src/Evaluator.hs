@@ -29,11 +29,11 @@ eval_sexpr context (SList (first:args)) = do
         let f_context = handle_args arg_names rest (bound ++ args)
         (expr, _) <- eval_sexpr (f_context `Map.union` context) sexpr
         eval_sexpr context expr
-    SCallable (BuiltIn _ f bound)                       -> do
+    SCallable (BuiltIn _ _ f bound)                       -> do
         pairs <- mapM (eval_sexpr context) args
         result <- f (bound ++ (fmap fst pairs))
         return (result, context)
-    SCallable (SpecialOp _ f bound)                       -> f eval_sexpr context (bound ++ args)
+    SCallable (SpecialOp _ _ f bound)                     -> f eval_sexpr context (bound ++ args)
     _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
 eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SSymbol str) 
@@ -60,55 +60,55 @@ load_prelude = do
 
 start_context :: Context
 start_context = Map.fromList $
-    (fmap (\(name, f) -> (name, SCallable $ SpecialOp name f [])) [
-    ("let",               spop_let),
-    ("lambda",            spop_lambda),
-    ("defvar",            spop_defvar),
-    ("if",                spop_if),
-    ("macro",             spop_macro),
-    ("macro-expand",      spop_macro_expand),
-    ("quote",             spop_quote),
-    ("backquote",         spop_backquote),
-    ("interprete",        spop_interprete),
-    ("eval",              spop_eval),
-    ("and",               spop_and),
-    ("or",                spop_or),
-    ("->",                spop_impl),
-    ("context",           spop_context),
-    ("load-context",      spop_load_context),
-    ("current-context",   spop_current_context),
-    ("context-from-file", spop_context_from_file),
-    ("seq",               spop_seq) ]) ++
-  (fmap (\(name, f) -> (name, SCallable $ BuiltIn name f [])) [
-    ("type",         builtin_type),
-    ("print",        builtin_print),
-    ("print-ln",     builtin_print_ln),
-    ("flush",        builtin_flush),
-    ("get-line",     builtin_get_line),
-    ("list",         builtin_list),
-    ("head",         builtin_head),
-    ("tail",         builtin_tail),
-    ("init",         builtin_init),
-    ("last",         builtin_last),
-    ("length",       builtin_length),
-    ("append",       builtin_append),
-    ("nth",          builtin_nth),
-    ("+",            builtin_sum),
-    ("-",            builtin_substract),
-    ("*",            builtin_product),
-    ("/",            builtin_divide),
-    ("float",        builtin_float),
-    ("not",          builtin_not),
-    ("=",            builtin_eq),
-    ("/=",           builtin_ne),
-    ("<",            builtin_lt),
-    (">",            builtin_gt),
-    ("<=",           builtin_le),
-    (">=",           builtin_ge),
-    ("concat",       builtin_concat),
-    ("str-to-int",   builtin_str_to_int),
-    ("str-to-float", builtin_str_to_float),
-    ("str-length",   builtin_str_length) ])
+    (fmap (\(name, args, f) -> (name, SCallable $ SpecialOp name args f [])) [
+    ("let",               Nothing, spop_let),
+    ("lambda",            Nothing, spop_lambda),
+    ("defvar",            Just 2,  spop_defvar),
+    ("if",                Just 3,  spop_if),
+    ("macro",             Nothing, spop_macro),
+    ("macro-expand",      Just 1,  spop_macro_expand),
+    ("quote",             Just 1,  spop_quote),
+    ("backquote",         Just 1,  spop_backquote),
+    ("interprete",        Just 1,  spop_interprete),
+    ("eval",              Just 1,  spop_eval),
+    ("and",               Nothing, spop_and),
+    ("or",                Nothing, spop_or),
+    ("->",                Just 2,  spop_impl),
+    ("context",           Nothing, spop_context),
+    ("load-context",      Just 1,  spop_load_context),
+    ("current-context",   Just 0,  spop_current_context),
+    ("context-from-file", Just 1,  spop_context_from_file),
+    ("seq",               Nothing, spop_seq) ]) ++
+  (fmap (\(name, args, f) -> (name, SCallable $ BuiltIn name args f [])) [
+    ("type",         Just 1,  builtin_type),
+    ("print",        Just 1,  builtin_print),
+    ("print-ln",     Just 1,  builtin_print_ln),
+    ("flush",        Just 0,  builtin_flush),
+    ("get-line",     Just 0,  builtin_get_line),
+    ("list",         Nothing, builtin_list),
+    ("head",         Just 1,  builtin_head),
+    ("tail",         Just 1,  builtin_tail),
+    ("init",         Just 1,  builtin_init),
+    ("last",         Just 1,  builtin_last),
+    ("length",       Just 1,  builtin_length),
+    ("append",       Just 2,  builtin_append),
+    ("nth",          Just 2,  builtin_nth),
+    ("+",            Nothing, builtin_sum),
+    ("-",            Just 2,  builtin_substract),
+    ("*",            Nothing, builtin_product),
+    ("/",            Just 2,  builtin_divide),
+    ("float",        Just 1,  builtin_float),
+    ("not",          Just 1,  builtin_not),
+    ("=",            Just 2,  builtin_eq),
+    ("/=",           Just 2,  builtin_ne),
+    ("<",            Just 2,  builtin_lt),
+    (">",            Just 2,  builtin_gt),
+    ("<=",           Just 2,  builtin_le),
+    (">=",           Just 2,  builtin_ge),
+    ("concat",       Nothing, builtin_concat),
+    ("str-to-int",   Just 1,  builtin_str_to_int),
+    ("str-to-float", Just 1,  builtin_str_to_float),
+    ("str-length",   Just 1,  builtin_str_length) ])
 
 spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_context_from_file eval context [args] = do

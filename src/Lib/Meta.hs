@@ -27,6 +27,7 @@ spop_macro_expand eval context (name:args) = do
         (expr, _) <- eval (f_context `Map.union` context) sexpr
         return (expr, context)
     _                                     -> error "macro-expand: macro expected"
+spop_macro_expand _    _       _           = error "macro-expand: at least one argument required"
 
 handle_args :: [String] -> Bool -> [SExpr] -> Context
 handle_args arg_names False args
