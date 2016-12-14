@@ -1,5 +1,6 @@
-; (define flip (f)
-;   (lambda (x y) (f y x)))
-; 
-; (print-ln (-  1 2))
-; (print-ln ((flip -) 1 2))
+(print-ln 
+  (switch
+    ((= 1 0) "MEOW")
+    ((= 2 1) "LOL")))
+
+;(switch)
