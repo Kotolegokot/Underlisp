@@ -24,3 +24,8 @@
 
 ; otherwise is used with `cond` macro
 (defvar otherwise True)
+
+; not equal
+(define /= (x y)
+  (not (= x y)))
+
