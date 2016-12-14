@@ -25,13 +25,13 @@
       (last (tail xs)))))
 
 (define nth (n xs)
-  (switch (((null xs)          (error "nth: empty list"))
+  (switch ((null xs)          (error "nth: empty list"))
 	   ((>= n (length xs)) (error "nth: out of bounds"))
 	   ((< n 0)            (error "nth: negative index"))
 	   (otherwise
 	    (if (= n 0)
 		(head xs)
-	      (nth (- n 1) (tail xs)))))))
+	      (nth (- n 1) (tail xs))))))
 
 (define map (f xs)
   (if (null xs)
@@ -78,3 +78,26 @@
 
 (define any (p xs)
   (foldl (lambda (acc x) (if (p x) True acc)) False xs))
+
+(define find (p xs)
+  (if (null xs)
+      '()
+    (if (p (head xs))
+        (head xs)
+      (find (p (tail xs))))))
+
+(define take (n xs)
+  (switch ((> n (length xs)) (error "take: out of bounds"))
+	   ((< n 0)            (error "take: negative number"))
+           (otherwise
+            (if (= n 0)
+                '()
+              (prepend (head xs) (take (- n 1) (tail xs)))))))
+
+(define drop (n xs)
+  (switch ((> n (length xs)) (error "drop: out of bounds"))
+          ((< n 0)            (error "drop: negative number"))
+          (otherwise
+           (if (= n 0)
+               xs
+             (drop (- n 1) (tail xs))))))
