@@ -106,7 +106,8 @@ start_context = Map.fromList $
     ("concat",       Nothing, builtin_concat),
     ("str-to-int",   Just 1,  builtin_str_to_int),
     ("str-to-float", Just 1,  builtin_str_to_float),
-    ("str-length",   Just 1,  builtin_str_length) ])
+    ("str-length",   Just 1,  builtin_str_length),
+    ("error",        Just 1,  builtin_error) ])
 
 spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_context_from_file eval context [args] = do
