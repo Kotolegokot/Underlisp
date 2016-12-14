@@ -56,3 +56,7 @@
   (= 'CALLABLE (type x)))
 (define context? (x)
   (= 'CONTEXT (type x)))
+
+; returns whether x is an atom
+(define atom? (x)
+  (/= 'LIST (type x)))
