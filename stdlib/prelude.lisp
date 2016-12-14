@@ -10,6 +10,14 @@
 (defmacro unless (cond &rest body)
   `(when (not ~cond) @body))
 
+; (switch (condition1 exp1) (condition2 exp2) ...)
+(defmacro switch (&rest pairs)
+  (if (null pairs)
+    '()
+    `(if ~(head (head pairs))
+       ~(head (tail (head pairs)))
+       (switch @(tail pairs)))))
+
 ; (define function-name args body)
 (defmacro define (name args &rest body)
   `(defvar ~name (lambda ~args @body)))
