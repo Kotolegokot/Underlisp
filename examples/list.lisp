@@ -19,10 +19,3 @@
             (append acc (list (list (head xs) (head ys)))))))
 
   (zip' xs ys '()))
-
-(defvar l '(1 2 3 4))
-(defvar ll (foreach factorial l))
-
-(print-ln l)
-(print-ln ll)
-(print-ln (zip l ll))

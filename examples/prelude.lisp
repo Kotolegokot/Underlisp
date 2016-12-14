@@ -12,3 +12,12 @@
 
 (defmacro load-module (filename)
   `(load-context (context-from-file ~filename)))
+
+; (define flip' (f x y)
+;   (bind f y x))
+; 
+; (define flip (f)
+;   (bind (flip' f)))
+; 
+; (defvar ++ (bind + 1))
+; (defvar -- (bind (flip -) 1))

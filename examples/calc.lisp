@@ -1,10 +1,18 @@
 (load-module "examples/factorial.lisp")
+(load-module "examples/list.lisp")
 (print-ln "Hi! I'm a stupid calculator. I can either multiply or add two numbers or calculate a factorial.")
 (print-ln "Please, type either '+' or '*', and then two numbers, or 'factorial' and then one number")
 
+(define print' (&rest args)
+  (foreach print args))
+
+(define print-ln' (&rest args)
+  (foreach print args)
+  (print-ln ""))
+
 (define get-int () (str-to-int (get-line)))
 (define get-float () (str-to-float (get-line)))
-(define print-number (x) (print "Your number is ") (print-ln x))
+(defvar print-number (bind print-ln' "Your number is "))
 
 (let ((input (get-line)))
   (if (= input "*")
