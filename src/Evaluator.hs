@@ -91,7 +91,7 @@ start_context = Map.fromList $
     ("tail",         Just 1,  builtin_tail),
     ("init",         Just 1,  builtin_init),
     ("last",         Just 1,  builtin_last),
-    ("length",       Just 1,  builtin_length),
+    ("null",         Just 1,  builtin_null),
     ("append",       Just 2,  builtin_append),
     ("nth",          Just 2,  builtin_nth),
     ("+",            Nothing, builtin_sum),

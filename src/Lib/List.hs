@@ -3,7 +3,7 @@ module Lib.List (builtin_list,
                  builtin_tail,
                  builtin_init,
                  builtin_last,
-                 builtin_length,
+                 builtin_null,
                  builtin_append,
                  builtin_nth) where
 
@@ -39,10 +39,10 @@ builtin_last [SList list]
 builtin_last [_] = error "last: list expected"
 builtin_last _   = error "last: just one argument required"
 
-builtin_length :: [SExpr] -> IO SExpr
-builtin_length [SList list] = return . SInt . length $ list
-builtin_length [_]          = error "length: list expected"
-builtin_length _            = error "length: just one argument required"
+builtin_null :: [SExpr] -> IO SExpr
+builtin_null [SList list] = return . SBool . null $ list
+builtin_null [_]           = error "null: list expected"
+builtin_null _             = error "null: just one argument requried"
 
 builtin_append :: [SExpr] -> IO SExpr
 builtin_append [list1, list2]
