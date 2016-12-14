@@ -74,13 +74,15 @@ show_sexpr (SCallable func)   = show func
 show_sexpr (SContext context) = "Context " ++ (show $ Map.toList context)
 
 show_type :: SExpr -> String
-show_type (SList _)    = "List"
-show_type (SInt _)     = "Int"
-show_type (SFloat _)   = "Float"
-show_type (SString _)  = "String"
-show_type (SChar _)    = "Char"
-show_type (SBool _)    = "Bool"
-show_type (SSymbol _)  = "Symbol"
+show_type (SList _)     = "List"
+show_type (SInt _)      = "Int"
+show_type (SFloat _)    = "Float"
+show_type (SString _)   = "String"
+show_type (SChar _)     = "Char"
+show_type (SBool _)     = "Bool"
+show_type (SSymbol _)   = "Symbol"
+show_type (SCallable _) = "Callable"
+show_type (SContext _)  = "Context"
 
 instance Expr SExpr where
     is_list (SList _) = True
