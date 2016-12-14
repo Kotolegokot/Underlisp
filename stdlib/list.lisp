@@ -14,18 +14,18 @@
   (if (null xs)
       (error "init: empty list")
     (if (= 1 (length xs))
-	'()
+	    '()
       (prepend (head xs) (init (tail xs))))))
 
 (define last (xs)
   (if (null xs)
       (error "last: empty list")
     (if (= 1 (length xs))
-	xs
+	    xs
       (last (tail xs)))))
 
 (define nth (n xs)
-  (switch ((null xs)          (error "nth: empty list"))
+  (switch ((null xs)       (error "nth: empty list"))
 	   ((>= n (length xs)) (error "nth: out of bounds"))
 	   ((< n 0)            (error "nth: negative index"))
 	   (otherwise
@@ -88,7 +88,7 @@
 
 (define take (n xs)
   (switch ((> n (length xs)) (error "take: out of bounds"))
-	   ((< n 0)            (error "take: negative number"))
+	   ((< n 0)              (error "take: negative number"))
            (otherwise
             (if (= n 0)
                 '()
@@ -96,7 +96,7 @@
 
 (define drop (n xs)
   (switch ((> n (length xs)) (error "drop: out of bounds"))
-          ((< n 0)            (error "drop: negative number"))
+          ((< n 0)           (error "drop: negative number"))
           (otherwise
            (if (= n 0)
                xs
