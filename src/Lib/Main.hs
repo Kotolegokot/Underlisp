@@ -1,7 +1,8 @@
 module Lib.Main (spop_let,
                  spop_lambda,
                  spop_defvar,
-                 builtin_type) where
+                 builtin_type,
+                 builtin_bind) where
 
 import qualified Data.Map as Map
 import SExpr
@@ -35,10 +36,15 @@ spop_defvar eval context [var, value]
   | otherwise           = do
       (expr, _) <- eval context value
       return (expr, Map.insert (from_symbol var) expr context)
-spop_defvar _    _       _ = error "'defvar' requires two arguments"
+spop_defvar _    _       _ = error "defvar: two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr
 builtin_type [sexpr] = return . SString $ show_type sexpr
-builtin_type _       = error "'type' requires just one argument"
+builtin_type _       = error "type: just one argument required"
 
+builtin_bind :: [SExpr] -> IO SExpr
+builtin_bind (first:args) = return $ case first of
+                                       SCallable callable -> SCallable $ bind callable args
+                                       _                  -> error "bind: callable expected"
+builtin_bind _            = error "bind: at least one argument required"
