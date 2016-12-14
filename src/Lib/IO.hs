@@ -8,12 +8,10 @@ import SExpr
 import Lib.Internal
 
 builtin_print :: [SExpr] -> IO SExpr
-builtin_print [sexpr] = (putStr . show_sexpr $ sexpr) >> return empty_list
-builtin_print _       = error "'print' requires just one argument"
+builtin_print sexprs = mapM (putStr . show_sexpr) sexprs >> return empty_list
 
 builtin_print_ln :: [SExpr] -> IO SExpr
-builtin_print_ln [sexpr] = (putStrLn . show_sexpr $ sexpr) >> return empty_list
-builtin_print_ln _       = error "'print-ln' requires just one argument"
+builtin_print_ln sexprs = mapM (putStrLn . show_sexpr) sexprs >> return empty_list
 
 builtin_flush :: [SExpr] -> IO SExpr
 builtin_flush [] = hFlush stdout >> return empty_list

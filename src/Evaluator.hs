@@ -82,8 +82,8 @@ start_context = Map.fromList $
   (fmap (\(name, args, f) -> (name, SCallable $ BuiltIn name args f [])) [
     ("type",         Just 1,  builtin_type),
     ("bind",         Nothing, builtin_bind),
-    ("print",        Just 1,  builtin_print),
-    ("print-ln",     Just 1,  builtin_print_ln),
+    ("print",        Nothing, builtin_print),
+    ("print-ln",     Nothing, builtin_print_ln),
     ("flush",        Just 0,  builtin_flush),
     ("get-line",     Just 0,  builtin_get_line),
     ("list",         Nothing, builtin_list),
