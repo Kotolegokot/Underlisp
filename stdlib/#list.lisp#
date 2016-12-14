@@ -87,16 +87,16 @@
       (find (p (tail xs))))))
 
 (define take (n xs)
-  (switch ((> n (length xs)) (error "take: out of bounds"))
-	   ((< n 0)            (error "take: negative number"))
-           (otherwise
+  (switch ((> n (length xs)) xs)
+          ((< n 0)           '())
+          (otherwise
             (if (= n 0)
                 '()
               (prepend (head xs) (take (- n 1) (tail xs)))))))
 
 (define drop (n xs)
-  (switch ((> n (length xs)) (error "drop: out of bounds"))
-          ((< n 0)            (error "drop: negative number"))
+  (switch ((> n (length xs)) '())
+          ((< n 0)           (error "drop: negative number"))
           (otherwise
            (if (= n 0)
                xs
