@@ -5,6 +5,7 @@ module Lib.Meta (spop_macro,
                  spop_interprete,
                  spop_eval) where
 
+import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
 import SExpr
@@ -14,7 +15,7 @@ import Lib.Internal
 spop_macro :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_macro eval context (lambda_list:body) = return (SCallable macro, context)
   where (arg_names, rest) = handle_lambda_list lambda_list
-        macro = Macro context arg_names rest (SList $ SSymbol "seq" : body) []
+        macro = Macro (Map.keys context) arg_names rest (SList $ SSymbol "seq" : body) []
 spop_macro _   _       _                   = error "macro: at least one argument required"
 
 -- special operator macro-expand
@@ -22,8 +23,9 @@ spop_macro_expand :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_macro_expand eval context (name:args) = do
   (expr, _) <- eval context name
   case expr of
-    SCallable (Macro l_context arg_name rest sexpr bound) -> do
+    SCallable (Macro scope arg_name rest sexpr bound) -> do
         let f_context = handle_args arg_name rest args
+        let l_context = Map.restrictKeys context (Set.fromList scope)
         (expr, _) <- eval (f_context `Map.union` l_context) sexpr
         return (expr, context)
     _                                     -> error "macro-expand: macro expected"

@@ -28,15 +28,16 @@ spop_let _    _       _               = error "list of bindings expected"
 spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
   where (arg_names, rest) = handle_lambda_list lambda_list
-        func = UserDefined context arg_names rest (SList $ SSymbol "seq" : body) []
+        func = UserDefined (Map.keys context) arg_names rest (SList $ SSymbol "seq" : body) []
 spop_lambda _    _       _            = error "lambda: at least one argument required"
 
 -- special operator defvar
 spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_defvar eval context [var, value]
-  | not $ is_symbol var = error "first argument of 'defvar' must be a keyword"
+  | not $ is_symbol var = error "first argument of 'defvar' must be a symbol"
   | otherwise           = do
-      (expr, _) <- eval context value
+      let new_context = Map.insert (from_symbol var) (SList []) context
+      (expr, _) <- eval new_context value
       return (expr, Map.insert (from_symbol var) expr context)
 spop_defvar _    _       _ = error "defvar: two arguments required"
 

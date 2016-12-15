@@ -172,10 +172,10 @@ str2atom atom
 type Eval = Context -> SExpr -> IO (SExpr, Context)
 
 data Callable where
-  -- arg names -> rest -> s-expression -> bound args
-  UserDefined :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
-  -- arg names -> rest -> s-expression -> bound args
-  Macro       :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  -- lexical scope -> arg names -> rest -> s-expression -> bound args
+  UserDefined :: [String] -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  -- lexical scope -> arg names -> rest -> s-expression -> bound args
+  Macro       :: [String] -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
   BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
@@ -196,12 +196,12 @@ instance Show Callable where
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
 
 bind :: Callable -> [SExpr] -> Callable
-bind (UserDefined context arg_names rest sexpr bound) args
+bind (UserDefined scope arg_names rest sexpr bound) args
   | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = UserDefined context arg_names rest sexpr (bound ++ args)
-bind (Macro context arg_names rest sexpr bound) args
+  | otherwise                                               = UserDefined scope arg_names rest sexpr (bound ++ args)
+bind (Macro scope arg_names rest sexpr bound) args
   | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = Macro context arg_names rest sexpr (bound ++ args)
+  | otherwise                                               = Macro scope arg_names rest sexpr (bound ++ args)
 bind (BuiltIn name (Just args_count) f bound) args
   | args_count < (length bound + length args) = error "too many arguments"
   | otherwise                                 = BuiltIn name (Just args_count) f (bound ++ args)

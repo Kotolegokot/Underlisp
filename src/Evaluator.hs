@@ -1,5 +1,6 @@
-module Evaluator (evaluate_program, evalute_module) where
+module Evaluator (evaluate_program, evaluate_module) where
 
+import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
 import Control.Monad (void, foldM)
@@ -11,8 +12,8 @@ evaluate_program body = do
   prelude <- load_prelude
   void $ eval_list eval_sexpr prelude body
 
-evalute_module :: [SExpr] -> IO Context
-evalute_module body = do
+evaluate_module :: [SExpr] -> IO Context
+evaluate_module body = do
   prelude <- load_prelude
   (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (empty_list, prelude) body
   return context
@@ -21,12 +22,14 @@ eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
   (expr, _) <- eval_sexpr context first
   case expr of
-    SCallable (UserDefined l_context arg_names rest sexpr bound) -> do
+    SCallable (UserDefined scope arg_names rest sexpr bound) -> do
         pairs <- mapM (eval_sexpr context) args
         let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
+        let l_context = Map.restrictKeys context (Set.fromList scope)
         eval_sexpr (f_context `Map.union` l_context) sexpr
-    SCallable (Macro l_context arg_names rest sexpr bound) -> do
+    SCallable (Macro scope arg_names rest sexpr bound) -> do
         let f_context = handle_args arg_names rest (bound ++ args)
+        let l_context = Map.restrictKeys context (Set.fromList scope)
         (expr, _) <- eval_sexpr (f_context `Map.union` l_context) sexpr
         eval_sexpr context expr
     SCallable (BuiltIn _ _ f bound)                       -> do
@@ -111,7 +114,7 @@ spop_context_from_file eval context [args] = do
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      new_context <- evalute_module $ Reader.read text
+      new_context <- evaluate_module $ Reader.read text
       return (SContext new_context, context)
     _                -> error "context-from-file: string expected"
 spop_context_from_file _    _       _      = error "context-from-file: just one argument required"

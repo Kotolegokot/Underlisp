@@ -9,4 +9,4 @@ interprete_program :: String -> IO ()
 interprete_program = Evaluator.evaluate_program . Reader.read
 
 interprete_module :: String -> IO Context
-interprete_module = Evaluator.evalute_module . Reader.read
+interprete_module = Evaluator.evaluate_module . Reader.read
