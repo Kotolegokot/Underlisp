@@ -169,7 +169,7 @@ data Callable where
   -- lexical scope -> arg names -> rest -> s-expression -> bound args
   UserDefined :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- lexical scope -> arg names -> rest -> s-expression -> bound args
-  Macro       :: [String] -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  Macro       :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
   BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args

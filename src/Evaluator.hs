@@ -26,9 +26,8 @@ eval_sexpr context (SList (first:args)) = do
         pairs <- mapM (eval_sexpr context) args
         let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
         eval_sexpr (f_context `Map.union` l_context) sexpr
-    SCallable (Macro scope arg_names rest sexpr bound) -> do
+    SCallable (Macro l_context arg_names rest sexpr bound) -> do
         let f_context = handle_args arg_names rest (bound ++ args)
-        let l_context = Map.restrictKeys context (Set.fromList scope)
         (expr, _) <- eval_sexpr (f_context `Map.union` l_context) sexpr
         eval_sexpr context expr
     SCallable (BuiltIn _ _ f bound)                       -> do
