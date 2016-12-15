@@ -57,6 +57,10 @@
 (define context? (x)
   (= 'CONTEXT (type x)))
 
-;; returns whether x is an atom
+;; tells whether x is an atom
 (define atom? (x)
   (/= 'LIST (type x)))
+
+;; tells whether x is an empty list
+(define nil? (x)
+  (and (list? x) (null x)))
