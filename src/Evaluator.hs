@@ -15,7 +15,7 @@ evaluate_program body = do
 evaluate_module :: [SExpr] -> IO Context
 evaluate_module body = do
   prelude <- load_prelude
-  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (empty_list, prelude) body
+  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (nil, prelude) body
   return context
 
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)

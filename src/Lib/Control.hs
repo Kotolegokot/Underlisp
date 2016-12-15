@@ -5,8 +5,8 @@ import SExpr
 import Lib.Internal
 
 spop_if :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_if eval context [cond_sexpr]                          = spop_if eval context [cond_sexpr, empty_list, empty_list]
-spop_if eval context [cond_sexpr, true_sexpr]              = spop_if eval context [cond_sexpr, true_sexpr, empty_list]
+spop_if eval context [cond_sexpr]                          = spop_if eval context [cond_sexpr, nil, nil]
+spop_if eval context [cond_sexpr, true_sexpr]              = spop_if eval context [cond_sexpr, true_sexpr, nil]
 spop_if eval context [cond_sexpr, true_sexpr, false_sexpr] = do
     (cond, _) <- eval context cond_sexpr
     if from_bool cond

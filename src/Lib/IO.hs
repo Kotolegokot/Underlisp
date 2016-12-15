@@ -8,13 +8,13 @@ import SExpr
 import Lib.Internal
 
 builtin_print :: [SExpr] -> IO SExpr
-builtin_print sexprs = mapM (putStr . show_sexpr) sexprs >> return empty_list
+builtin_print sexprs = mapM (putStr . show_sexpr) sexprs >> return nil
 
 builtin_print_ln :: [SExpr] -> IO SExpr
-builtin_print_ln sexprs = mapM (putStrLn . show_sexpr) sexprs >> return empty_list
+builtin_print_ln sexprs = mapM (putStrLn . show_sexpr) sexprs >> return nil
 
 builtin_flush :: [SExpr] -> IO SExpr
-builtin_flush [] = hFlush stdout >> return empty_list
+builtin_flush [] = hFlush stdout >> return nil
 builtin_flush _  = error "'flush' requires no arguments"
 
 builtin_get_line :: [SExpr] -> IO SExpr

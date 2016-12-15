@@ -5,7 +5,7 @@ module SExpr (SExpr (..),
               Context,
               bind,
               str2atom,
-              empty_list,
+              nil,
               is_list, from_list,
               is_int, from_int,
               is_float, from_float,
@@ -93,7 +93,7 @@ is_list _         = False
 from_list (SList list) = list
 from_list _            = error "list expected"
 
-empty_list = SList []
+nil = SList []
 
 is_int (SInt _) = True
 is_int _        = False
