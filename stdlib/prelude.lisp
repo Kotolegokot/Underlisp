@@ -1,16 +1,16 @@
-; (defmacro macro-name args body)
+;; (defmacro macro-name args body)
 (defvar defmacro (macro (name args &rest body)
   `(defvar ~name (macro ~args @body))))
 
-; (when true-condition body)
+;; (when true-condition body)
 (defmacro when (cond &rest body)
   `(if ~cond (seq @body)))
 
-; (unless false-condition body)
+;; (unless false-condition body)
 (defmacro unless (cond &rest body)
   `(when (not ~cond) @body))
 
-; (switch (condition1 exp1) (condition2 exp2) ...)
+;; (switch (condition1 exp1) (condition2 exp2) ...)
 (defmacro switch (&rest pairs)
   (if (null pairs)
     ''()
@@ -22,22 +22,22 @@
 (defmacro define (name args &rest body)
   `(defvar ~name (lambda ~args @body)))
 
-; (load-module module-name)
+;; (load-module module-name)
 (defmacro load-module (filename)
   `(load-context (context-from-file ~filename)))
 
-; (apply function list)
+;; (apply function list)
 (defmacro apply (f xs)
   `(~f @(eval xs)))
 
-; otherwise is used with `cond` macro
+;; otherwise is used with `switch` macro
 (defvar otherwise True)
 
-; not equal
+;; not equal
 (define /= (x y)
   (not (= x y)))
 
-; type predicates
+;; type predicates
 (define list? (x)
   (= 'LIST (type x)))
 (define int? (x)
@@ -57,6 +57,6 @@
 (define context? (x)
   (= 'CONTEXT (type x)))
 
-; returns whether x is an atom
+;; returns whether x is an atom
 (define atom? (x)
   (/= 'LIST (type x)))
