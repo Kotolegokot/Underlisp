@@ -101,3 +101,5 @@
            (if (= n 0)
                xs
              (drop (- n 1) (tail xs))))))
+
+(defvar nil '())
