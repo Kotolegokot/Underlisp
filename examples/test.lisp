@@ -1,3 +1,1 @@
-(print-ln (callable? print-ln))
-
-((bind print 1 2))
+(print-ln ([+] 1 5))

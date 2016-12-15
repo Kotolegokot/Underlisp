@@ -1,12 +1,13 @@
+cons functions
 closures
 remove Expr class
 pattern matching
+
 fractional
 long numbers
 maps
 vectors
 arrays
   and so forth...
+
 standard library
-syntactic sugar:
-  [...] for (bind ...)

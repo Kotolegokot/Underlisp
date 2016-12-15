@@ -1,37 +1,41 @@
 module Parser (parse) where
 
+import Debug.Trace
 import SExpr
 import Lexer
-
--- ( ( ) atom ' ` ~ @)
+import Debug.Trace
 
 -- | takes a list of lexemes and generates a complete s-expression
 parse :: [Lexeme] -> [SExpr]
 parse [] = []
-parse (x:xs)
-  | x /= LeftParen = error "list of lexemes doesn't start with a left paren"
-  | otherwise      = let (sexpr, rest) = parseList xs
-                      in case rest of
-                           [] -> [sexpr]
-                           _  -> sexpr : parse rest
+parse (x:xs) = case x of
+                 Open p -> let (sexpr, rest) = parse_list p xs
+                           in sexpr : parse rest
+                 _      -> error $ "open bracket expected at top level\n" ++
+                                  "there are probably too many closed brackets"
 
-parseList :: [Lexeme] -> (SExpr, [Lexeme])
-parseList lexemes = helper [] lexemes
-  where helper acc (x:xs) =
+parse_list :: Char -> [Lexeme] -> (SExpr, [Lexeme])
+parse_list b lexemes = case b of
+                         '(' -> parse_list' '(' [] lexemes
+                         '[' -> let (SList list, rest) = parse_list' '[' [] lexemes
+                                in (SList (SSymbol "bind" : list), rest)
+  where parse_list' bracket acc (x:xs) =
           case x of
-            LeftParen     -> let (sublist, rest) = helper [] xs
-                              in helper (sublist : acc) rest
-            RightParen    -> (SList $ reverse acc, xs)
-            Atom atom     -> helper (atom : acc) xs
+            Open b        -> let (sublist, rest) = parse_list b xs
+                             in parse_list' bracket (sublist : acc) rest
+            Closed b      -> if b == bracket
+                               then (SList $ reverse acc, xs)
+                               else error $ "unmatching brackets: unclosed '" ++ [bracket] ++ "'"
+            Atom atom     -> parse_list' bracket (atom : acc) xs
             Sugar str     -> let (quote, rest) = handle_sugar xs str
-                              in helper (quote : acc) rest
-        helper acc []     = error "unexpected EOF in the middle of a list"
+                             in parse_list' bracket (quote : acc) rest
+        parse_list' _       _   []     = error "unexpected EOF in the middle of a list"
 
         handle_sugar :: [Lexeme] -> String -> (SExpr, [Lexeme])
-        handle_sugar (RightParen:_)  str = error "right paren after quote sign is forbidden"
-        handle_sugar (LeftParen:xs)  str = let (list, rest) = helper [] xs
-                                            in (SList [SSymbol str, list], rest)
+        handle_sugar (Closed _:_)    _   = error "right paren after quote sign is forbidden"
+        handle_sugar (Open b:xs)     str = let (list, rest) = parse_list' b [] xs
+                                           in (SList [SSymbol str, list], rest)
         handle_sugar (Atom atom:xs)  str = (SList [SSymbol str, atom], xs)
         handle_sugar (Sugar str2:xs) str = let (quote, rest) = handle_sugar xs str2
-                                            in (SList [SSymbol str, quote], rest)
+                                           in (SList [SSymbol str, quote], rest)
 
