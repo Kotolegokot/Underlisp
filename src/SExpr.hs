@@ -1,11 +1,21 @@
 {-# LANGUAGE GADTs #-}
 
-module SExpr (Expr (..),
-              SExpr (..),
+module SExpr (SExpr (..),
               Callable (..),
               Context,
               bind,
               str2atom,
+              empty_list,
+              is_list, from_list,
+              is_int, from_int,
+              is_float, from_float,
+              is_number, from_number,
+              is_string, from_string,
+              is_char, from_char,
+              is_bool, from_bool,
+              is_symbol, from_symbol,
+              is_callable, from_callable,
+              is_context, from_context,
               show_sexpr, show_type) where
 
 import Data.Maybe
@@ -52,27 +62,6 @@ instance Ord SExpr where
     compare (SCallable a)    (SCallable b)    = error "can't compare two functions"
     compare _                 _               = error "can't compare s-expressions of different types"
 
-class (Eq a, Show a, Ord a) => Expr a where
-    is_list       :: a -> Bool
-    from_list     :: a -> [a]
-    is_int        :: a -> Bool
-    from_int      :: a -> Int
-    is_float      :: a -> Bool
-    from_float    :: a -> Float
-    is_number     :: a -> Bool
-    from_number   :: a -> Float
-    is_string     :: a -> Bool
-    from_string   :: a -> String
-    is_char       :: a -> Bool
-    from_char     :: a -> Char
-    is_bool       :: a -> Bool
-    from_bool     :: a -> Bool
-    is_symbol     :: a -> Bool
-    from_symbol   :: a -> String
-    is_callable   :: a -> Bool
-    from_callable :: a -> Callable
-    empty_list    :: a
-
 show_sexpr :: SExpr -> String
 show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
     where show_list [x]    = show_sexpr x
@@ -98,62 +87,67 @@ show_type (SSymbol _)   = "Symbol"
 show_type (SCallable _) = "Callable"
 show_type (SContext _)  = "Context"
 
-instance Expr SExpr where
-    is_list (SList _) = True
-    is_list _         = False
+is_list (SList _) = True
+is_list _         = False
 
-    from_list (SList list) = list
-    from_list _            = error "list expected"
+from_list (SList list) = list
+from_list _            = error "list expected"
 
-    empty_list = SList []
+empty_list = SList []
 
-    is_int (SInt _) = True
-    is_int _        = False
+is_int (SInt _) = True
+is_int _        = False
 
-    from_int (SInt int) = int
-    from_int _          = error "int expected"
+from_int (SInt int) = int
+from_int _          = error "int expected"
 
-    is_float (SFloat _) = True
-    is_float _          = False
+is_float (SFloat _) = True
+is_float _          = False
 
-    from_float (SFloat float) = float
-    from_float _              = error "float expected"
+from_float (SFloat float) = float
+from_float _              = error "float expected"
 
-    is_number sexpr = is_int sexpr || is_float sexpr
+is_number sexpr = is_int sexpr || is_float sexpr
 
-    from_number (SFloat float) = float
-    from_number (SInt int)     = fromIntegral int
-    from_number _              = error "int or float expected"
+from_number (SFloat float) = float
+from_number (SInt int)     = fromIntegral int
+from_number _              = error "int or float expected"
 
-    is_string (SString _) = True
-    is_string _           = False
+is_string (SString _) = True
+is_string _           = False
 
-    from_string (SString string) = string
-    from_string _                = error "string expected"
+from_string (SString string) = string
+from_string _                = error "string expected"
 
-    is_char (SChar _) = True
-    is_char _         = False
+is_char (SChar _) = True
+is_char _         = False
 
-    from_char (SChar char) = char
-    from_char _            = error "char expected"
+from_char (SChar char) = char
+from_char _            = error "char expected"
 
-    is_bool (SBool _) = True
-    is_bool _         = False
+is_bool (SBool _) = True
+is_bool _         = False
 
-    from_bool (SBool bool) = bool
-    from_bool _            = error "bool expected"
+from_bool (SBool bool) = bool
+from_bool _            = error "bool expected"
 
-    is_symbol (SSymbol _) = True
-    is_symbol _           = False
+is_symbol (SSymbol _) = True
+is_symbol _           = False
 
-    from_symbol (SSymbol keyword) = keyword
-    from_symbol _                  = error "keyword expected"
+from_symbol (SSymbol keyword) = keyword
+from_symbol _                  = error "keyword expected"
 
-    is_callable (SCallable _) = True
-    is_callable _         = False
+is_callable (SCallable _) = True
+is_callable _         = False
 
-    from_callable (SCallable f) = f
-    from_callable _         = error "function expected"
+from_callable (SCallable f) = f
+from_callable _         = error "function expected"
+
+is_context (SContext _) = True
+is_context _            = False
+
+from_context (SContext c) = c
+from_context _            = error "context expected"
 
 str2atom :: String -> SExpr
 str2atom atom
