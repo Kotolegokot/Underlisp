@@ -21,13 +21,13 @@ eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
   (expr, _) <- eval_sexpr context first
   case expr of
-    SCallable (UserDefined arg_names rest sexpr bound) -> do
+    SCallable (UserDefined l_context arg_names rest sexpr bound) -> do
         pairs <- mapM (eval_sexpr context) args
         let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
-        eval_sexpr (f_context `Map.union` context) sexpr
-    SCallable (Macro arg_names rest sexpr bound) -> do
+        eval_sexpr (f_context `Map.union` l_context) sexpr
+    SCallable (Macro l_context arg_names rest sexpr bound) -> do
         let f_context = handle_args arg_names rest (bound ++ args)
-        (expr, _) <- eval_sexpr (f_context `Map.union` context) sexpr
+        (expr, _) <- eval_sexpr (f_context `Map.union` l_context) sexpr
         eval_sexpr context expr
     SCallable (BuiltIn _ _ f bound)                       -> do
         pairs <- mapM (eval_sexpr context) args

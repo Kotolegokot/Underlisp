@@ -1,9 +1,3 @@
-(defvar defmacro (macro (name args &rest body)
-  `(defvar ~name (macro ~args @body))))
-
-(defmacro define (name args &rest body)
-  `(defvar ~name (lambda ~args @body)))
-
 (define outer-1 () (inner))
 
 (define outer-2 ()
