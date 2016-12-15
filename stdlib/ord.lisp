@@ -14,7 +14,7 @@
 ;; (compare x) returns 'LT, 'EQ, or 'GT
 (define compare (x y)
   (if (= x y)
-    'EQ
+      'EQ
     (if (< x y)
       'LT
       'GT)))

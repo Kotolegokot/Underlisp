@@ -42,6 +42,8 @@ spop_defvar eval context [var, value]
       let new_value = case expr of
             SCallable (UserDefined context arg_names rest sexpr bound) ->
               SCallable $ UserDefined (Map.insert var_name new_value context) arg_names rest sexpr bound
+            SCallable (Macro context arg_names rest sexpr bound) ->
+              SCallable $ Macro (Map.insert var_name new_value context) arg_names rest sexpr bound
             other                                      -> other
       return (new_value, Map.insert var_name new_value context)
 spop_defvar _    _       _ = error "defvar: two arguments required"

@@ -1,6 +1,6 @@
 ;; (defmacro macro-name args body)
 (defvar defmacro (macro (name args &rest body)
-  `(defvar ~name (macro ~args @body))))
+			`(defvar ~name (macro ~args @body))))
 
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
@@ -13,7 +13,7 @@
 ;; (switch (condition1 exp1) (condition2 exp2) ...)
 (defmacro switch (&rest pairs)
   (if (null pairs)
-    ''()
+      ''()
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
        (switch @(tail pairs)))))
