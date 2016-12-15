@@ -28,7 +28,7 @@ spop_let _    _       _               = error "list of bindings expected"
 spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
   where (arg_names, rest) = handle_lambda_list lambda_list
-        func = UserDefined (Map.keys context) arg_names rest (SList $ SSymbol "seq" : body) []
+        func = UserDefined context arg_names rest (SList $ SSymbol "seq" : body) []
 spop_lambda _    _       _            = error "lambda: at least one argument required"
 
 -- special operator defvar
@@ -39,7 +39,11 @@ spop_defvar eval context [var, value]
       let var_name = from_symbol var
       let new_context = Map.insert var_name nil context
       (expr, _) <- eval new_context value
-      return (expr, Map.insert var_name expr context)
+      let new_value = case expr of
+            SCallable (UserDefined context arg_names rest sexpr bound) ->
+              SCallable $ UserDefined (Map.insert var_name new_value context) arg_names rest sexpr bound
+            other                                      -> other
+      return (new_value, Map.insert var_name new_value context)
 spop_defvar _    _       _ = error "defvar: two arguments required"
 
 -- built-in function type

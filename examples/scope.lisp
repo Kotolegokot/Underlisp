@@ -5,6 +5,7 @@
   (outer-1)
 )
 
-;(outer-1) would fail
-(outer-2)
+(define flip (f)
+  (lambda (x y) (f y x)))
 
+(print ((flip -) 1 2))

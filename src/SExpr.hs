@@ -167,7 +167,7 @@ type Eval = Context -> SExpr -> IO (SExpr, Context)
 
 data Callable where
   -- lexical scope -> arg names -> rest -> s-expression -> bound args
-  UserDefined :: [String] -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  UserDefined :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- lexical scope -> arg names -> rest -> s-expression -> bound args
   Macro       :: [String] -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
