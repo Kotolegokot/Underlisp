@@ -47,14 +47,14 @@ handle_args arg_names False args
   | length arg_names < length args = error "too many arguements"
   | otherwise                    = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
 handle_args arg_names True args
-  | length arg_names > length args = error "too little arguments"
-  | otherwise                      = let (left, right) = splitAt (length arg_names - 1) args
-                                      in let args' = left ++ [SList right]
-                                          in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+  | length arg_names - 1 > length args = error "too little arguments"
+  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
+                                          in let args' = left ++ [SList right]
+                                              in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
 
 load_prelude :: IO Context
 load_prelude = do
-  text <- readFile "examples/prelude.lisp"
+  text <- readFile "stdlib/prelude.lisp"
   (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read text
   return context
 
@@ -89,11 +89,8 @@ start_context = Map.fromList $
     ("list",         Nothing, builtin_list),
     ("head",         Just 1,  builtin_head),
     ("tail",         Just 1,  builtin_tail),
-    ("init",         Just 1,  builtin_init),
-    ("last",         Just 1,  builtin_last),
-    ("length",       Just 1,  builtin_length),
+    ("null",         Just 1,  builtin_null),
     ("append",       Just 2,  builtin_append),
-    ("nth",          Just 2,  builtin_nth),
     ("+",            Nothing, builtin_sum),
     ("-",            Just 2,  builtin_substract),
     ("*",            Nothing, builtin_product),
@@ -101,15 +98,12 @@ start_context = Map.fromList $
     ("float",        Just 1,  builtin_float),
     ("not",          Just 1,  builtin_not),
     ("=",            Just 2,  builtin_eq),
-    ("/=",           Just 2,  builtin_ne),
     ("<",            Just 2,  builtin_lt),
-    (">",            Just 2,  builtin_gt),
-    ("<=",           Just 2,  builtin_le),
-    (">=",           Just 2,  builtin_ge),
     ("concat",       Nothing, builtin_concat),
     ("str-to-int",   Just 1,  builtin_str_to_int),
     ("str-to-float", Just 1,  builtin_str_to_float),
-    ("str-length",   Just 1,  builtin_str_length) ])
+    ("str-length",   Just 1,  builtin_str_length),
+    ("error",        Just 1,  builtin_error) ])
 
 spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_context_from_file eval context [args] = do
