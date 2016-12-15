@@ -36,9 +36,10 @@ spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_defvar eval context [var, value]
   | not $ is_symbol var = error "first argument of 'defvar' must be a symbol"
   | otherwise           = do
-      let new_context = Map.insert (from_symbol var) (SList []) context
+      let var_name = from_symbol var
+      let new_context = Map.insert var_name nil context
       (expr, _) <- eval new_context value
-      return (expr, Map.insert (from_symbol var) expr context)
+      return (expr, Map.insert var_name expr context)
 spop_defvar _    _       _ = error "defvar: two arguments required"
 
 -- built-in function type
