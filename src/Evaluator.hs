@@ -28,7 +28,7 @@ eval_sexpr context (SList (first:args)) = do
         eval_sexpr (f_context `Map.union` l_context) sexpr
     SCallable (Macro l_context arg_names rest sexpr bound) -> do
         let f_context = handle_args arg_names rest (bound ++ args)
-        (expr, _) <- eval_sexpr (f_context `Map.union` (context `Map.union` l_context)) sexpr
+        (expr, _) <- eval_sexpr (f_context `Map.union` (l_context `Map.union` context)) sexpr
         eval_sexpr context expr
     SCallable (BuiltIn _ _ f bound)                       -> do
         pairs <- mapM (eval_sexpr context) args
