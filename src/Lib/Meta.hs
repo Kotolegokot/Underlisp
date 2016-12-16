@@ -9,6 +9,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
 import SExpr
+import Util
 import Lib.Internal
 
 -- special operator macro
@@ -80,7 +81,7 @@ spop_interprete :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
 spop_interprete eval context [arg] = do
     (expr, _) <- eval context arg
     case expr of
-      SString str -> eval_list eval context . Reader.read $ str
+      SString str -> eval_list eval context . Reader.read Undefined  $ str -- TODO: change Undefined to a normal point
       _           -> error "interprete: string expected"
 spop_interprete _    _       _     = error "interprete: just one argument required"
 

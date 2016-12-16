@@ -1,14 +1,16 @@
 module Main where
 
 import Data.Tree
+import Control.Category
 import System.Environment
 import Interpreter
 
+
 main :: IO ()
-main = getArgs >>= handle_args >>= interprete_program
+main = do
+  args <- getArgs
+  interprete_program (handle_args args)
 
-handle_args :: [String] -> IO String
-handle_args []     = getLine
-handle_args [file] = readFile file
-handle_args _      = getExecutablePath >>= (\exe -> error $ "usage: " ++ exe ++ " [file]")
-
+handle_args :: [String] -> String
+handle_args [filename] = filename
+handle_args _          = error "usage: program filename"

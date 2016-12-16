@@ -5,6 +5,7 @@ import qualified Data.Map as Map
 import qualified Reader
 import Control.Monad (void, foldM)
 import SExpr
+import Util
 import Lib.Everything
 
 evaluate_program :: [SExpr] -> IO ()
@@ -61,7 +62,7 @@ handle_args arg_names True args
 load_prelude :: IO Context
 load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
-  (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read text
+  (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read Undefined text -- TODO: change Undefined
   return context
 
 start_context :: Context
@@ -118,7 +119,7 @@ spop_context_from_file eval context [args] = do
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      new_context <- evaluate_module $ Reader.read text
+      new_context <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
       return (SContext new_context, context)
     _                -> error "context-from-file: string expected"
 spop_context_from_file _    _       _      = error "context-from-file: just one argument required"
@@ -129,6 +130,6 @@ spop_context_from_file_no_prelude eval context [args] = do
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      new_context <- evaluate_module_no_prelude $ Reader.read text
+      new_context <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
       return (SContext new_context, context)
     _                -> error "context-from-file-no-prelude: string expected"
