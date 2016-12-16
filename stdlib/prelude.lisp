@@ -26,6 +26,11 @@
 (defmacro load-module (filename)
   `(load-context (context-from-file ~filename)))
 
+;; (load-module-no-prelude module-name)
+(defmacro load-module-no-prelude (filename)
+  `(load-context
+    (context-from-file-no-prelude ~filename)))
+
 ;; (apply function list)
 (defmacro apply (f xs)
   `(~f @(eval xs)))

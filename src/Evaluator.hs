@@ -18,6 +18,11 @@ evaluate_module body = do
   (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (nil, prelude) body
   return context
 
+evaluate_module_no_prelude :: [SExpr] -> IO Context
+evaluate_module_no_prelude body = do
+  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (nil, start_context) body
+  return context
+
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
 eval_sexpr context (SList (first:args)) = do
   (expr, _) <- eval_sexpr context first
@@ -62,24 +67,25 @@ load_prelude = do
 start_context :: Context
 start_context = Map.fromList $
     (fmap (\(name, args, f) -> (name, SCallable $ SpecialOp name args f [])) [
-    ("let",               Nothing, spop_let),
-    ("lambda",            Nothing, spop_lambda),
-    ("defvar",            Just 2,  spop_defvar),
-    ("if",                Just 3,  spop_if),
-    ("macro",             Nothing, spop_macro),
-    ("macro-expand",      Just 1,  spop_macro_expand),
-    ("quote",             Just 1,  spop_quote),
-    ("backquote",         Just 1,  spop_backquote),
-    ("interprete",        Just 1,  spop_interprete),
-    ("eval",              Just 1,  spop_eval),
-    ("and",               Nothing, spop_and),
-    ("or",                Nothing, spop_or),
-    ("->",                Just 2,  spop_impl),
-    ("context",           Nothing, spop_context),
-    ("load-context",      Just 1,  spop_load_context),
-    ("current-context",   Just 0,  spop_current_context),
-    ("context-from-file", Just 1,  spop_context_from_file),
-    ("seq",               Nothing, spop_seq) ]) ++
+    ("let",                          Nothing, spop_let),
+    ("lambda",                       Nothing, spop_lambda),
+    ("defvar",                       Just 2,  spop_defvar),
+    ("if",                           Just 3,  spop_if),
+    ("macro",                        Nothing, spop_macro),
+    ("macro-expand",                 Just 1,  spop_macro_expand),
+    ("quote",                        Just 1,  spop_quote),
+    ("backquote",                    Just 1,  spop_backquote),
+    ("interprete",                   Just 1,  spop_interprete),
+    ("eval",                         Just 1,  spop_eval),
+    ("and",                          Nothing, spop_and),
+    ("or",                           Nothing, spop_or),
+    ("->",                           Just 2,  spop_impl),
+    ("context",                      Nothing, spop_context),
+    ("load-context",                 Just 1,  spop_load_context),
+    ("current-context",              Just 0,  spop_current_context),
+    ("context-from-file",            Just 1,  spop_context_from_file),
+    ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
+    ("seq",                          Nothing, spop_seq) ]) ++
   (fmap (\(name, args, f) -> (name, SCallable $ BuiltIn name args f [])) [
     ("type",         Just 1,  builtin_type),
     ("bind",         Nothing, builtin_bind),
@@ -116,3 +122,13 @@ spop_context_from_file eval context [args] = do
       return (SContext new_context, context)
     _                -> error "context-from-file: string expected"
 spop_context_from_file _    _       _      = error "context-from-file: just one argument required"
+
+spop_context_from_file_no_prelude :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
+spop_context_from_file_no_prelude eval context [args] = do
+  (sexpr, _) <- eval context args
+  case sexpr of
+    SString filename -> do
+      text <- readFile filename
+      new_context <- evaluate_module_no_prelude $ Reader.read text
+      return (SContext new_context, context)
+    _                -> error "context-from-file-no-prelude: string expected"
