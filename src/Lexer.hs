@@ -5,6 +5,11 @@ import Data.Map (Map)
 import Data.Char (isSpace)
 import SExpr
 
+data Point = Point { filename :: String
+                   , row :: Int
+                   , column :: Int }
+           | Undefined
+
 data Lexeme = Open Char | Closed Char | Atom SExpr | Sugar String
   deriving (Eq, Show)
 
