@@ -60,10 +60,11 @@ handle_args arg_names True args
                                               in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
 
 load_prelude :: IO Context
-load_prelude = do
+load_prelude = return start_context
+{--load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
   (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read Undefined text -- TODO: change Undefined
-  return context
+  return context--}
 
 start_context :: Context
 start_context = Map.fromList $
