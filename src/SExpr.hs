@@ -2,6 +2,7 @@
 
 module SExpr (SExpr (..),
               Callable (..),
+              Prototype (..),
               Context,
               bind,
               str2atom,
@@ -165,37 +166,43 @@ str2atom atom
 
 type Eval = Context -> SExpr -> IO (SExpr, Context)
 
+data Prototype = Prototype [String] Bool
+
+instance Show Prototype where
+  show (Prototype arg_names rest) =
+    if rest
+    then show_sexpr . SList . map SSymbol $ init arg_names ++ ["&rest", last arg_names]
+    else show_sexpr . SList . map SSymbol $ arg_names
+
 data Callable where
-  -- lexical scope -> arg names -> rest -> s-expression -> bound args
-  UserDefined :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
-  -- lexical scope -> arg names -> rest -> s-expression -> bound args
-  Macro       :: Context -> [String] -> Bool -> SExpr -> [SExpr] -> Callable
+  -- lexical scope -> arg names -> rest -> s-expressions -> bound args
+  UserDefined :: Context -> Prototype -> [SExpr] -> [SExpr] -> Callable
+  -- lexical scope -> arg names -> rest -> s-expressions -> bound args
+  Macro       :: Context -> Prototype -> [SExpr] -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
   BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
   SpecialOp   :: String -> Maybe Int -> (Eval -> Context -> [SExpr] -> IO (SExpr, Context)) -> [SExpr] -> Callable
 
 instance Show Callable where
-  show (UserDefined _ args rest sexpr bound)  = "User-defined function (args: "
-                                                ++ show args ++ ", &rest: " ++ (if rest then "on" else "off")
-                                                ++ ", sexpr: " ++ show_sexpr sexpr
-                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-  show (Macro _ args rest sexpr bound)        = "Macro (args: " ++ show args
-                                                ++ ", &rest: " ++ (if rest then "on" else "off")
-                                                ++ ", sexpr: " ++ show_sexpr sexpr
-                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+  show (UserDefined _ prototype sexprs bound)  = "User-defined function " ++ show prototype
+                                                 ++ "(body: " ++ show_sexpr (SList sexprs)
+                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+  show (Macro _ prototype sexprs bound)        = "Macro (args: " ++ show prototype
+                                                 ++ "(body: " ++ show_sexpr (SList sexprs)
+                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
   show (BuiltIn name _ _ bound)               = "Built-in function (name: '" ++ name ++ "'"
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
   show (SpecialOp name _ _ bound)             = "Special operator (name: '" ++ name ++ "'"
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
 
 bind :: Callable -> [SExpr] -> Callable
-bind (UserDefined scope arg_names rest sexpr bound) args
+bind (UserDefined scope prototype@(Prototype arg_names rest) sexprs bound) args
   | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = UserDefined scope arg_names rest sexpr (bound ++ args)
-bind (Macro scope arg_names rest sexpr bound) args
+  | otherwise                                               = UserDefined scope prototype sexprs (bound ++ args)
+bind (Macro scope prototype@(Prototype arg_names rest) sexprs bound) args
   | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = Macro scope arg_names rest sexpr (bound ++ args)
+  | otherwise                                               = Macro scope prototype sexprs (bound ++ args)
 bind (BuiltIn name (Just args_count) f bound) args
   | args_count < (length bound + length args) = error "too many arguments"
   | otherwise                                 = BuiltIn name (Just args_count) f (bound ++ args)

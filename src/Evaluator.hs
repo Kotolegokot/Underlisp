@@ -68,6 +68,59 @@ eval_scope = expand_macros >>= handle_defines >>= eval_list
         eval_list (context, [])     = (context, nil)
 
 expand_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
+expand_macros (context, sexprs) = apply_macros (collect_macros Map.empty, filter (not . is_defmacro) sexprs)
+  where collect_macros :: Context -> (Context, [SExpr]) -> Context
+        collect_macros lexical_scope (context, (SList [SSymbol "defmacro":definition]:rest)) =
+          let (name, value) = handle_macro definition
+          in  collect_macros (Map.insert name value lexical_scope) (context, rest)
+        collect_macros lexical_scope (context, (_:rest)) = collect_macros lexical_scope (context, rest)
+        collect_macros lexical_scope (context, [])       =
+          let new_lexical_scope = fmap (\(Macro context prototype sexprs bound) ->
+                                           Macro (new_lexical_scope `Map.union` context) prototype sexprs bound) lexical_scope
+          in  new_lexical_scope `Map.union` context
+
+        is_defmacro :: SExpr -> Bool
+        is_defmacro (SList (SSymbol "defmacro":_)) = True
+        is_defmacro                                = False
+
+        apply_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
+        apply_macros (context, (x:xs)) = do
+          x' <- apply_macro context x
+          rest' <- apply_macros (context, xs)
+          return (context, x' : rest')
+        apply_macros (context, [])     = return (context, [])
+
+        apply_macro :: Context -> SExpr -> IO SExpr
+        apply_macro (context, SList (SSymbol sym:body)) = case Map.lookup sym context of
+          Just (SCallable (Macro context prototype sexprs bound)) -> do
+            let arg_bindings = handle_args prototype (bound ++ body)
+            body' <- mapM (apply_macro context) body
+            (_, sexpr) <- eval_scope (context, sexprs)
+            return sexpr
+          Nothing                                                 -> return (SList $ SSymbol sym : body)
+        apply_macro (context, other)                    = return other
+
+handle_macro :: Context -> [SExpr] -> Callable
+handle_macro (s_name:s_lambda_list:body)
+  | not $ is_symbol s_name = error "macro name must be a symbol"
+  | otherwise              = Macro name Map.empty prototype body []
+  where name = from_string s_name
+        prototype = Evaluator.handle_lambda_list s_lambda_list -- TODO remove "Evaluator."
+
+handle_lambda_list :: SExpr -> Prototype
+handle_lambda_list (SList lambda_list)
+  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
+  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = error "&rest must be last but one"
+  | otherwise                       = if rest
+                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
+                                      else Prototype (map from_symbol $ lambda_list) rest
+  where ixs   = elemIndices (SSymbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+handle_lmabda_list _ = error "lambda list must be a list"
+
 handle_defines :: (Context, [SExpr]) -> IO (Context, [SExpr])
 eval :: (Context, SExpr) -> IO SExpr
 

@@ -28,4 +28,4 @@ handle_lambda_list (SList lambda_list)
         ix    = head ixs
         rest  = length ixs == 1
         count = length lambda_list
-handle_lambda_list' _ = error "lambda list must be a list"
+handle_lambda_list _ = error "lambda list must be a list"
