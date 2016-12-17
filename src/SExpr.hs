@@ -3,9 +3,6 @@
 module SExpr (SExpr (..),
               Callable (..),
               Context,
-              Context',
-              Callable' (..),
-              Prototype (..),
               bind,
               str2atom,
               nil,
@@ -207,19 +204,3 @@ bind (SpecialOp name (Just args_count) f bound) args
   | args_count < (length bound + length args) = error "too many arguments"
   | otherwise                                 = SpecialOp name (Just args_count) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
-
-data Prototype = Prototype { names :: String
-                           , rest  :: Bool }
-
-type Bound = [String]
-type Eval' = (Context', SExpr) -> IO (Context', SExpr)
-type SpecialOpF = Eval' -> (Context', SExpr) -> IO (Context', SExpr)
-type BuiltInF   = [SExpr] -> IO SExpr
-
-data Callable' where
-  Macro' :: Context' -> Prototype -> SExpr -> [SExpr] -> Callable'
-  UserDefined' :: Context' -> Prototype -> SExpr -> Bound -> Callable'
-  SpecialOp' :: String -> Maybe Int -> SpecialOpF -> Callable'
-  BuiltIn' :: String -> Maybe Int -> BuiltInF -> Callable'
-
-type Context' = Map String Callable'
