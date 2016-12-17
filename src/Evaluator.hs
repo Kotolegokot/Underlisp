@@ -3,6 +3,7 @@ module Evaluator (evaluate_program, evaluate_module) where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
+import Control.Arrow
 import Control.Monad (void, foldM)
 import SExpr
 import Util
@@ -58,6 +59,17 @@ handle_args arg_names True args
   | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
                                           in let args' = left ++ [SList right]
                                               in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+
+eval_scope :: (Context', [SExpr]) -> IO (Context', SExpr)
+eval_scope = expand_macros >>= handle_defines >>= eval_list
+  where eval_list :: (Context', [SExpr]) -> IO (Context', SExpr)
+        eval_list (context, (x:xs)) = eval (context, x) >> eval_rest (context, xs)
+        eval_list (context, [x])    = (context, eval (context, x))
+        eval_list (context, [])     = (context, nil)
+
+expand_macros :: (Context', [SExpr]) -> IO (Context', [SExpr])
+handle_defines :: (Context', [SExpr]) -> IO (Context', [SExpr])
+eval :: (Context', SExpr) -> IO SExpr
 
 load_prelude :: IO Context
 load_prelude = return start_context
