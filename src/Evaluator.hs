@@ -56,23 +56,23 @@ eval_sexpr context sexpr                = return (sexpr, context)--}
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
 eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
-eval_scope context sexprs = expand_macros (context, sexprs) >>= handle_defines >>= eval_list
-  where eval_list :: (Context, [SExpr]) -> IO (Context, SExpr)
-        eval_list (context, xs) = foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil) xs
+eval_scope context sexprs = expand_macros context sexprs >>= (uncurry collect_defines) >>= (uncurry eval_list)
+  where eval_list :: Context -> [SExpr] -> IO (Context, SExpr)
+        eval_list context = foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil)
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
-expand_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
-expand_macros (context, sexprs) = apply_macros (collect_macros Map.empty (context, sexprs), filter (not . is_defmacro) sexprs)
+expand_macros :: Context -> [SExpr] -> IO (Context, [SExpr])
+expand_macros context sexprs = apply_macros (collect_macros Map.empty (context, sexprs), filter (not . is_defmacro) sexprs)
   where collect_macros :: Context -> (Context, [SExpr]) -> Context
         collect_macros lexical_scope (context, (SList (SSymbol "defmacro":definition):rest)) =
           let (name, macro) = handle_defmacro context definition
           in  collect_macros (Map.insert name (SCallable macro) lexical_scope) (context, rest)
         collect_macros lexical_scope (context, (_:rest)) = collect_macros lexical_scope (context, rest)
         collect_macros lexical_scope (context, [])       =
-          let new_lexical_scope = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
-                                           SCallable (Macro (new_lexical_scope `Map.union` context) prototype sexprs bound)) lexical_scope
-          in  new_lexical_scope `Map.union` context
+          let lexical_scope' = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
+                                           SCallable (Macro (lexical_scope' `Map.union` context) prototype sexprs bound)) lexical_scope
+          in  lexical_scope' `Map.union` context
 
         is_defmacro :: SExpr -> Bool
         is_defmacro (SList (SSymbol "defmacro":_)) = True
@@ -116,8 +116,8 @@ handle_defmacro :: Context -> [SExpr] -> (String, Callable)
 handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
   | otherwise              = (name, Macro context prototype body [])
-  where name = from_string s_name
-        prototype = parse_lambda_list s_lambda_list -- TODO remove "Evaluator."
+  where name      = from_string s_name
+        prototype = parse_lambda_list s_lambda_list
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -135,8 +135,34 @@ parse_lambda_list (SList lambda_list)
         count = length lambda_list
 parse_lambda_list _ = error "lambda list must be a list"
 
-handle_defines :: (Context, [SExpr]) -> IO (Context, [SExpr])
-handle_defines = undefined
+-- | looks through a lexical scope and evaluate all defines
+collect_defines :: Context -> [SExpr] -> IO (Context, [SExpr])
+collect_defines context sexprs = do
+  context' <- collect_defines' Map.empty context sexprs
+  return (context', filter (not . is_define) sexprs)
+    where collect_defines' :: Context -> Context -> [SExpr] -> IO Context
+          collect_defines' lexical_scope context (SList (SSymbol "define":definition):rest) =
+            let (name, function) = handle_define context definition
+            in  collect_defines' (Map.insert name (SCallable function) lexical_scope) context rest
+          collect_defines' lexical_scope context (_:rest) = collect_defines' lexical_scope context rest
+          collect_defines' lexical_scope context []       = return $
+            let lexical_scope' = fmap (\(SCallable (UserDefined context prototype sexprs bound)) ->
+                                         SCallable (UserDefined (lexical_scope' `Map.union` context) prototype sexprs bound)) lexical_scope
+            in  lexical_scope' `Map.union` context
+
+          is_define :: SExpr -> Bool
+          is_define (SList (SSymbol "define":_)) = True
+          is_define _                            = False
+
+-- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
+-- | and constructs the correspoding UserDefined object (Callable)
+-- | also returns its name
+handle_define :: Context -> [SExpr] -> (String, Callable)
+handle_define context (s_name:s_lambda_list:body)
+  | not $ is_symbol s_name = error "function name must be a symbol"
+  | otherwise              = (name, UserDefined context prototype body [])
+  where name      = from_string s_name
+        prototype = parse_lambda_list s_lambda_list
 
 eval :: Context -> SExpr -> IO (Context, SExpr)
 eval = undefined
