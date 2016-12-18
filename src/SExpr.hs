@@ -164,7 +164,8 @@ str2atom atom
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
 
-type Eval = Context -> SExpr -> IO (SExpr, Context)
+type Eval      = Context -> SExpr   -> IO (Context, SExpr)
+type EvalScope = Context -> [SExpr] -> IO (Context, SExpr)
 
 data Prototype = Prototype [String] Bool
 
@@ -182,7 +183,7 @@ data Callable where
   -- name -> args count or rest -> function -> bound args
   BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
-  SpecialOp   :: String -> Maybe Int -> (Eval -> Context -> [SExpr] -> IO (SExpr, Context)) -> [SExpr] -> Callable
+  SpecialOp   :: String -> Maybe Int -> (Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)) -> [SExpr] -> Callable
 
 instance Show Callable where
   show (UserDefined _ prototype sexprs bound)  = "User-defined function " ++ show prototype

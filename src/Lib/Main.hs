@@ -1,5 +1,4 @@
 module Lib.Main (spop_let,
-                 spop_lambda,
                  spop_defvar,
                  builtin_type,
                  builtin_bind,
@@ -11,43 +10,36 @@ import SExpr
 import Lib.Internal
 
 -- special operator let
-spop_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_let eval context ((SList pairs):body) = do
-    new_context <- handle_pairs pairs context
-    eval new_context (SList (SSymbol "seq":body))
-        where handle_pairs (x:xs) acc = case x of
-                                          (SList [SSymbol var, value]) -> do
-                                              (expr, _) <- eval acc value
-                                              handle_pairs xs (Map.insert var expr acc)
-                                          (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
-                                          _              -> error "a binding in 'let' must be of the following form: (var value)"
-              handle_pairs []     acc = return acc
-spop_let _    _       _               = error "list of bindings expected"
-
--- special operator lambda
--- TODO: remove
-spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
-  where (arg_names, rest) = handle_lambda_list lambda_list
-        func = UserDefined context (Prototype arg_names rest) body []
-spop_lambda _    _       _            = error "lambda: at least one argument required"
+spop_let :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_let eval eval_scope context ((SList pairs):body) = do
+  context' <- handle_pairs pairs context
+  eval_scope context' body
+    where handle_pairs (x:xs) acc = case x of
+            (SList [SSymbol var, value]) -> do
+              (_, expr) <- eval acc value
+              handle_pairs xs (Map.insert var expr acc)
+            (SList [_, _]) -> error "let: first item in a binding pair must be a keyword"
+            _              -> error "let: bindings must be of the following form: (var value)"
+          handle_pairs []     acc = return acc
+spop_let _    _          _       [_]                  = error "let: list expected"
+spop_let _    _          _       _                    = error "let: at least one argument expected"
 
 -- special operator defvar
-spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_defvar eval context [var, value]
-  | not $ is_symbol var = error "first argument of 'defvar' must be a symbol"
+spop_defvar :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_defvar eval eval_scope context [var, value]
+  | not $ is_symbol var = error "defvar: first argument must be a symbol"
   | otherwise           = do
       let var_name = from_symbol var
-      let new_context = Map.insert var_name nil context
-      (expr, _) <- eval new_context value
-      let new_value = case expr of
+      let context' = Map.insert var_name nil context
+      (_, expr) <- eval context' value
+      let value' = case expr of
             SCallable (UserDefined context prototype sexpr bound) ->
-              SCallable $ UserDefined (Map.insert var_name new_value context) prototype sexpr bound
+              SCallable $ UserDefined (Map.insert var_name value' context) prototype sexpr bound
             SCallable (Macro context prototype sexpr bound) ->
-              SCallable $ Macro (Map.insert var_name new_value context) prototype sexpr bound
+              SCallable $ Macro (Map.insert var_name value' context) prototype sexpr bound
             other                                      -> other
-      return (new_value, Map.insert var_name new_value context)
-spop_defvar _    _       _ = error "defvar: two arguments required"
+      return (Map.insert var_name value' context, value')
+spop_defvar _    _           _       _ = error "defvar: two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr

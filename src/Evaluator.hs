@@ -13,43 +13,18 @@ import Lib.Everything
 evaluate_program :: [SExpr] -> IO ()
 evaluate_program body = do
   prelude <- load_prelude
-  void $ eval_list eval_sexpr prelude body
+  void $ eval_scope prelude body
 
 evaluate_module :: [SExpr] -> IO Context
 evaluate_module body = do
   prelude <- load_prelude
-  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (nil, prelude) body
+  (context, _) <- eval_scope prelude body
   return context
 
 evaluate_module_no_prelude :: [SExpr] -> IO Context
 evaluate_module_no_prelude body = do
-  (_, context) <- foldM (\(_, prev_context) sexpr -> eval_sexpr prev_context sexpr) (nil, start_context) body
+  (context, _) <- eval_scope start_context body
   return context
-
-eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
-eval_sexpr = undefined
-{--eval_sexpr context (SList (first:args)) = do
-  (expr, _) <- eval_sexpr context first
-  case expr of
-    SCallable (UserDefined l_context prototype sexpr bound) -> do
-        pairs <- mapM (eval_sexpr context) args
-        let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
-        eval_sexpr (f_context `Map.union` l_context) sexpr
-    SCallable (Macro l_context arg_names rest sexpr bound) -> do
-        let f_context = handle_args arg_names rest (bound ++ args)
-        (expr, _) <- eval_sexpr (f_context `Map.union` (l_context `Map.union` context)) sexpr
-        eval_sexpr context expr
-    SCallable (BuiltIn _ _ f bound)                       -> do
-        pairs <- mapM (eval_sexpr context) args
-        result <- f (bound ++ (fmap fst pairs))
-        return (result, context)
-    SCallable (SpecialOp _ _ f bound)                     -> f eval_sexpr context (bound ++ args)
-    _                                         -> error $ "can't execute s-expression: '" ++ show_sexpr expr ++ "'"
-eval_sexpr context (SList [])           = error "can't execute empty list"
-eval_sexpr context (SSymbol str) 
-  | str `Map.member` context = return (context Map.! str, context)
-  | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
-eval_sexpr context sexpr                = return (sexpr, context)--}
 
 -- | evaluates a lexical scope
 -- | 1. expands all macros in it
@@ -170,13 +145,13 @@ eval context (SList (first:rest)) = do
   case first' of
     SCallable (UserDefined l_context prototype sexprs bound) -> do
       pairs <- mapM (eval context) rest
-      let arg_bindings = bind_args prototype (bound ++ map fst pairs)
-      eval_scope (arg_bindings `Map.union`  l_context) sexpr
+      let arg_bindings = bind_args prototype (bound ++ map snd pairs)
+      eval_scope (arg_bindings `Map.union`  l_context) sexprs
     SCallable (BuiltIn _ _ f bound)                          -> do
       pairs <- mapM (eval context) rest
-      result <- f (bound ++ map fst pairs)
+      result <- f (bound ++ map snd pairs)
       return (context, result)
-    SCallable (SpecialOp _ _ f bound)                        -> f eval context (bound ++ rest)
+    SCallable (SpecialOp _ _ f bound)                        -> f eval eval_scope context (bound ++ rest) :: IO (Context, SExpr)
     _                                                        -> error $ "unable to execute s-expression: '" ++ show_sexpr first' ++ "'"
 eval context (SList [])           = error "unable to execute an empty list"
 eval context (SSymbol sym)        = case Map.lookup sym context of
@@ -195,11 +170,8 @@ start_context :: Context
 start_context = Map.fromList $
     (fmap (\(name, args, f) -> (name, SCallable $ SpecialOp name args f [])) [
     ("let",                          Nothing, spop_let),
-    ("lambda",                       Nothing, spop_lambda),
-    ("defvar",                       Just 2,  spop_defvar),
     ("if",                           Just 3,  spop_if),
-    ("macro",                        Nothing, spop_macro),
-    ("macro-expand",                 Just 1,  spop_macro_expand),
+    ("defvar",                       Just 2,  spop_defvar),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),
@@ -239,23 +211,24 @@ start_context = Map.fromList $
     ("str-length",   Just 1,  builtin_str_length),
     ("error",        Just 1,  builtin_error) ])
 
-spop_context_from_file :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_context_from_file eval context [args] = do
-  (sexpr, _) <- eval context args
+spop_context_from_file :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_context_from_file eval eval_scope context [arg] = do
+  (_, sexpr) <- eval context arg
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      new_context <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
-      return (SContext new_context, context)
+      context' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
+      return (context, SContext context')
     _                -> error "context-from-file: string expected"
-spop_context_from_file _    _       _      = error "context-from-file: just one argument required"
+spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"
 
-spop_context_from_file_no_prelude :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_context_from_file_no_prelude eval context [args] = do
-  (sexpr, _) <- eval context args
+spop_context_from_file_no_prelude :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_context_from_file_no_prelude eval eval_scope context [args] = do
+  (_, sexpr) <- eval context args
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      new_context <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
-      return (SContext new_context, context)
+      context' <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
+      return (context, SContext context')
     _                -> error "context-from-file-no-prelude: string expected"
+spop_context_from_file_no_prelude _    _          _       _      = error "context-from-file-no-prelude: just one argument required"

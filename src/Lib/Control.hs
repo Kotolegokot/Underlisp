@@ -4,17 +4,17 @@ module Lib.Control (spop_if,
 import SExpr
 import Lib.Internal
 
-spop_if :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_if eval context [cond_sexpr]                          = spop_if eval context [cond_sexpr, nil, nil]
-spop_if eval context [cond_sexpr, true_sexpr]              = spop_if eval context [cond_sexpr, true_sexpr, nil]
-spop_if eval context [cond_sexpr, true_sexpr, false_sexpr] = do
-    (cond, _) <- eval context cond_sexpr
+spop_if :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_if eval eval_scope context [cond_sexpr]                          = spop_if eval eval_scope context [cond_sexpr, nil,        nil]
+spop_if eval eval_scope context [cond_sexpr, true_sexpr]              = spop_if eval eval_scope context [cond_sexpr, true_sexpr, nil]
+spop_if eval eval_scope context [cond_sexpr, true_sexpr, false_sexpr] = do
+    (_, cond) <- eval context cond_sexpr
     if from_bool cond
        then eval context true_sexpr
        else eval context false_sexpr
-spop_if _    _       _                                     = error "'if' requires 1 to 3 arguments"
+spop_if _    _          _        _                                    = error "if: 1 to 3 arguments requried"
 
-spop_seq :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_seq eval context args = do
-    (expr, _) <- eval_list eval context args
-    return (expr, context)
+spop_seq :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_seq _ eval_scope context args = do
+  (_, expr) <- eval_scope context args
+  return (context, expr)
