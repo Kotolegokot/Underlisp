@@ -1,5 +1,7 @@
 module Evaluator (evaluate_program, evaluate_module) where
 
+import Debug.Trace
+
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
@@ -31,7 +33,11 @@ evaluate_module_no_prelude body = do
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
 eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
-eval_scope context sexprs = expand_macros context sexprs >>= (uncurry collect_defines) >>= (uncurry eval_list)
+eval_scope context sexprs = do
+  (context', sexprs') <- expand_macros context sexprs
+  (context'', sexprs'') <- collect_defines context' sexprs'
+  eval_list context'' sexprs''
+--eval_scope context sexprs = expand_macros context sexprs >>= (uncurry collect_defines) >>= (uncurry eval_list)
   where eval_list :: Context -> [SExpr] -> IO (Context, SExpr)
         eval_list context = foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil)
 
@@ -61,13 +67,16 @@ apply_macros (context, (x:xs)) = do
   (_, rest') <- apply_macros (context, xs)
   return (context, x' : rest')
   where apply_macro :: Context -> SExpr -> IO SExpr
-        apply_macro context (SList (SSymbol sym:body)) = case Map.lookup sym context of
-          Just (SCallable (Macro context prototype sexprs bound)) -> do
-            let arg_bindings = bind_args prototype (bound ++ body)
+        apply_macro context list@(SList (SSymbol sym:body)) = case Map.lookup sym context of
+          Just (SCallable (Macro l_context prototype sexprs bound)) -> do
             body' <- mapM (apply_macro context) body
-            (_, sexpr) <- eval_scope context sexprs
-            return sexpr
-          Nothing                                                 -> return (SList $ SSymbol sym : body)
+            let arg_bindings = bind_args prototype (bound ++ body')
+            (_, macro_expr) <- eval_scope (arg_bindings `Map.union` l_context) sexprs
+            (_, expr) <- eval context macro_expr
+            return expr
+          _                                                         -> do
+            list' <- mapM (apply_macro context) (from_list list)
+            return $ SList list'
         apply_macro context other                      = return other
 apply_macros (context, [])     = return (context, [])
 
@@ -91,7 +100,7 @@ handle_defmacro :: Context -> [SExpr] -> (String, Callable)
 handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
   | otherwise              = (name, Macro context prototype body [])
-  where name      = from_string s_name
+  where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
@@ -136,7 +145,7 @@ handle_define :: Context -> [SExpr] -> (String, Callable)
 handle_define context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "function name must be a symbol"
   | otherwise              = (name, UserDefined context prototype body [])
-  where name      = from_string s_name
+  where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
 eval :: Context -> SExpr -> IO (Context, SExpr)
@@ -151,9 +160,8 @@ eval context (SList (first:rest)) = do
       pairs <- mapM (eval context) rest
       result <- f (bound ++ map snd pairs)
       return (context, result)
-    SCallable (SpecialOp _ _ f bound)                        -> f eval eval_scope context (bound ++ rest) :: IO (Context, SExpr)
+    SCallable (SpecialOp _ _ f bound)                        -> f eval eval_scope context (bound ++ rest)
     _                                                        -> error $ "unable to execute s-expression: '" ++ show_sexpr first' ++ "'"
-eval context (SList [])           = error "unable to execute an empty list"
 eval context (SSymbol sym)        = case Map.lookup sym context of
   Just smth -> return (context, smth)
   Nothing   -> error $ "undefined identificator '" ++ sym ++ "'"
@@ -161,10 +169,10 @@ eval context sexpr                = return (context, sexpr)
 
 load_prelude :: IO Context
 load_prelude = return start_context
-{--load_prelude = do
-  text <- readFile "stdlib/prelude.lisp"
-  (_, context) <- eval_list_with_context eval_sexpr start_context $ Reader.read Undefined text -- TODO: change Undefined
-  return context--}
+--load_prelude = do
+--  text <- readFile "stdlib/prelude.lisp"
+--  (context, _) <- eval_scope start_context $ Reader.read Undefined text -- TODO: change Undefined
+--  return context
 
 start_context :: Context
 start_context = Map.fromList $

@@ -41,8 +41,8 @@ spop_backquote eval eval_scope context [SList list] = do
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
-spop_backquote eval _          context [arg] = return (context, arg)
-spop_backquote eval _          _       _     = error "backquote: just one argument required"
+spop_backquote _    _          context [arg]        = return (context, arg)
+spop_backquote _    _          _       _            = error "backquote: just one argument required"
 
 -- | special operator interprete
 spop_interprete :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
