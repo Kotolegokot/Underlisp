@@ -3,6 +3,7 @@ module Evaluator (evaluate_program, evaluate_module) where
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
+import Data.List (elemIndices, delete)
 import Control.Arrow
 import Control.Monad (void, foldM)
 import SExpr
@@ -26,10 +27,11 @@ evaluate_module_no_prelude body = do
   return context
 
 eval_sexpr :: Context -> SExpr -> IO (SExpr, Context)
-eval_sexpr context (SList (first:args)) = do
+eval_sexpr = undefined
+{--eval_sexpr context (SList (first:args)) = do
   (expr, _) <- eval_sexpr context first
   case expr of
-    SCallable (UserDefined l_context arg_names rest sexpr bound) -> do
+    SCallable (UserDefined l_context prototype sexpr bound) -> do
         pairs <- mapM (eval_sexpr context) args
         let f_context = handle_args arg_names rest (bound ++ fmap fst pairs)
         eval_sexpr (f_context `Map.union` l_context) sexpr
@@ -47,68 +49,84 @@ eval_sexpr context (SList [])           = error "can't execute empty list"
 eval_sexpr context (SSymbol str) 
   | str `Map.member` context = return (context Map.! str, context)
   | otherwise                = error $ "undefined identificator '" ++ str ++ "'"
-eval_sexpr context sexpr                = return (sexpr, context)
+eval_sexpr context sexpr                = return (sexpr, context)--}
 
-handle_args :: [String] -> Bool -> [SExpr] -> Context
-handle_args arg_names False args
-  | length arg_names > length args = error "too little arguments"
-  | length arg_names < length args = error "too many arguements"
-  | otherwise                    = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
-handle_args arg_names True args
-  | length arg_names - 1 > length args = error "too little arguments"
-  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
-                                          in let args' = left ++ [SList right]
-                                              in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
-
-eval_scope :: (Context, [SExpr]) -> IO (Context, SExpr)
-eval_scope = expand_macros >>= handle_defines >>= eval_list
+-- | evaluates a lexical scope
+-- | 1. expands all macros in it
+-- | 2. collect all function definitions
+-- | 3. executes the remaining s-expressions successively
+eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
+eval_scope context sexprs = expand_macros (context, sexprs) >>= handle_defines >>= eval_list
   where eval_list :: (Context, [SExpr]) -> IO (Context, SExpr)
-        eval_list (context, (x:xs)) = eval (context, x) >> eval_rest (context, xs)
-        eval_list (context, [x])    = (context, eval (context, x))
-        eval_list (context, [])     = (context, nil)
+        eval_list (context, [x])    = do
+          sexpr <- eval (context, x)
+          return (context, sexpr)
+        eval_list (context, (x:xs)) = eval (context, x) >> eval_list (context, xs)
+        eval_list (context, [])     = return (context, nil)
 
+-- | looks through a lexical scope, executes all defmacros,
+-- | and expands them
 expand_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
-expand_macros (context, sexprs) = apply_macros (collect_macros Map.empty, filter (not . is_defmacro) sexprs)
+expand_macros (context, sexprs) = apply_macros (collect_macros Map.empty (context, sexprs), filter (not . is_defmacro) sexprs)
   where collect_macros :: Context -> (Context, [SExpr]) -> Context
-        collect_macros lexical_scope (context, (SList [SSymbol "defmacro":definition]:rest)) =
-          let (name, value) = handle_macro definition
-          in  collect_macros (Map.insert name value lexical_scope) (context, rest)
+        collect_macros lexical_scope (context, (SList (SSymbol "defmacro":definition):rest)) =
+          let (name, macro) = handle_defmacro context definition
+          in  collect_macros (Map.insert name (SCallable macro) lexical_scope) (context, rest)
         collect_macros lexical_scope (context, (_:rest)) = collect_macros lexical_scope (context, rest)
         collect_macros lexical_scope (context, [])       =
-          let new_lexical_scope = fmap (\(Macro context prototype sexprs bound) ->
-                                           Macro (new_lexical_scope `Map.union` context) prototype sexprs bound) lexical_scope
+          let new_lexical_scope = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
+                                           SCallable (Macro (new_lexical_scope `Map.union` context) prototype sexprs bound)) lexical_scope
           in  new_lexical_scope `Map.union` context
 
         is_defmacro :: SExpr -> Bool
         is_defmacro (SList (SSymbol "defmacro":_)) = True
-        is_defmacro                                = False
+        is_defmacro _                              = False
 
-        apply_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
-        apply_macros (context, (x:xs)) = do
-          x' <- apply_macro context x
-          rest' <- apply_macros (context, xs)
-          return (context, x' : rest')
-        apply_macros (context, [])     = return (context, [])
-
-        apply_macro :: Context -> SExpr -> IO SExpr
-        apply_macro (context, SList (SSymbol sym:body)) = case Map.lookup sym context of
+-- | applies macros in a certain lexical scope
+-- | all macros are stored in Context
+apply_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
+apply_macros (context, (x:xs)) = do
+  x' <- apply_macro context x
+  (_, rest') <- apply_macros (context, xs)
+  return (context, x' : rest')
+  where apply_macro :: Context -> SExpr -> IO SExpr
+        apply_macro context (SList (SSymbol sym:body)) = case Map.lookup sym context of
           Just (SCallable (Macro context prototype sexprs bound)) -> do
-            let arg_bindings = handle_args prototype (bound ++ body)
+            let arg_bindings = bind_args prototype (bound ++ body)
             body' <- mapM (apply_macro context) body
-            (_, sexpr) <- eval_scope (context, sexprs)
+            (_, sexpr) <- eval_scope context sexprs
             return sexpr
           Nothing                                                 -> return (SList $ SSymbol sym : body)
-        apply_macro (context, other)                    = return other
+        apply_macro context other                      = return other
+apply_maros (context, [])     = return (context, [])
 
-handle_macro :: Context -> [SExpr] -> Callable
-handle_macro (s_name:s_lambda_list:body)
+-- | creates argument bindings from a Prototype
+-- | and arguments (s-expressions)
+bind_args :: Prototype -> [SExpr] -> Context
+bind_args (Prototype arg_names False) args
+  | length arg_names > length args = error "too little arguments"
+  | length arg_names < length args = error "too many arguments"
+  | otherwise                      = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
+bind_args (Prototype arg_names True) args
+  | length arg_names - 1 > length args = error "too little arguments"
+  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
+                                             args'         = left ++ [SList right]
+                                         in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+
+-- | takes a list of the form (name (arg1 arg2... [&rest argLast]) body...)
+-- | and constructs a Macro object (Callable)
+-- | also returns its name
+handle_defmacro :: Context -> [SExpr] -> (String, Callable)
+handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
-  | otherwise              = Macro name Map.empty prototype body []
+  | otherwise              = (name, Macro context prototype body [])
   where name = from_string s_name
-        prototype = Evaluator.handle_lambda_list s_lambda_list -- TODO remove "Evaluator."
+        prototype = parse_lambda_list s_lambda_list -- TODO remove "Evaluator."
 
-handle_lambda_list :: SExpr -> Prototype
-handle_lambda_list (SList lambda_list)
+-- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | and constructs a Prototype
+parse_lambda_list :: SExpr -> Prototype
+parse_lambda_list (SList lambda_list)
   | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
   | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
   | rest && ix /= count - 2         = error "&rest must be last but one"
@@ -119,10 +137,13 @@ handle_lambda_list (SList lambda_list)
         ix    = head ixs
         rest  = length ixs == 1
         count = length lambda_list
-handle_lmabda_list _ = error "lambda list must be a list"
+parse_lambda_list _ = error "lambda list must be a list"
 
 handle_defines :: (Context, [SExpr]) -> IO (Context, [SExpr])
+handle_defines = undefined
+
 eval :: (Context, SExpr) -> IO SExpr
+eval = undefined
 
 load_prelude :: IO Context
 load_prelude = return start_context
