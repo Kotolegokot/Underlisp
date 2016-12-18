@@ -58,11 +58,7 @@ eval_sexpr context sexpr                = return (sexpr, context)--}
 eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
 eval_scope context sexprs = expand_macros (context, sexprs) >>= handle_defines >>= eval_list
   where eval_list :: (Context, [SExpr]) -> IO (Context, SExpr)
-        eval_list (context, [x])    = do
-          sexpr <- eval (context, x)
-          return (context, sexpr)
-        eval_list (context, (x:xs)) = eval (context, x) >> eval_list (context, xs)
-        eval_list (context, [])     = return (context, nil)
+        eval_list (context, xs) = foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil) xs
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
@@ -142,7 +138,7 @@ parse_lambda_list _ = error "lambda list must be a list"
 handle_defines :: (Context, [SExpr]) -> IO (Context, [SExpr])
 handle_defines = undefined
 
-eval :: (Context, SExpr) -> IO SExpr
+eval :: Context -> SExpr -> IO (Context, SExpr)
 eval = undefined
 
 load_prelude :: IO Context
