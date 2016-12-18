@@ -165,7 +165,24 @@ handle_define context (s_name:s_lambda_list:body)
         prototype = parse_lambda_list s_lambda_list
 
 eval :: Context -> SExpr -> IO (Context, SExpr)
-eval = undefined
+eval context (SList (first:rest)) = do
+  (_, first') <- eval context first
+  case first' of
+    SCallable (UserDefined l_context prototype sexprs bound) -> do
+      pairs <- mapM (eval context) rest
+      let arg_bindings = bind_args prototype (bound ++ map fst pairs)
+      eval_scope (arg_bindings `Map.union`  l_context) sexpr
+    SCallable (BuiltIn _ _ f bound)                          -> do
+      pairs <- mapM (eval context) rest
+      result <- f (bound ++ map fst pairs)
+      return (context, result)
+    SCallable (SpecialOp _ _ f bound)                        -> f eval context (bound ++ rest)
+    _                                                        -> error $ "unable to execute s-expression: '" ++ show_sexpr first' ++ "'"
+eval context (SList [])           = error "unable to execute an empty list"
+eval context (SSymbol sym)        = case Map.lookup sym context of
+  Just smth -> return (context, smth)
+  Nothing   -> error $ "undefined identificator '" ++ sym ++ "'"
+eval context sexpr                = return (context, sexpr)
 
 load_prelude :: IO Context
 load_prelude = return start_context
