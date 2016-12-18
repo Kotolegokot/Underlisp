@@ -69,7 +69,7 @@ apply_macros (context, (x:xs)) = do
             return sexpr
           Nothing                                                 -> return (SList $ SSymbol sym : body)
         apply_macro context other                      = return other
-apply_maros (context, [])     = return (context, [])
+apply_macros (context, [])     = return (context, [])
 
 -- | creates argument bindings from a Prototype
 -- | and arguments (s-expressions)
