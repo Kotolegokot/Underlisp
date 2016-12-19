@@ -1,7 +1,5 @@
 module Evaluator (evaluate_program, evaluate_module) where
 
-import Debug.Trace
-
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
@@ -35,64 +33,67 @@ evaluate_module_no_prelude body = do
 eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
 eval_scope context sexprs = do
   (context', sexprs') <- expand_macros context sexprs
-  (context'', sexprs'') <- collect_defines context' sexprs'
-  eval_list context'' sexprs''
---eval_scope context sexprs = expand_macros context sexprs >>= (uncurry collect_defines) >>= (uncurry eval_list)
-  where eval_list :: Context -> [SExpr] -> IO (Context, SExpr)
-        eval_list context = foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil)
+  eval_functions context' sexprs'
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
 expand_macros :: Context -> [SExpr] -> IO (Context, [SExpr])
-expand_macros context sexprs = apply_macros (collect_macros Map.empty (context, sexprs), filter (not . is_defmacro) sexprs)
-  where collect_macros :: Context -> (Context, [SExpr]) -> Context
-        collect_macros lexical_scope (context, (SList (SSymbol "defmacro":definition):rest)) =
-          let (name, macro) = handle_defmacro context definition
-          in  collect_macros (Map.insert name (SCallable macro) lexical_scope) (context, rest)
-        collect_macros lexical_scope (context, (_:rest)) = collect_macros lexical_scope (context, rest)
-        collect_macros lexical_scope (context, [])       =
-          let lexical_scope' = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
-                                           SCallable (Macro (lexical_scope' `Map.union` context) prototype sexprs bound)) lexical_scope
-          in  lexical_scope' `Map.union` context
-
-        is_defmacro :: SExpr -> Bool
+expand_macros context sexprs = do
+  let context' = collect_macros context sexprs
+  sexprs' <- apply_macros context' $ filter (not . is_defmacro) sexprs
+  return (context', sexprs')
+  where is_defmacro :: SExpr -> Bool
         is_defmacro (SList (SSymbol "defmacro":_)) = True
         is_defmacro _                              = False
 
+-- | looks through a lexical scope and evaluates all defmacros
+collect_macros :: Context -> [SExpr] -> Context
+collect_macros context sexprs = lexical_scope' `Map.union` context
+  where lexical_scope = foldl (\acc sexpr
+                                -> case sexpr of
+                                     SList (SSymbol "defmacro":definition)
+                                       -> let (name, macro) = handle_defmacro context definition
+                                          in   Map.insert name (SCallable macro) acc
+                                     _ -> acc)
+                        Map.empty
+                        sexprs
+        lexical_scope' = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
+                                SCallable $ Macro (lexical_scope' `Map.union` context) prototype sexprs bound) lexical_scope
+
+data State = Default | Quote | Backquote
+
 -- | applies macros in a certain lexical scope
 -- | all macros are stored in Context
-apply_macros :: (Context, [SExpr]) -> IO (Context, [SExpr])
-apply_macros (context, (x:xs)) = do
-  x' <- apply_macro context x
-  (_, rest') <- apply_macros (context, xs)
-  return (context, x' : rest')
-  where apply_macro :: Context -> SExpr -> IO SExpr
-        apply_macro context list@(SList (SSymbol sym:body)) = case Map.lookup sym context of
+apply_macros :: Context -> [SExpr] -> IO [SExpr]
+apply_macros context sexprs = mapM (apply_macro Default context) sexprs
+  where apply_macro :: State -> Context -> SExpr -> IO SExpr
+        apply_macro Default context (SList (SSymbol "backquote":body)) = do
+          body' <- mapM (apply_macro Backquote context) body
+          return $ SList (SSymbol "backquote" : body')
+
+        apply_macro Default context (SList (SSymbol "quote":body)) = do
+          body' <- mapM (apply_macro Quote context) body
+          return $ SList (SSymbol "quote" : body')
+
+        apply_macro Default context list@(SList (SSymbol sym:body)) = case Map.lookup sym context of
           Just (SCallable (Macro l_context prototype sexprs bound)) -> do
-            body' <- mapM (apply_macro context) body
+            body' <- mapM (apply_macro Default context) body
             let arg_bindings = bind_args prototype (bound ++ body')
             (_, macro_expr) <- eval_scope (arg_bindings `Map.union` l_context) sexprs
-            (_, expr) <- eval context macro_expr
-            return expr
+            apply_macro Default context macro_expr
           _                                                         -> do
-            list' <- mapM (apply_macro context) (from_list list)
+            list' <- mapM (apply_macro Default context) (from_list list)
             return $ SList list'
-        apply_macro context other                      = return other
-apply_macros (context, [])     = return (context, [])
 
--- | creates argument bindings from a Prototype
--- | and arguments (s-expressions)
-bind_args :: Prototype -> [SExpr] -> Context
-bind_args (Prototype arg_names False) args
-  | length arg_names > length args = error "too little arguments"
-  | length arg_names < length args = error "too many arguments"
-  | otherwise                      = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
-bind_args (Prototype arg_names True) args
-  | length arg_names - 1 > length args = error "too little arguments"
-  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
-                                             args'         = left ++ [SList right]
-                                         in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+        apply_macro Default context other                      = return other
 
+        apply_macro Quote _ sexpr = return sexpr
+
+        apply_macro Backquote context (SList (SSymbol "interpolate":body)) = do
+          body' <- mapM (apply_macro Default context) body
+          return $ SList (SSymbol "interpolate" : body')
+
+        apply_macro Backquote context other = return other
 -- | takes a list of the form (name (arg1 arg2... [&rest argLast]) body...)
 -- | and constructs a Macro object (Callable)
 -- | also returns its name
@@ -103,40 +104,37 @@ handle_defmacro context (s_name:s_lambda_list:body)
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
--- | takes an s-list of the form (arg1 arg2... [&rst argLast])
--- | and constructs a Prototype
-parse_lambda_list :: SExpr -> Prototype
-parse_lambda_list (SList lambda_list)
-  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
-  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2         = error "&rest must be last but one"
-  | otherwise                       = if rest
-                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
-                                      else Prototype (map from_symbol $ lambda_list) rest
-  where ixs   = elemIndices (SSymbol "&rest") lambda_list
-        ix    = head ixs
-        rest  = length ixs == 1
-        count = length lambda_list
-parse_lambda_list _ = error "lambda list must be a list"
+-- | looks through a lexical scope, executes all defines,
+-- | and evaluates the remaining s-expressions
+eval_functions :: Context -> [SExpr] -> IO (Context, SExpr)
+eval_functions context sexprs = do
+  let context' = collect_functions context sexprs
+  sexpr' <- apply_functions context' $ filter (not . is_define) sexprs
+  return (context', sexpr')
+  where is_define :: SExpr -> Bool
+        is_define (SList (SSymbol "define":_)) = True
+        is_define _                            = False
 
--- | looks through a lexical scope and evaluate all defines
-collect_defines :: Context -> [SExpr] -> IO (Context, [SExpr])
-collect_defines context sexprs = do
-  context' <- collect_defines' Map.empty context sexprs
-  return (context', filter (not . is_define) sexprs)
-    where collect_defines' :: Context -> Context -> [SExpr] -> IO Context
-          collect_defines' lexical_scope context (SList (SSymbol "define":definition):rest) =
-            let (name, function) = handle_define context definition
-            in  collect_defines' (Map.insert name (SCallable function) lexical_scope) context rest
-          collect_defines' lexical_scope context (_:rest) = collect_defines' lexical_scope context rest
-          collect_defines' lexical_scope context []       = return $
-            let lexical_scope' = fmap (\(SCallable (UserDefined context prototype sexprs bound)) ->
-                                         SCallable (UserDefined (lexical_scope' `Map.union` context) prototype sexprs bound)) lexical_scope
-            in  lexical_scope' `Map.union` context
+-- | looks through a lexical scope and evaluates all defines
+collect_functions :: Context -> [SExpr] -> Context
+collect_functions context sexprs = lexical_scope' `Map.union` context
+  where lexical_scope = foldl (\acc sexpr
+                                -> case sexpr of
+                                     SList (SSymbol "define":definition)
+                                       -> let (name, function) = handle_define context definition
+                                          in  Map.insert name (SCallable function) lexical_scope
+                                     _ -> acc)
+                        Map.empty
+                        sexprs
+        lexical_scope' = fmap (\(SCallable (UserDefined context prototype sexprs bound)) ->
+                                 SCallable $ UserDefined (lexical_scope' `Map.union` context) prototype sexprs bound)
+                         lexical_scope
 
-          is_define :: SExpr -> Bool
-          is_define (SList (SSymbol "define":_)) = True
-          is_define _                            = False
+-- | evaluates functions in a certain lexical scope
+apply_functions :: Context -> [SExpr] -> IO SExpr
+apply_functions context sexprs = do
+  (_, sexpr) <- foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil) sexprs
+  return sexpr
 
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
@@ -240,3 +238,32 @@ spop_context_from_file_no_prelude eval eval_scope context [args] = do
       return (context, SContext context')
     _                -> error "context-from-file-no-prelude: string expected"
 spop_context_from_file_no_prelude _    _          _       _      = error "context-from-file-no-prelude: just one argument required"
+
+-- | creates argument bindings from a Prototype
+-- | and arguments (s-expressions)
+bind_args :: Prototype -> [SExpr] -> Context
+bind_args (Prototype arg_names False) args
+  | length arg_names > length args = error "too little arguments"
+  | length arg_names < length args = error "too many arguments"
+  | otherwise                      = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
+bind_args (Prototype arg_names True) args
+  | length arg_names - 1 > length args = error "too little arguments"
+  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
+                                             args'         = left ++ [SList right]
+                                         in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
+
+-- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | and constructs a Prototype
+parse_lambda_list :: SExpr -> Prototype
+parse_lambda_list (SList lambda_list)
+  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
+  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = error "&rest must be last but one"
+  | otherwise                       = if rest
+                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
+                                      else Prototype (map from_symbol $ lambda_list) rest
+  where ixs   = elemIndices (SSymbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+parse_lambda_list _ = error "lambda list must be a list"

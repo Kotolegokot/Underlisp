@@ -1,12 +1,23 @@
+(defvar nil ())
+
 (defmacro when (cond &rest body)
   `(if ~cond (seq @body)))
 
-(defmacro unless (ond &rest ody)
-  `(when (not ~ond) @ody))
+(defmacro unless (cond &rest body)
+  `(when (not ~cond) @body))
 
-(unless (< 7 6) (print-ln 12) (print-ln 13))
+(defmacro cond (&rest pairs)
+  (if (null pairs)
+      nil
+    `(if ~(head (head pairs))
+       ~(head (tail (head pairs)))
+       (cond @(tail pairs)))))
 
-;;(defvar cond '(< 7 6))
-;;(defvar body '((print-ln 12) (print-ln 13)))
+(if (= 1 2)
+    (print-ln 1)
+  (if nil
+      (print-ln 2)
+    nil))
 
-;;(print-ln `(when (not ~cond) @body))
+;;(cond ((= 1 2) (print-ln 1))
+;;      (nil (print-ln 2)))
