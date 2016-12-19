@@ -30,15 +30,8 @@ spop_defvar eval eval_scope context [var, value]
   | not $ is_symbol var = error "defvar: first argument must be a symbol"
   | otherwise           = do
       let var_name = from_symbol var
-      let context' = Map.insert var_name nil context
-      (_, expr) <- eval context' value
-      let value' = case expr of
-            SCallable (UserDefined context prototype sexpr bound) ->
-              SCallable $ UserDefined (Map.insert var_name value' context) prototype sexpr bound
-            SCallable (Macro context prototype sexpr bound) ->
-              SCallable $ Macro (Map.insert var_name value' context) prototype sexpr bound
-            other                                      -> other
-      return (Map.insert var_name value' context, value')
+      (_, value') <- eval context value
+      return (Map.insert var_name value' context, nil)
 spop_defvar _    _           _       _ = error "defvar: two arguments required"
 
 -- built-in function type

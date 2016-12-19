@@ -13,11 +13,6 @@
        ~(head (tail (head pairs)))
        (cond @(tail pairs)))))
 
-(if (= 1 2)
-    (print-ln 1)
-  (if nil
-      (print-ln 2)
-    nil))
+(define f (x) (print-ln x))
 
-;;(cond ((= 1 2) (print-ln 1))
-;;      (nil (print-ln 2)))
+(f 12)

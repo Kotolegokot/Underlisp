@@ -1,5 +1,7 @@
 module Evaluator (evaluate_program, evaluate_module) where
 
+import Debug.Trace
+
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Reader
@@ -122,7 +124,7 @@ collect_functions context sexprs = lexical_scope' `Map.union` context
                                 -> case sexpr of
                                      SList (SSymbol "define":definition)
                                        -> let (name, function) = handle_define context definition
-                                          in  Map.insert name (SCallable function) lexical_scope
+                                          in  Map.insert name (SCallable function) acc
                                      _ -> acc)
                         Map.empty
                         sexprs
@@ -166,11 +168,11 @@ eval context (SSymbol sym)        = case Map.lookup sym context of
 eval context sexpr                = return (context, sexpr)
 
 load_prelude :: IO Context
-load_prelude = return start_context
---load_prelude = do
---  text <- readFile "stdlib/prelude.lisp"
---  (context, _) <- eval_scope start_context $ Reader.read Undefined text -- TODO: change Undefined
---  return context
+--load_prelude = return start_context
+load_prelude = do
+  text <- readFile "stdlib/prelude.lisp"
+  (context, _) <- eval_scope start_context $ Reader.read Undefined text -- TODO: change Undefined
+  return context
 
 start_context :: Context
 start_context = Map.fromList $

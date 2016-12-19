@@ -187,11 +187,9 @@ data Callable where
 
 instance Show Callable where
   show (UserDefined _ prototype sexprs bound)  = "User-defined function " ++ show prototype
-                                                 ++ "(body: " ++ show_sexpr (SList sexprs)
-                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-  show (Macro _ prototype sexprs bound)        = "Macro (args: " ++ show prototype
-                                                 ++ "(body: " ++ show_sexpr (SList sexprs)
-                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
+                                                 ++ " " ++ show_sexpr (SList bound)
+  show (Macro _ prototype sexprs bound)        = "Macro " ++ show prototype
+                                                 ++ " " ++ show_sexpr (SList bound)
   show (BuiltIn name _ _ bound)               = "Built-in function (name: '" ++ name ++ "'"
                                                 ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
   show (SpecialOp name _ _ bound)             = "Special operator (name: '" ++ name ++ "'"
