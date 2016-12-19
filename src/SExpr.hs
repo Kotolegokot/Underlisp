@@ -21,10 +21,12 @@ module SExpr (SExpr (..),
 
 import Data.Maybe
 import Text.Read (readMaybe)
+
 import qualified Data.Map as Map
 import Data.Map (Map)
 
-type Context = Map String SExpr
+import qualified Env
+import Env (Env)
 
 -- SExpr --
 data SExpr = SList     [SExpr]
@@ -35,7 +37,7 @@ data SExpr = SList     [SExpr]
            | SBool     Bool
            | SSymbol   String
            | SCallable Callable
-           | SContext  Context
+           | SContext  (Env SExpr)
   deriving (Show)
 
 instance Eq SExpr where
@@ -164,8 +166,8 @@ str2atom atom
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
 
-type Eval      = Context -> SExpr   -> IO (Context, SExpr)
-type EvalScope = Context -> [SExpr] -> IO (Context, SExpr)
+type Eval      = Env SExpr -> SExpr   -> IO (Env SExpr, SExpr)
+type EvalScope = Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 
 data Prototype = Prototype [String] Bool
 
@@ -177,13 +179,13 @@ instance Show Prototype where
 
 data Callable where
   -- lexical scope -> arg names -> rest -> s-expressions -> bound args
-  UserDefined :: Context -> Prototype -> [SExpr] -> [SExpr] -> Callable
+  UserDefined :: Env SExpr -> Prototype -> [SExpr] -> [SExpr] -> Callable
   -- lexical scope -> arg names -> rest -> s-expressions -> bound args
-  Macro       :: Context -> Prototype -> [SExpr] -> [SExpr] -> Callable
+  Macro       :: Env SExpr -> Prototype -> [SExpr] -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
   BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
   -- name -> args count or rest -> function -> bound args
-  SpecialOp   :: String -> Maybe Int -> (Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)) -> [SExpr] -> Callable
+  SpecialOp   :: String -> Maybe Int -> (Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)) -> [SExpr] -> Callable
 
 instance Show Callable where
   show (UserDefined _ prototype sexprs bound)  = "User-defined function " ++ show prototype

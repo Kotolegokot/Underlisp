@@ -168,7 +168,6 @@ eval context (SSymbol sym)        = case Map.lookup sym context of
 eval context sexpr                = return (context, sexpr)
 
 load_prelude :: IO Context
---load_prelude = return start_context
 load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
   (context, _) <- eval_scope start_context $ Reader.read Undefined text -- TODO: change Undefined
