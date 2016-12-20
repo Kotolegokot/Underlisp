@@ -100,7 +100,7 @@ apply_macros env sexprs = mapM (apply_macro Default env) sexprs
 -- | takes a list of the form (name (arg1 arg2... [&rest argLast]) body...)
 -- | and constructs a Macro object (Callable)
 -- | also returns its name
-handle_defmacro :: Env SExpr -> [SExpr] -> (String, Callable)
+handle_defmacro :: Env SExpr -> [SExpr] -> (String, Callable Env SExpr)
 handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
   | otherwise              = (name, Macro context prototype body [])
@@ -142,7 +142,7 @@ apply_functions env sexprs = do
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
 -- | also returns its name
-handle_define :: Env SExpr -> [SExpr] -> (String, Callable)
+handle_define :: Env SExpr -> [SExpr] -> (String, Callable Env SExpr)
 handle_define context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "function name must be a symbol"
   | otherwise              = (name, UserDefined context prototype body [])
@@ -231,8 +231,8 @@ spop_context_from_file eval eval_scope env [arg] = do
 spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"
 
 spop_context_from_file_no_prelude :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
-spop_context_from_file_no_prelude eval eval_scope env [args] = do
-  (_, sexpr) <- eval env args
+spop_context_from_file_no_prelude eval eval_scope env [arg] = do
+  (_, sexpr) <- eval env arg
   case sexpr of
     SString filename -> do
       text <- readFile filename

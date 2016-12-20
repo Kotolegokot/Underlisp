@@ -27,6 +27,8 @@ import Data.Map (Map)
 import qualified Env
 import Env (Env)
 
+import Callable
+
 -- SExpr --
 data SExpr = SList     [SExpr]
            | SInt      Int
@@ -35,7 +37,7 @@ data SExpr = SList     [SExpr]
            | SChar     Char
            | SBool     Bool
            | SSymbol   String
-           | SCallable Callable
+           | SCallable (Callable Env SExpr)
            | SEnv      (Map String SExpr)
   deriving (Show)
 
@@ -164,50 +166,3 @@ str2atom atom
         try_char   = readMaybe atom :: Maybe Char
         try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
-
-type Eval      = Env SExpr -> SExpr   -> IO (Env SExpr, SExpr)
-type EvalScope = Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
-
-data Prototype = Prototype [String] Bool
-
-instance Show Prototype where
-  show (Prototype arg_names rest) =
-    if rest
-    then show_sexpr . SList . map SSymbol $ init arg_names ++ ["&rest", last arg_names]
-    else show_sexpr . SList . map SSymbol $ arg_names
-
-data Callable where
-  -- lexical scope -> arg names -> rest -> s-expressions -> bound args
-  UserDefined :: Env SExpr -> Prototype -> [SExpr] -> [SExpr] -> Callable
-  -- lexical scope -> arg names -> rest -> s-expressions -> bound args
-  Macro       :: Env SExpr -> Prototype -> [SExpr] -> [SExpr] -> Callable
-  -- name -> args count or rest -> function -> bound args
-  BuiltIn     :: String -> Maybe Int -> ([SExpr] -> IO SExpr) -> [SExpr] -> Callable
-  -- name -> args count or rest -> function -> bound args
-  SpecialOp   :: String -> Maybe Int -> (Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)) -> [SExpr] -> Callable
-
-instance Show Callable where
-  show (UserDefined _ prototype sexprs bound)  = "User-defined function " ++ show prototype
-                                                 ++ " " ++ show_sexpr (SList bound)
-  show (Macro _ prototype sexprs bound)        = "Macro " ++ show prototype
-                                                 ++ " " ++ show_sexpr (SList bound)
-  show (BuiltIn name _ _ bound)               = "Built-in function (name: '" ++ name ++ "'"
-                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-  show (SpecialOp name _ _ bound)             = "Special operator (name: '" ++ name ++ "'"
-                                                ++ ", bound args: " ++ show_sexpr (SList bound) ++ ")"
-
-bind :: Callable -> [SExpr] -> Callable
-bind (UserDefined scope prototype@(Prototype arg_names rest) sexprs bound) args
-  | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = UserDefined scope prototype sexprs (bound ++ args)
-bind (Macro scope prototype@(Prototype arg_names rest) sexprs bound) args
-  | rest && length arg_names < (length bound + length args) = error "too many arguments"
-  | otherwise                                               = Macro scope prototype sexprs (bound ++ args)
-bind (BuiltIn name (Just args_count) f bound) args
-  | args_count < (length bound + length args) = error "too many arguments"
-  | otherwise                                 = BuiltIn name (Just args_count) f (bound ++ args)
-bind (BuiltIn name Nothing f bound) args = BuiltIn name Nothing f (bound ++ args)
-bind (SpecialOp name (Just args_count) f bound) args
-  | args_count < (length bound + length args) = error "too many arguments"
-  | otherwise                                 = SpecialOp name (Just args_count) f (bound ++ args)
-bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)

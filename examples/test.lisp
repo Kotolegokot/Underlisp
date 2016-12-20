@@ -13,18 +13,10 @@
        ~(head (tail (head pairs)))
        (cond @(tail pairs)))))
 
-;;(load-module "examples/factorial.lisp")
-(load-module "stdlib/ord.lisp")
+(load-module "examples/factorial.lisp")
 
-;;(print-ln (context-from-file "stdlib/ord.lisp"))
+(print-ln (context-from-file "examples/factorial.lisp"))
 
-;;(define f (x) (factorial (+ x 1)))
+(define f (x) (factorial (+ x 1)))
 
-;;(f 12)
-
-(define fctr (x)
-  (if (<= x 1)
-      1
-    (* x (fctr (- x 1)))))
-
-(print-ln "(fctr 12) = " (fctr 12))
+(f 12)
