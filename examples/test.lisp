@@ -27,4 +27,4 @@
       1
     (* x (fctr (- x 1)))))
 
-(print-ln "fctr 12 = " (fctr 12))
+(print-ln "(fctr 12) = " (fctr 12))

@@ -1,9 +1,7 @@
 module Parser (parse) where
 
-import Debug.Trace
 import SExpr
 import Lexer
-import Debug.Trace
 
 -- | takes a list of lexemes and generates a complete s-expression
 parse :: [Lexeme] -> [SExpr]

@@ -1,7 +1,5 @@
 module Evaluator (evaluate_program, evaluate_module) where
 
-import Debug.Trace
-
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
