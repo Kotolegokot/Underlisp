@@ -3,7 +3,6 @@
 module SExpr (SExpr (..),
               Callable (..),
               Prototype (..),
-              Context,
               bind,
               str2atom,
               nil,
@@ -16,7 +15,7 @@ module SExpr (SExpr (..),
               is_bool, from_bool,
               is_symbol, from_symbol,
               is_callable, from_callable,
-              is_context, from_context,
+              is_env, from_env,
               show_sexpr, show_type) where
 
 import Data.Maybe
@@ -37,7 +36,7 @@ data SExpr = SList     [SExpr]
            | SBool     Bool
            | SSymbol   String
            | SCallable Callable
-           | SContext  (Env SExpr)
+           | SEnv      (Map String SExpr)
   deriving (Show)
 
 instance Eq SExpr where
@@ -50,8 +49,8 @@ instance Eq SExpr where
   (==) (SSymbol sym1)    (SSymbol sym2)    = sym1 == sym2
   (==) (SCallable _)     _                 = undefined
   (==) _                 (SCallable _)     = undefined
-  (==) (SContext _)      _                 = undefined
-  (==) _                 (SContext _)      = undefined
+  (==) (SEnv     _)      _                 = undefined
+  (==) _                 (SEnv      _)      = undefined
   (==) _                 _                 = False
 
 instance Ord SExpr where
@@ -66,18 +65,18 @@ instance Ord SExpr where
     compare _                 _               = error "can't compare s-expressions of different types"
 
 show_sexpr :: SExpr -> String
-show_sexpr (SList list)       = "(" ++ show_list list ++ ")"
+show_sexpr (SList list)     = "(" ++ show_list list ++ ")"
     where show_list [x]    = show_sexpr x
           show_list (x:xs) = show_sexpr x ++ " " ++ show_list xs
           show_list []     = ""
-show_sexpr (SInt int)         = show int
-show_sexpr (SFloat float)     = show float
-show_sexpr (SString string)   = string
-show_sexpr (SChar char)       = [char]
-show_sexpr (SBool bool)       = show bool
-show_sexpr (SSymbol symbol)   = symbol
-show_sexpr (SCallable func)   = show func
-show_sexpr (SContext context) = "Context " ++ (show $ Map.toList context)
+show_sexpr (SInt int)       = show int
+show_sexpr (SFloat float)   = show float
+show_sexpr (SString string) = string
+show_sexpr (SChar char)     = [char]
+show_sexpr (SBool bool)     = show bool
+show_sexpr (SSymbol symbol) = symbol
+show_sexpr (SCallable func) = show func
+show_sexpr (SEnv env)       = "Env" ++ show env
 
 show_type :: SExpr -> String
 show_type (SList _)     = "List"
@@ -88,7 +87,7 @@ show_type (SChar _)     = "Char"
 show_type (SBool _)     = "Bool"
 show_type (SSymbol _)   = "Symbol"
 show_type (SCallable _) = "Callable"
-show_type (SContext _)  = "Context"
+show_type (SEnv _)      = "Env"
 
 is_list (SList _) = True
 is_list _         = False
@@ -146,11 +145,11 @@ is_callable _         = False
 from_callable (SCallable f) = f
 from_callable _         = error "function expected"
 
-is_context (SContext _) = True
-is_context _            = False
+is_env (SEnv _) = True
+is_env _            = False
 
-from_context (SContext c) = c
-from_context _            = error "context expected"
+from_env (SEnv c) = c
+from_env _            = error "env expected"
 
 str2atom :: String -> SExpr
 str2atom atom

@@ -4,6 +4,9 @@ import Debug.Trace
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import Data.Map (Map)
+import qualified Env
+import Env (Env)
 import qualified Reader
 import Data.List (elemIndices, delete)
 import Control.Arrow
@@ -17,29 +20,29 @@ evaluate_program body = do
   prelude <- load_prelude
   void $ eval_scope prelude body
 
-evaluate_module :: [SExpr] -> IO Context
+evaluate_module :: [SExpr] -> IO (Map String SExpr)
 evaluate_module body = do
   prelude <- load_prelude
-  (context, _) <- eval_scope prelude body
-  return context
+  (env, _) <- eval_scope prelude body
+  return $ Env.merge env
 
-evaluate_module_no_prelude :: [SExpr] -> IO Context
+evaluate_module_no_prelude :: [SExpr] -> IO (Map String SExpr)
 evaluate_module_no_prelude body = do
-  (context, _) <- eval_scope start_context body
-  return context
+  (env, _) <- eval_scope start_env body
+  return $ Env.merge env
 
 -- | evaluates a lexical scope
 -- | 1. expands all macros in it
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
-eval_scope :: Context -> [SExpr] -> IO (Context, SExpr)
-eval_scope context sexprs = do
-  (context', sexprs') <- expand_macros context sexprs
-  eval_functions context' sexprs'
+eval_scope :: Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+eval_scope env sexprs = do
+  (env', sexprs') <- expand_macros (Env.pass env) sexprs
+  eval_functions env' sexprs'
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
-expand_macros :: Context -> [SExpr] -> IO (Context, [SExpr])
+expand_macros :: Env SExpr -> [SExpr] -> IO (Env SExpr, [SExpr])
 expand_macros context sexprs = do
   let context' = collect_macros context sexprs
   sexprs' <- apply_macros context' $ filter (not . is_defmacro) sexprs
@@ -49,57 +52,57 @@ expand_macros context sexprs = do
         is_defmacro _                              = False
 
 -- | looks through a lexical scope and evaluates all defmacros
-collect_macros :: Context -> [SExpr] -> Context
-collect_macros context sexprs = lexical_scope' `Map.union` context
-  where lexical_scope = foldl (\acc sexpr
-                                -> case sexpr of
-                                     SList (SSymbol "defmacro":definition)
-                                       -> let (name, macro) = handle_defmacro context definition
-                                          in   Map.insert name (SCallable macro) acc
-                                     _ -> acc)
-                        Map.empty
-                        sexprs
-        lexical_scope' = fmap (\(SCallable (Macro context prototype sexprs bound)) ->
-                                SCallable $ Macro (lexical_scope' `Map.union` context) prototype sexprs bound) lexical_scope
+collect_macros :: Env SExpr -> [SExpr] -> Env SExpr
+collect_macros env sexprs = Env.append add_lexical' env
+  where add_lexical = foldl (\acc sexpr
+                              -> case sexpr of
+                                   SList (SSymbol "defmacro":definition)
+                                     -> let (name, macro) = handle_defmacro env definition
+                                        in   Map.insert name (SCallable macro) acc
+                                   _ -> acc)
+                      Map.empty
+                      sexprs
+        add_lexical' = fmap (\(SCallable (Macro local_env prototype sexprs bound)) ->
+                               SCallable $ Macro (Env.append add_lexical' local_env) prototype sexprs bound) add_lexical
 
 data State = Default | Quote | Backquote
 
 -- | applies macros in a certain lexical scope
--- | all macros are stored in Context
-apply_macros :: Context -> [SExpr] -> IO [SExpr]
-apply_macros context sexprs = mapM (apply_macro Default context) sexprs
-  where apply_macro :: State -> Context -> SExpr -> IO SExpr
-        apply_macro Default context (SList (SSymbol "backquote":body)) = do
-          body' <- mapM (apply_macro Backquote context) body
+-- | all macros are stored in Env SExpr
+apply_macros :: Env SExpr -> [SExpr] -> IO [SExpr]
+apply_macros env sexprs = mapM (apply_macro Default env) sexprs
+  where apply_macro :: State -> Env SExpr -> SExpr -> IO SExpr
+        apply_macro Default env (SList (SSymbol "backquote":body)) = do
+          body' <- mapM (apply_macro Backquote env) body
           return $ SList (SSymbol "backquote" : body')
 
-        apply_macro Default context (SList (SSymbol "quote":body)) = do
-          body' <- mapM (apply_macro Quote context) body
+        apply_macro Default env (SList (SSymbol "quote":body)) = do
+          body' <- mapM (apply_macro Quote env) body
           return $ SList (SSymbol "quote" : body')
 
-        apply_macro Default context list@(SList (SSymbol sym:body)) = case Map.lookup sym context of
-          Just (SCallable (Macro l_context prototype sexprs bound)) -> do
-            body' <- mapM (apply_macro Default context) body
+        apply_macro Default env list@(SList (SSymbol sym:body)) = case Env.lookup sym env of
+          Just (SCallable (Macro local_env prototype sexprs bound)) -> do
+            body' <- mapM (apply_macro Default env) body
             let arg_bindings = bind_args prototype (bound ++ body')
-            (_, macro_expr) <- eval_scope (arg_bindings `Map.union` l_context) sexprs
-            apply_macro Default context macro_expr
+            (_, macro_expr) <- eval_scope (Env.append arg_bindings local_env) sexprs
+            apply_macro Default env macro_expr
           _                                                         -> do
-            list' <- mapM (apply_macro Default context) (from_list list)
+            list' <- mapM (apply_macro Default env) (from_list list)
             return $ SList list'
 
-        apply_macro Default context other                      = return other
+        apply_macro Default env      other                      = return other
 
-        apply_macro Quote _ sexpr = return sexpr
+        apply_macro Quote    _       sexpr                      = return sexpr
 
-        apply_macro Backquote context (SList (SSymbol "interpolate":body)) = do
-          body' <- mapM (apply_macro Default context) body
+        apply_macro Backquote env (SList (SSymbol "interpolate":body)) = do
+          body' <- mapM (apply_macro Default env) body
           return $ SList (SSymbol "interpolate" : body')
 
-        apply_macro Backquote context other = return other
+        apply_macro Backquote env other                                = return other
 -- | takes a list of the form (name (arg1 arg2... [&rest argLast]) body...)
 -- | and constructs a Macro object (Callable)
 -- | also returns its name
-handle_defmacro :: Context -> [SExpr] -> (String, Callable)
+handle_defmacro :: Env SExpr -> [SExpr] -> (String, Callable)
 handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
   | otherwise              = (name, Macro context prototype body [])
@@ -108,7 +111,7 @@ handle_defmacro context (s_name:s_lambda_list:body)
 
 -- | looks through a lexical scope, executes all defines,
 -- | and evaluates the remaining s-expressions
-eval_functions :: Context -> [SExpr] -> IO (Context, SExpr)
+eval_functions :: Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 eval_functions context sexprs = do
   let context' = collect_functions context sexprs
   sexpr' <- apply_functions context' $ filter (not . is_define) sexprs
@@ -118,63 +121,63 @@ eval_functions context sexprs = do
         is_define _                            = False
 
 -- | looks through a lexical scope and evaluates all defines
-collect_functions :: Context -> [SExpr] -> Context
-collect_functions context sexprs = lexical_scope' `Map.union` context
-  where lexical_scope = foldl (\acc sexpr
-                                -> case sexpr of
-                                     SList (SSymbol "define":definition)
-                                       -> let (name, function) = handle_define context definition
-                                          in  Map.insert name (SCallable function) acc
-                                     _ -> acc)
-                        Map.empty
-                        sexprs
-        lexical_scope' = fmap (\(SCallable (UserDefined context prototype sexprs bound)) ->
-                                 SCallable $ UserDefined (lexical_scope' `Map.union` context) prototype sexprs bound)
-                         lexical_scope
+collect_functions :: Env SExpr -> [SExpr] -> Env SExpr
+collect_functions env sexprs = Env.append add_lexical' env
+  where add_lexical = foldl (\acc sexpr
+                              -> case sexpr of
+                                   SList (SSymbol "define":definition)
+                                     -> let (name, function) = handle_define env definition
+                                        in  Map.insert name (SCallable function) acc
+                                   _ -> acc)
+                      Map.empty
+                      sexprs
+        add_lexical' = fmap (\(SCallable (UserDefined local_env prototype sexprs bound)) ->
+                               SCallable $ UserDefined (Env.append add_lexical' local_env) prototype sexprs bound)
+                       add_lexical
 
 -- | evaluates functions in a certain lexical scope
-apply_functions :: Context -> [SExpr] -> IO SExpr
-apply_functions context sexprs = do
-  (_, sexpr) <- foldM (\(prev_context, _) sexpr -> eval prev_context sexpr) (context, nil) sexprs
+apply_functions :: Env SExpr -> [SExpr] -> IO SExpr
+apply_functions env sexprs = do
+  (_, sexpr) <- foldM (\(prev_env, _) sexpr -> eval prev_env sexpr) (env, nil) sexprs
   return sexpr
 
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
 -- | also returns its name
-handle_define :: Context -> [SExpr] -> (String, Callable)
+handle_define :: Env SExpr -> [SExpr] -> (String, Callable)
 handle_define context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "function name must be a symbol"
   | otherwise              = (name, UserDefined context prototype body [])
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
-eval :: Context -> SExpr -> IO (Context, SExpr)
-eval context (SList (first:rest)) = do
-  (_, first') <- eval context first
+eval :: Env SExpr -> SExpr -> IO (Env SExpr, SExpr)
+eval env (SList (first:rest)) = do
+  (_, first') <- eval env first
   case first' of
-    SCallable (UserDefined l_context prototype sexprs bound) -> do
-      pairs <- mapM (eval context) rest
+    SCallable (UserDefined local_env prototype sexprs bound) -> do
+      pairs <- mapM (eval env) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
-      eval_scope (arg_bindings `Map.union`  l_context) sexprs
+      eval_scope (Env.append arg_bindings local_env) sexprs
     SCallable (BuiltIn _ _ f bound)                          -> do
-      pairs <- mapM (eval context) rest
+      pairs <- mapM (eval env) rest
       result <- f (bound ++ map snd pairs)
-      return (context, result)
-    SCallable (SpecialOp _ _ f bound)                        -> f eval eval_scope context (bound ++ rest)
+      return (env, result)
+    SCallable (SpecialOp _ _ f bound)                        -> f eval eval_scope env (bound ++ rest)
     _                                                        -> error $ "unable to execute s-expression: '" ++ show_sexpr first' ++ "'"
-eval context (SSymbol sym)        = case Map.lookup sym context of
-  Just smth -> return (context, smth)
+eval env (SSymbol sym)        = case Env.lookup sym env of
+  Just smth -> return (env, smth)
   Nothing   -> error $ "undefined identificator '" ++ sym ++ "'"
-eval context sexpr                = return (context, sexpr)
+eval env sexpr                = return (env, sexpr)
 
-load_prelude :: IO Context
+load_prelude :: IO (Env SExpr)
 load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
-  (context, _) <- eval_scope start_context $ Reader.read Undefined text -- TODO: change Undefined
-  return context
+  (env, _) <- eval_scope start_env $ Reader.read Undefined text -- TODO: change Undefined
+  return (Env.pass env)
 
-start_context :: Context
-start_context = Map.fromList $
+start_env :: Env SExpr
+start_env = Env.fromList $
     (fmap (\(name, args, f) -> (name, SCallable $ SpecialOp name args f [])) [
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
@@ -218,31 +221,31 @@ start_context = Map.fromList $
     ("str-length",   Just 1,  builtin_str_length),
     ("error",        Just 1,  builtin_error) ])
 
-spop_context_from_file :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
-spop_context_from_file eval eval_scope context [arg] = do
-  (_, sexpr) <- eval context arg
+spop_context_from_file :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_context_from_file eval eval_scope env [arg] = do
+  (_, sexpr) <- eval env arg
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      context' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
-      return (context, SContext context')
+      env' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
+      return (env, SEnv env')
     _                -> error "context-from-file: string expected"
 spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"
 
-spop_context_from_file_no_prelude :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
-spop_context_from_file_no_prelude eval eval_scope context [args] = do
-  (_, sexpr) <- eval context args
+spop_context_from_file_no_prelude :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_context_from_file_no_prelude eval eval_scope env [args] = do
+  (_, sexpr) <- eval env args
   case sexpr of
     SString filename -> do
       text <- readFile filename
-      context' <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
-      return (context, SContext context')
+      env' <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
+      return (env, SEnv env')
     _                -> error "context-from-file-no-prelude: string expected"
 spop_context_from_file_no_prelude _    _          _       _      = error "context-from-file-no-prelude: just one argument required"
 
 -- | creates argument bindings from a Prototype
 -- | and arguments (s-expressions)
-bind_args :: Prototype -> [SExpr] -> Context
+bind_args :: Prototype -> [SExpr] -> Map String SExpr
 bind_args (Prototype arg_names False) args
   | length arg_names > length args = error "too little arguments"
   | length arg_names < length args = error "too many arguments"

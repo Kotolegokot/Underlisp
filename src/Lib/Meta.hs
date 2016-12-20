@@ -5,18 +5,20 @@ module Lib.Meta (spop_quote,
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import qualified Env
+import Env (Env)
 import qualified Reader
 import SExpr
 import Util
 import Lib.Internal
 
 -- special operator quote
-spop_quote :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_quote :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
 spop_quote _    _ _       _     = error "quote: just one argument requried"
 
 -- | special operator backquote
-spop_backquote :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_backquote :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_backquote eval eval_scope context [SList (SSymbol "interpolate" : rest)]
   | length rest /= 1 = error "interpolate: just one argument required"
   | otherwise        = do
@@ -25,7 +27,7 @@ spop_backquote eval eval_scope context [SList (SSymbol "interpolate" : rest)]
 spop_backquote eval eval_scope context [SList list] = do
   pairs <- mapM' (spop_backquote eval eval_scope context . return) list
   return (context, SList $ map snd pairs)
-    where mapM' :: (SExpr -> IO (Context, SExpr)) -> [SExpr] -> IO [(Context, SExpr)]
+    where mapM' :: (SExpr -> IO (Env SExpr, SExpr)) -> [SExpr] -> IO [(Env SExpr, SExpr)]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList [SSymbol "unfold", arg] -> do
@@ -45,7 +47,7 @@ spop_backquote _    _          context [arg]        = return (context, arg)
 spop_backquote _    _          _       _            = error "backquote: just one argument required"
 
 -- | special operator interprete
-spop_interprete :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_interprete :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
@@ -54,7 +56,7 @@ spop_interprete eval eval_scope context [arg] = do
 spop_interprete _    _          _       _     = error "interprete: just one argument required"
 
 -- | special operator eval
-spop_eval :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
+spop_eval :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_eval eval _ context [arg] = do
   (_, expr) <- eval context arg
   eval context expr

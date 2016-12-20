@@ -5,19 +5,21 @@ module Lib.Main (spop_let,
                  builtin_error ) where
 
 import qualified Data.Map as Map
+import qualified Env
+import Env (Env)
 import Data.Char (toUpper)
 import SExpr
 import Lib.Internal
 
 -- special operator let
-spop_let :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
-spop_let eval eval_scope context ((SList pairs):body) = do
-  context' <- handle_pairs pairs context
-  eval_scope context' body
+spop_let :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_let eval eval_scope env ((SList pairs):body) = do
+  env' <- handle_pairs pairs env
+  eval_scope env' body
     where handle_pairs (x:xs) acc = case x of
             (SList [SSymbol var, value]) -> do
               (_, expr) <- eval acc value
-              handle_pairs xs (Map.insert var expr acc)
+              handle_pairs xs (Env.insert var expr acc)
             (SList [_, _]) -> error "let: first item in a binding pair must be a keyword"
             _              -> error "let: bindings must be of the following form: (var value)"
           handle_pairs []     acc = return acc
@@ -25,13 +27,13 @@ spop_let _    _          _       [_]                  = error "let: list expecte
 spop_let _    _          _       _                    = error "let: at least one argument expected"
 
 -- special operator defvar
-spop_defvar :: Eval -> EvalScope -> Context -> [SExpr] -> IO (Context, SExpr)
-spop_defvar eval eval_scope context [var, value]
+spop_defvar :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_defvar eval eval_scope env [var, value]
   | not $ is_symbol var = error "defvar: first argument must be a symbol"
   | otherwise           = do
-      let var_name = from_symbol var
-      (_, value') <- eval context value
-      return (Map.insert var_name value' context, nil)
+      let key = from_symbol var
+      (_, value') <- eval env value
+      return (Env.insert key value' env, nil)
 spop_defvar _    _           _       _ = error "defvar: two arguments required"
 
 -- built-in function type

@@ -16,6 +16,8 @@
 ;;(load-module "examples/factorial.lisp")
 (load-module "stdlib/ord.lisp")
 
+;;(print-ln (context-from-file "stdlib/ord.lisp"))
+
 ;;(define f (x) (factorial (+ x 1)))
 
 ;;(f 12)
