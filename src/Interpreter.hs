@@ -13,6 +13,6 @@ interprete_program filename = readFile filename >>= (Evaluator.evaluate_program 
 interprete_module :: String -> IO (Map String SExpr)
 interprete_module filename  = readFile filename >>= (Evaluator.evaluate_module . Reader.read (start_point filename))
 
---interprete_stdin :: IO ()
---interprete_stdin = interprete_stdin' (start_point "stdin")
---  where interprete_stdin'
+--interprete_repl :: IO ()
+--interprete_repl = interprete_repl' (start_point "stdin")
+--  where interprete_repl'

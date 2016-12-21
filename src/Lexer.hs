@@ -4,12 +4,12 @@ module Lexer (Lexeme (..)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Char (isSpace)
+import Atom
 import SExpr
 import Util
 
-
-data Lexeme = Open Char | Closed Char | Atom SExpr | Sugar String
-  deriving (Eq, Show)
+data Lexeme = Open Char | Closed Char | Atom (Atom SExpr) | Sugar String
+  deriving Eq
 
 data State = None | Comment | String | OtherAtom
   deriving (Eq, Show)
@@ -36,7 +36,7 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' point lexemes String sequence = parse_string point [] sequence
               where parse_string point string xs@(x:rest)
-                      | x == '"'  = tokenize' (forward_column point) ((Atom (SString $ reverse string), point) : lexemes) None rest
+                      | x == '"'  = tokenize' (forward_column point) ((Atom (AString $ reverse string), point) : lexemes) None rest
                       | x == '\n' = parse_string (forward_row    point) (x : string) rest
                       | otherwise = parse_string (forward_column point) (x : string) rest
 

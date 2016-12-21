@@ -10,16 +10,16 @@ import Env (Env)
 import qualified Reader
 import SExpr
 import Util
-import Lib.Internal
+import Callable
 
 -- special operator quote
-spop_quote :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_quote :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
 spop_quote _    _ _       _     = error "quote: just one argument requried"
 
 -- | special operator backquote
-spop_backquote :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
-spop_backquote eval eval_scope context [SList (SSymbol "interpolate" : rest)]
+spop_backquote :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_backquote eval eval_scope context [SList (SAtom (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = error "interpolate: just one argument required"
   | otherwise        = do
       (_, expr) <- eval context $ head rest
@@ -30,7 +30,7 @@ spop_backquote eval eval_scope context [SList list] = do
     where mapM' :: (SExpr -> IO (Env SExpr, SExpr)) -> [SExpr] -> IO [(Env SExpr, SExpr)]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
-            SList [SSymbol "unfold", arg] -> do
+            SList [SAtom (ASymbol "unfold"), arg] -> do
               (_, expr) <- eval context arg
               case expr of
                 SList list -> do
@@ -38,7 +38,7 @@ spop_backquote eval eval_scope context [SList list] = do
                   rest <- mapM' f xs
                   return $ exprs ++ rest
                 _          -> error "unfold: list expected"
-            SList (SSymbol "unfold":_)           -> error "unfold: just one argument required"
+            SList (SAtom (ASymbol "unfold"):_)           -> error "unfold: just one argument required"
             other                                -> do
               result <- f other
               rest   <- mapM' f xs
@@ -47,16 +47,16 @@ spop_backquote _    _          context [arg]        = return (context, arg)
 spop_backquote _    _          _       _            = error "backquote: just one argument required"
 
 -- | special operator interprete
-spop_interprete :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_interprete :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
-    SString str -> eval_scope context . Reader.read Undefined  $ str -- TODO: change Undefined to a normal point
-    _           -> error "interprete: string expected"
+    SAtom (AString str) -> eval_scope context . Reader.read Undefined  $ str -- TODO: change Undefined to a normal point
+    _                   -> error "interprete: string expected"
 spop_interprete _    _          _       _     = error "interprete: just one argument required"
 
 -- | special operator eval
-spop_eval :: Eval -> EvalScope -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_eval :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
 spop_eval eval _ context [arg] = do
   (_, expr) <- eval context arg
   eval context expr

@@ -12,7 +12,7 @@ import qualified Data.Map as Map
 data Env a where
   -- Lexical Scope -> External Scope -> Environment a
   Env :: (Map String a) -> (Map String a) -> Env a
-  deriving (Show, Foldable, Traversable, Functor)
+  deriving (Eq, Show, Foldable, Traversable, Functor)
 
 -- | moves the lexical scope to external
 pass :: Env a -> Env a
