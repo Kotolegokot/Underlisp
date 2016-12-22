@@ -6,9 +6,10 @@ import Data.Map (Map)
 import Data.Char (isSpace)
 import Atom
 import SExpr
+import LexicalEnv
 import Util
 
-data Lexeme = Open Char | Closed Char | Atom (Atom SExpr) | Sugar String
+data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | Sugar String
   deriving Eq
 
 data State = None | Comment | String | OtherAtom

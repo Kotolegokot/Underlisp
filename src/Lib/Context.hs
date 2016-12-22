@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lib.Context (spop_context,
                     spop_load_context,
                     spop_current_context) where
@@ -8,9 +10,10 @@ import qualified Env
 import Env (Env (..))
 import qualified Reader
 import Callable
+import LexicalEnv
 import SExpr
 
-spop_context :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context eval eval_scope e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
@@ -18,34 +21,21 @@ spop_context eval eval_scope e args = do
            then error "context: symbol expected"
            else (e, env $ extract_symbols e $ map from_symbol symbols)
 
-extract_symbols :: Env SExpr -> [String] -> Map String SExpr
+extract_symbols :: LEnv SExpr -> [String] -> Map String SExpr
 extract_symbols env keys = foldl (\acc key -> case Env.lookup key env of
                                      Just value -> Map.insert key value acc
                                      Nothing    -> error $ "context: undefined symbol '" ++ key ++ "'")
                            Map.empty
                            keys
 
-spop_load_context :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
-spop_load_context eval eval_scope env@(Env lexical external) [arg] = do
-  (_, sexpr) <- eval env arg
+spop_load_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_load_context eval eval_scope e [arg] = do
+  (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom (AEnv add_env) -> (new_env, nil)
-      where new_lexical  = fmap (\sexpr -> case sexpr of
-                                    SAtom (ACallable (UserDefined local_env prototype sexprs bound))
-                                           -> callable $ UserDefined (Env.append_ex add_env local_env) prototype sexprs bound
-                                    other  -> other)
-                           lexical
-            new_lexical' = fmap (\sexpr -> case sexpr of
-                                    SAtom (ACallable (UserDefined local_env prototype sexprs bound))
-                                           -> callable $ UserDefined (Env.append new_lexical' local_env) prototype sexprs bound
-                                    other  -> other)
-                           new_lexical
-
-            new_env      = Env new_lexical' (add_env `Map.union` external)
-    _                    -> error "load-context: context expected"
+    SAtom (AEnv add) -> (Env.lappend e add, nil)
 pop_load_context eval eval_scope _   []    = error "load-context: just one argument required"
 
-spop_current_context :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_current_context _ _ e [] = return (e, env $ Env.merge e)
 spop_current_context _ _ _ _  = error "current-context: no arguments required"
 

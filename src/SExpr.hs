@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module SExpr (SExpr (..)
              , module Expr
@@ -15,12 +16,13 @@ import Atom
 import Callable
 import Expr
 import LispShow
+import LexicalEnv
 
 -- s-expression --
-data SExpr = SList [SExpr] | SAtom (Atom SExpr)
+data SExpr = SList [SExpr] | SAtom (Atom LEnv SExpr)
   deriving (Eq, Ord)
 
-instance Expr SExpr where
+instance Expr LEnv SExpr where
   is_list (SList _)   = True
   is_list _           = False
 

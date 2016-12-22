@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lib.Meta (spop_quote,
                  spop_backquote,
                  spop_interprete,
@@ -10,15 +12,16 @@ import Env (Env)
 import qualified Reader
 import SExpr
 import Util
+import LexicalEnv
 import Callable
 
 -- special operator quote
-spop_quote :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
 spop_quote _    _ _       _     = error "quote: just one argument requried"
 
 -- | special operator backquote
-spop_backquote :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_backquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_backquote eval eval_scope context [SList (SAtom (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = error "interpolate: just one argument required"
   | otherwise        = do
@@ -27,7 +30,7 @@ spop_backquote eval eval_scope context [SList (SAtom (ASymbol  "interpolate") : 
 spop_backquote eval eval_scope context [SList list] = do
   pairs <- mapM' (spop_backquote eval eval_scope context . return) list
   return (context, SList $ map snd pairs)
-    where mapM' :: (SExpr -> IO (Env SExpr, SExpr)) -> [SExpr] -> IO [(Env SExpr, SExpr)]
+    where mapM' :: (SExpr -> IO (LEnv SExpr, SExpr)) -> [SExpr] -> IO [(LEnv SExpr, SExpr)]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList [SAtom (ASymbol "unfold"), arg] -> do
@@ -47,7 +50,7 @@ spop_backquote _    _          context [arg]        = return (context, arg)
 spop_backquote _    _          _       _            = error "backquote: just one argument required"
 
 -- | special operator interprete
-spop_interprete :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
@@ -56,7 +59,7 @@ spop_interprete eval eval_scope context [arg] = do
 spop_interprete _    _          _       _     = error "interprete: just one argument required"
 
 -- | special operator eval
-spop_eval :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_eval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_eval eval _ context [arg] = do
   (_, expr) <- eval context arg
   eval context expr

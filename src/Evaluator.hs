@@ -1,10 +1,12 @@
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Evaluator (evaluate_program, evaluate_module) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
-import Env (Env)
+import LexicalEnv
 import qualified Reader
 import Data.List (elemIndices, delete)
 import Control.Arrow
@@ -35,14 +37,14 @@ evaluate_module_no_prelude body = do
 -- | 1. expands all macros in it
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
-eval_scope :: Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 eval_scope env sexprs = do
   (env', sexprs') <- expand_macros (Env.pass env) sexprs
   eval_functions env' sexprs'
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
-expand_macros :: Env SExpr -> [SExpr] -> IO (Env SExpr, [SExpr])
+expand_macros :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, [SExpr])
 expand_macros context sexprs = do
   let context' = collect_macros context sexprs
   sexprs' <- apply_macros context' $ filter (not . is_defmacro) sexprs
@@ -52,26 +54,26 @@ expand_macros context sexprs = do
         is_defmacro _                                      = False
 
 -- | looks through a lexical scope and evaluates all defmacros
-collect_macros :: Env SExpr -> [SExpr] -> Env SExpr
-collect_macros env sexprs = Env.append add_lexical' env
+collect_macros :: LEnv SExpr -> [SExpr] -> LEnv SExpr
+collect_macros e sexprs = Env.lappend e add_lexical'
   where add_lexical = foldl (\acc sexpr
                               -> case sexpr of
                                    SList (SAtom (ASymbol "defmacro"):definition)
-                                     -> let (name, macro) = handle_defmacro env definition
+                                     -> let (name, macro) = handle_defmacro e definition
                                         in   Map.insert name (callable macro) acc
                                    _ -> acc)
                       Map.empty
                       sexprs
-        add_lexical' = fmap (\(SAtom (ACallable (Macro local_env prototype sexprs bound))) ->
-                               callable $ Macro (Env.append add_lexical' local_env) prototype sexprs bound) add_lexical
+        add_lexical' = fmap (\(SAtom (ACallable (Macro e prototype sexprs bound))) ->
+                               callable $ Macro (Env.lappend e add_lexical') prototype sexprs bound) add_lexical
 
 data State = Default | Quote | Backquote
 
 -- | applies macros in a certain lexical scope
 -- | all macros are stored in Env SExpr
-apply_macros :: Env SExpr -> [SExpr] -> IO [SExpr]
+apply_macros :: LEnv SExpr -> [SExpr] -> IO [SExpr]
 apply_macros env sexprs = mapM (apply_macro Default env) sexprs
-  where apply_macro :: State -> Env SExpr -> SExpr -> IO SExpr
+  where apply_macro :: State -> LEnv SExpr -> SExpr -> IO SExpr
         apply_macro Default env (SList (SAtom (ASymbol "backquote"):body)) = do
           body' <- mapM (apply_macro Backquote env) body
           return $ SList (symbol "backquote" : body')
@@ -81,10 +83,10 @@ apply_macros env sexprs = mapM (apply_macro Default env) sexprs
           return $ SList (symbol "quote" : body')
 
         apply_macro Default env list@(SList (SAtom (ASymbol sym):body)) = case Env.lookup sym env of
-          Just (SAtom (ACallable (Macro local_env prototype sexprs bound))) -> do
+          Just (SAtom (ACallable (Macro e prototype sexprs bound))) -> do
             body' <- mapM (apply_macro Default env) body
             let arg_bindings = bind_args prototype (bound ++ body')
-            (_, macro_expr) <- eval_scope (Env.append arg_bindings local_env) sexprs
+            (_, macro_expr) <- eval_scope (Env.lappend e arg_bindings) sexprs
             apply_macro Default env macro_expr
           _                                                                 -> do
             list' <- mapM (apply_macro Default env) (from_list list)
@@ -102,7 +104,7 @@ apply_macros env sexprs = mapM (apply_macro Default env) sexprs
 -- | takes a list of the form (name (arg1 arg2... [&rest argLast]) body...)
 -- | and constructs a Macro object (Callable)
 -- | also returns its name
-handle_defmacro :: Env SExpr -> [SExpr] -> (String, Callable SExpr)
+handle_defmacro :: LEnv SExpr -> [SExpr] -> (String, Callable LEnv SExpr)
 handle_defmacro context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "macro name must be a symbol"
   | otherwise              = (name, Macro context prototype body [])
@@ -111,7 +113,7 @@ handle_defmacro context (s_name:s_lambda_list:body)
 
 -- | looks through a lexical scope, executes all defines,
 -- | and evaluates the remaining s-expressions
-eval_functions :: Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+eval_functions :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 eval_functions context sexprs = do
   let context' = collect_functions context sexprs
   sexpr' <- apply_functions context' $ filter (not . is_define) sexprs
@@ -121,22 +123,19 @@ eval_functions context sexprs = do
         is_define _                                    = False
 
 -- | looks through a lexical scope and evaluates all defines
-collect_functions :: Env SExpr -> [SExpr] -> Env SExpr
-collect_functions env sexprs = Env.append add_lexical' env
+collect_functions :: LEnv SExpr -> [SExpr] -> LEnv SExpr
+collect_functions e sexprs = Env.lappend e add_lexical
   where add_lexical = foldl (\acc sexpr
                               -> case sexpr of
                                    SList (SAtom (ASymbol "define"):definition)
-                                     -> let (name, function) = handle_define env definition
+                                     -> let (name, function) = handle_define e definition
                                         in  Map.insert name (callable function) acc
                                    _ -> acc)
                       Map.empty
                       sexprs
-        add_lexical' = fmap (\(SAtom (ACallable (UserDefined local_env prototype sexprs bound))) ->
-                               callable $ UserDefined (Env.append add_lexical' local_env) prototype sexprs bound)
-                       add_lexical
 
 -- | evaluates functions in a certain lexical scope
-apply_functions :: Env SExpr -> [SExpr] -> IO SExpr
+apply_functions :: LEnv SExpr -> [SExpr] -> IO SExpr
 apply_functions env sexprs = do
   (_, sexpr) <- foldM (\(prev_env, _) sexpr -> eval prev_env sexpr) (env, nil) sexprs
   return sexpr
@@ -144,39 +143,40 @@ apply_functions env sexprs = do
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
 -- | also returns its name
-handle_define :: Env SExpr -> [SExpr] -> (String, Callable SExpr)
+handle_define :: LEnv SExpr -> [SExpr] -> (String, Callable LEnv SExpr)
 handle_define context (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "function name must be a symbol"
   | otherwise              = (name, UserDefined context prototype body [])
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
-eval :: Env SExpr -> SExpr -> IO (Env SExpr, SExpr)
-eval env (SList (first:rest))  = do
-  (_, first') <- eval env first
+eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
+eval e (SList (first:rest))  = do
+  (_, first') <- eval e first
   case first' of
     SAtom (ACallable (UserDefined local_env prototype sexprs bound)) -> do
-      pairs <- mapM (eval env) rest
+      pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
-      eval_scope (Env.append arg_bindings local_env) sexprs
+      (_, expr) <- eval_scope (Env.lappend e arg_bindings) sexprs
+      return (e, expr)
     SAtom (ACallable (BuiltIn _ _ f bound))                          -> do
-      pairs <- mapM (eval env) rest
+      pairs <- mapM (eval e) rest
       result <- f (bound ++ map snd pairs)
-      return (env, result)
-    SAtom (ACallable (SpecialOp _ _ f bound))                        -> f eval eval_scope env (bound ++ rest)
+      return (e, result)
+    SAtom (ACallable (SpecialOp _ _ f bound))                        -> f eval eval_scope e (bound ++ rest)
     _                                                                -> error $ "unable to execute s-expression: '" ++ lisp_show first' ++ "'"
-eval env (SAtom (ASymbol sym)) = case Env.lookup sym env of
-  Just smth -> return (env, smth)
+eval e (SAtom (ASymbol sym)) = case Env.lookup sym e of
+  Just value -> return (e, value)
   Nothing   -> error $ "undefined identificator '" ++ sym ++ "'"
 eval e sexpr                 = return (e, sexpr)
 
-load_prelude :: IO (Env SExpr)
+load_prelude :: IO (LEnv SExpr)
 load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
   (env, _) <- eval_scope start_env $ Reader.read Undefined text -- TODO: change Undefined
   return (Env.pass env)
 
-start_env :: Env SExpr
+start_env :: LEnv SExpr
 start_env = Env.fromList $
     (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) [
     ("let",                          Nothing, spop_let),
@@ -221,7 +221,7 @@ start_env = Env.fromList $
     ("str-length",   Just 1,  builtin_str_length),
     ("error",        Just 1,  builtin_error) ])
 
-spop_context_from_file :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_context_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
@@ -232,7 +232,7 @@ spop_context_from_file eval eval_scope e [arg] = do
     _                        -> error "context-from-file: string expected"
 spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"
 
-spop_context_from_file_no_prelude :: Eval SExpr -> EvalScope SExpr -> Env SExpr -> [SExpr] -> IO (Env SExpr, SExpr)
+spop_context_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context_from_file_no_prelude eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
