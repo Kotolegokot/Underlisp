@@ -1,66 +1,58 @@
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lib.Main (spop_let,
-                 spop_lambda,
                  spop_defvar,
                  builtin_type,
                  builtin_bind,
                  builtin_error ) where
 
 import qualified Data.Map as Map
+import qualified Env
+import Env (Env)
 import Data.Char (toUpper)
 import SExpr
-import Lib.Internal
+import LexicalEnv
+import Callable
 
 -- special operator let
-spop_let :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_let eval context ((SList pairs):body) = do
-    new_context <- handle_pairs pairs context
-    eval new_context (SList (SSymbol "seq":body))
-        where handle_pairs (x:xs) acc = case x of
-                                          (SList [SSymbol var, value]) -> do
-                                              (expr, _) <- eval acc value
-                                              handle_pairs xs (Map.insert var expr acc)
-                                          (SList [_, _]) -> error "first item in a let binding pair must be a keyword"
-                                          _              -> error "a binding in 'let' must be of the following form: (var value)"
-              handle_pairs []     acc = return acc
-spop_let _    _       _               = error "list of bindings expected"
-
--- special operator lambda
-spop_lambda :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_lambda eval context (lambda_list:body) = return (SCallable func, context)
-  where (arg_names, rest) = handle_lambda_list lambda_list
-        func = UserDefined context arg_names rest (SList $ SSymbol "seq" : body) []
-spop_lambda _    _       _            = error "lambda: at least one argument required"
+spop_let :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_let eval eval_scope e ((SList pairs):body) = do
+  e' <- handle_pairs pairs e
+  (_, expr) <- eval_scope e' body
+  return (e, expr)
+    where handle_pairs (x:xs) acc = case x of
+            (SList [SAtom (ASymbol var), value]) -> do
+              (_, expr) <- eval acc value
+              handle_pairs xs (Env.linsert var expr acc)
+            (SList [_, _]) -> error "let: first item in a binding pair must be a keyword"
+            _              -> error "let: bindings must be of the following form: (var value)"
+          handle_pairs []     acc = return acc
+spop_let _    _          _       [_]                  = error "let: list expected"
+spop_let _    _          _       _                    = error "let: at least one argument expected"
 
 -- special operator defvar
-spop_defvar :: Eval -> Context -> [SExpr] -> IO (SExpr, Context)
-spop_defvar eval context [var, value]
-  | not $ is_symbol var = error "first argument of 'defvar' must be a symbol"
+spop_defvar :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_defvar eval eval_scope e [var, value]
+  | not $ is_symbol var = error "defvar: first argument must be a symbol"
   | otherwise           = do
-      let var_name = from_symbol var
-      let new_context = Map.insert var_name nil context
-      (expr, _) <- eval new_context value
-      let new_value = case expr of
-            SCallable (UserDefined context arg_names rest sexpr bound) ->
-              SCallable $ UserDefined (Map.insert var_name new_value context) arg_names rest sexpr bound
-            SCallable (Macro context arg_names rest sexpr bound) ->
-              SCallable $ Macro (Map.insert var_name new_value context) arg_names rest sexpr bound
-            other                                      -> other
-      return (new_value, Map.insert var_name new_value context)
-spop_defvar _    _       _ = error "defvar: two arguments required"
+      let key = from_symbol var
+      (_, value') <- eval e value
+      return (Env.linsert key value' e, nil)
+spop_defvar _    _           _       _ = error "defvar: two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr
-builtin_type [sexpr] = return . SSymbol . map toUpper . show_type $ sexpr
+builtin_type [sexpr] = return . symbol . map toUpper . expr_type $ sexpr
 builtin_type _       = error "type: just one argument required"
 
 builtin_bind :: [SExpr] -> IO SExpr
 builtin_bind (first:args) = return $ case first of
-                                       SCallable callable -> SCallable $ bind callable args
-                                       _                  -> error "bind: callable expected"
+                                       SAtom (ACallable c) -> callable $ bind c args
+                                       _           -> error "bind: callable expected"
 builtin_bind _            = error "bind: at least one argument required"
 
 -- built-in function error
 builtin_error :: [SExpr] -> IO SExpr
-builtin_error [SString err] = error err
-builtin_error [_]           = error "error: string expected"
-builtin_error _             = error "error: just one argument required"
+builtin_error [SAtom (AString err)] = error err
+builtin_error [_]                   = error "error: string expected"
+builtin_error _                     = error "error: just one argument required"

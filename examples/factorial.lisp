@@ -1,4 +1,4 @@
 (load-module "stdlib/ord.lisp")
 
 ;; factorial
-(define factorial (x) (if (<= x 1) 1 (* x (factorial (- x 1)))))
+(define factorial (y) (if (<= y 1) 1 (* y (factorial (- y 1)))))

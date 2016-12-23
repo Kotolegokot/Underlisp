@@ -5,7 +5,6 @@ module Lib.List (builtin_list,
                  builtin_append) where
 
 import SExpr
-import Lib.Internal
 
 builtin_list :: [SExpr] -> IO SExpr
 builtin_list = return . SList
@@ -23,7 +22,7 @@ builtin_tail [_]              = error "tail: list expected"
 builtin_tail _                = error "tail: just one argument required"
 
 builtin_null :: [SExpr] -> IO SExpr
-builtin_null [SList list] = return . SBool . null $ list
+builtin_null [SList list] = return . bool . null $ list
 builtin_null [_]           = error "null: list expected"
 builtin_null _             = error "null: just one argument requried"
 

@@ -1,7 +1,6 @@
 module Lib.Everything (module Lib.Boolean,
                        module Lib.Context,
                        module Lib.Control,
-                       module Lib.Internal,
                        module Lib.IO,
                        module Lib.List,
                        module Lib.Main,
@@ -13,7 +12,6 @@ module Lib.Everything (module Lib.Boolean,
 import Lib.Boolean
 import Lib.Context
 import Lib.Control
-import Lib.Internal
 import Lib.IO
 import Lib.List
 import Lib.Main

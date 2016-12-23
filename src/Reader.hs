@@ -4,8 +4,9 @@ import Prelude hiding (read)
 import SExpr
 import Lexer
 import Parser
+import Util
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
-read :: String -> [SExpr]
-read = parse . tokenize
+read :: Point -> String -> [SExpr]
+read point = parse . fmap fst . (tokenize point)

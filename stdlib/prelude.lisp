@@ -1,7 +1,3 @@
-;; (defmacro macro-name args body)
-(defvar defmacro (macro (name args &rest body)
-			`(defvar ~name (macro ~args @body))))
-
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
   `(if ~cond (seq @body)))
@@ -17,10 +13,6 @@
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
        (switch @(tail pairs)))))
-
-; (define function-name args body)
-(defmacro define (name args &rest body)
-  `(defvar ~name (lambda ~args @body)))
 
 ;; (load-module module-name)
 (defmacro load-module (filename)
