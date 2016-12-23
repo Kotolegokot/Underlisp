@@ -1,5 +1,6 @@
 pattern matching
 fix LispShow
+add REPL mode
 
 fractional
 long numbers
