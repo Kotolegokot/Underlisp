@@ -38,4 +38,3 @@ spop_load_context eval eval_scope _   []  = error "load-context: just one argume
 spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_current_context _ _ e [] = return (e, env $ Env.merge e)
 spop_current_context _ _ _ _  = error "current-context: no arguments required"
-

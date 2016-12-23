@@ -176,8 +176,8 @@ eval e sexpr                 = return (e, sexpr)
 load_prelude :: IO (LEnv SExpr)
 load_prelude = do
   text <- readFile "stdlib/prelude.lisp"
-  (env, _) <- eval_scope start_env $ Reader.read Undefined text -- TODO: change Undefined
-  return (Env.pass env)
+  (e, _) <- eval_scope start_env $ Reader.read Undefined text -- TODO: change Undefined
+  return e
 
 start_env :: LEnv SExpr
 start_env = Env.fromList $
