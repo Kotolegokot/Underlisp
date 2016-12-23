@@ -64,6 +64,6 @@
 
 ;; prints error if ex is false
 (defmacro assert (ex)
-  `(when ~ex
+  `(unless ~ex
      (print-ln '~ex)
      (error "assert failed")))
