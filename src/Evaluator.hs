@@ -117,8 +117,7 @@ handle_defmacro context (s_name:s_lambda_list:body)
 eval_functions :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 eval_functions e sexprs = do
   let e' = collect_functions e sexprs
-  sexpr' <- apply_functions e' $ filter (not . is_define) sexprs
-  return (e', sexpr')
+  apply_functions e' $ filter (not . is_define) sexprs
   where is_define :: SExpr -> Bool
         is_define (SList (SAtom (ASymbol "define"):_)) = True
         is_define _                                    = False
@@ -136,16 +135,8 @@ collect_functions e sexprs = Env.lappend e add
               sexprs
 
 -- | evaluates functions in a certain lexical scope
-apply_functions :: LEnv SExpr -> [SExpr] -> IO SExpr
-apply_functions e sexprs = do
---  (_, sexpr) <- apply_functions' (e, nil) sexprs
-  (_, sexpr) <- foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (e, nil) sexprs
-  return sexpr
---  where apply_functions' :: (LEnv SExpr, SExpr) -> [SExpr] -> IO (LEnv SExpr, SExpr)
---        apply_functions' acc    []     = return acc
---        apply_functions' (e, _) (x:xs) = do
---          acc'@(e', _) <- eval e x
---          apply_functions' acc' xs
+apply_functions :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+apply_functions e sexprs = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (e, nil) sexprs
 
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
@@ -162,8 +153,6 @@ eval e (SList (first:rest))  = do
   (_, first') <- eval e first
   case first' of
     SAtom (ACallable (UserDefined local_env prototype sexprs bound)) -> do
-      when (is_symbol first) $
-        when (from_symbol first == "factorial") (lisp_print local_env)
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
       (_, expr) <- eval_scope (Env.lappend local_env arg_bindings) sexprs
