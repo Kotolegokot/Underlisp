@@ -6,7 +6,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module LexicalEnv where
+module LexicalEnvironment where
 
 import Data.Maybe (fromMaybe)
 import Data.Map (Map)

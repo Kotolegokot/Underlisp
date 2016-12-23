@@ -11,7 +11,7 @@ import qualified Env
 import Env (Env)
 import Data.Char (toUpper)
 import SExpr
-import LexicalEnv
+import LexicalEnvironment
 import Callable
 
 -- special operator let

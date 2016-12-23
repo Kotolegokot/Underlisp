@@ -6,7 +6,7 @@ module Lib.Boolean (builtin_not,
                     spop_impl) where
 
 import SExpr
-import LexicalEnv
+import LexicalEnvironment
 import Callable
 
 builtin_not :: [SExpr] -> IO SExpr

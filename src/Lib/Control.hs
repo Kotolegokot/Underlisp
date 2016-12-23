@@ -5,7 +5,7 @@ module Lib.Control (spop_if,
 
 import SExpr
 import qualified Env
-import LexicalEnv
+import LexicalEnvironment
 import Callable
 
 spop_if :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)

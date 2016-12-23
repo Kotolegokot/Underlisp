@@ -6,7 +6,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
-import LexicalEnv
+import LexicalEnvironment
 import qualified Reader
 import Data.List (elemIndices, delete)
 import Control.Arrow

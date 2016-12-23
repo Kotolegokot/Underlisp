@@ -16,7 +16,7 @@ import Atom
 import Callable
 import Expr
 import LispShow
-import LexicalEnv
+import LexicalEnvironment
 
 -- s-expression --
 data SExpr = SList [SExpr] | SAtom (Atom LEnv SExpr)

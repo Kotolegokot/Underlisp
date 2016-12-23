@@ -9,7 +9,7 @@ import Data.Map (Map)
 import qualified Env
 import qualified Reader
 import Callable
-import LexicalEnv
+import LexicalEnvironment
 import SExpr
 import LispShow
 

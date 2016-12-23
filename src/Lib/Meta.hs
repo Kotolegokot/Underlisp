@@ -12,7 +12,7 @@ import Env (Env)
 import qualified Reader
 import SExpr
 import Util
-import LexicalEnv
+import LexicalEnvironment
 import Callable
 
 -- special operator quote
