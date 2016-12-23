@@ -39,9 +39,9 @@ evaluate_module_no_prelude body = do
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
 eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-eval_scope env sexprs = do
-  (env', sexprs') <- expand_macros (Env.pass env) sexprs
-  eval_functions env' sexprs'
+eval_scope e sexprs = do
+  (e', sexprs') <- expand_macros (Env.pass e) sexprs
+  eval_functions e' sexprs'
 
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
@@ -115,10 +115,10 @@ handle_defmacro context (s_name:s_lambda_list:body)
 -- | looks through a lexical scope, executes all defines,
 -- | and evaluates the remaining s-expressions
 eval_functions :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-eval_functions context sexprs = do
-  let context' = collect_functions context sexprs
-  sexpr' <- apply_functions context' $ filter (not . is_define) sexprs
-  return (context', sexpr')
+eval_functions e sexprs = do
+  let e' = collect_functions e sexprs
+  sexpr' <- apply_functions e' $ filter (not . is_define) sexprs
+  return (e', sexpr')
   where is_define :: SExpr -> Bool
         is_define (SList (SAtom (ASymbol "define"):_)) = True
         is_define _                                    = False
@@ -137,17 +137,23 @@ collect_functions e sexprs = Env.lappend e add
 
 -- | evaluates functions in a certain lexical scope
 apply_functions :: LEnv SExpr -> [SExpr] -> IO SExpr
-apply_functions env sexprs = do
-  (_, sexpr) <- foldM (\(prev_env, _) sexpr -> eval prev_env sexpr) (env, nil) sexprs
+apply_functions e sexprs = do
+--  (_, sexpr) <- apply_functions' (e, nil) sexprs
+  (_, sexpr) <- foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (e, nil) sexprs
   return sexpr
+--  where apply_functions' :: (LEnv SExpr, SExpr) -> [SExpr] -> IO (LEnv SExpr, SExpr)
+--        apply_functions' acc    []     = return acc
+--        apply_functions' (e, _) (x:xs) = do
+--          acc'@(e', _) <- eval e x
+--          apply_functions' acc' xs
 
 -- | takes an s-list of the form (name (arg1 arg2... [&rest lastArg]) body...)
 -- | and constructs the correspoding UserDefined object (Callable)
 -- | also returns its name
 handle_define :: LEnv SExpr -> [SExpr] -> (String, Callable LEnv SExpr)
-handle_define context (s_name:s_lambda_list:body)
+handle_define e (s_name:s_lambda_list:body)
   | not $ is_symbol s_name = error "function name must be a symbol"
-  | otherwise              = (name, UserDefined context prototype body [])
+  | otherwise              = (name, UserDefined e prototype body [])
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
 
@@ -160,7 +166,7 @@ eval e (SList (first:rest))  = do
         when (from_symbol first == "factorial") (lisp_print local_env)
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
-      (_, expr) <- eval_scope (Env.lappend e arg_bindings) sexprs
+      (_, expr) <- eval_scope (Env.lappend local_env arg_bindings) sexprs
       return (e, expr)
     SAtom (ACallable (BuiltIn _ _ f bound))                          -> do
       pairs <- mapM (eval e) rest
@@ -170,7 +176,7 @@ eval e (SList (first:rest))  = do
     _                                                                -> error $ "unable to execute s-expression: '" ++ lisp_show first' ++ "'"
 eval e (SAtom (ASymbol sym)) = case Env.lookup sym e of
   Just value -> return (e, value)
-  Nothing   -> error $ "undefined identificator '" ++ sym ++ "'"
+  Nothing    -> error $ "undefined identificator '" ++ sym ++ "'"
 eval e sexpr                 = return (e, sexpr)
 
 load_prelude :: IO (LEnv SExpr)
@@ -199,41 +205,39 @@ start_env = Env.fromList $
     ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
     ("seq",                          Nothing, spop_seq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
-    ("type",         Just 1,  builtin_type),
-    ("bind",         Nothing, builtin_bind),
-    ("print",        Nothing, builtin_print),
-    ("print-ln",     Nothing, builtin_print_ln),
-    ("flush",        Just 0,  builtin_flush),
-    ("get-line",     Just 0,  builtin_get_line),
-    ("list",         Nothing, builtin_list),
-    ("head",         Just 1,  builtin_head),
-    ("tail",         Just 1,  builtin_tail),
-    ("null",         Just 1,  builtin_null),
-    ("append",       Just 2,  builtin_append),
-    ("+",            Nothing, builtin_sum),
-    ("-",            Just 2,  builtin_substract),
-    ("*",            Nothing, builtin_product),
-    ("/",            Just 2,  builtin_divide),
-    ("float",        Just 1,  builtin_float),
-    ("not",          Just 1,  builtin_not),
-    ("=",            Just 2,  builtin_eq),
-    ("<",            Just 2,  builtin_lt),
-    ("concat",       Nothing, builtin_concat),
-    ("str-to-int",   Just 1,  builtin_str_to_int),
-    ("str-to-float", Just 1,  builtin_str_to_float),
-    ("str-length",   Just 1,  builtin_str_length),
-    ("error",        Just 1,  builtin_error) ])
+    ("type",             Just 1,  builtin_type),
+    ("bind",             Nothing, builtin_bind),
+    ("print",            Nothing, builtin_print),
+    ("print-ln",         Nothing, builtin_print_ln),
+    ("flush",            Just 0,  builtin_flush),
+    ("get-line",         Just 0,  builtin_get_line),
+    ("list",             Nothing, builtin_list),
+    ("head",             Just 1,  builtin_head),
+    ("tail",             Just 1,  builtin_tail),
+    ("null",             Just 1,  builtin_null),
+    ("append",           Just 2,  builtin_append),
+    ("+",                Nothing, builtin_sum),
+    ("-",                Just 2,  builtin_substract),
+    ("*",                Nothing, builtin_product),
+    ("/",                Just 2,  builtin_divide),
+    ("float",            Just 1,  builtin_float),
+    ("not",              Just 1,  builtin_not),
+    ("=",                Just 2,  builtin_eq),
+    ("<",                Just 2,  builtin_lt),
+    ("concat",           Nothing, builtin_concat),
+    ("str-to-int",       Just 1,  builtin_str_to_int),
+    ("str-to-float",     Just 1,  builtin_str_to_float),
+    ("str-length",       Just 1,  builtin_str_length),
+    ("error",            Just 1,  builtin_error),
+    ("function-context", Just 1, builtin_function_context) ])
 
 spop_context_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
-  putStrLn $ "FILE: " ++ from_string sexpr
   case sexpr of
     SAtom (AString filename) -> do
       text <- readFile filename
       e' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
-      when (filename == "stdlib/ord.lisp") $
-        lisp_print e'
       return (e, env e')
     _                        -> error "context-from-file: string expected"
 spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"

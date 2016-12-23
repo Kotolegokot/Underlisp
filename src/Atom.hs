@@ -28,7 +28,7 @@ instance (LispShow a) => LispShow (Atom e a) where
   lisp_show (AString s)   = show s
   lisp_show (AChar c)     = show c
   lisp_show (ABool b)     = show b
-  lisp_show (ASymbol s)   = '\'' : s
+  lisp_show (ASymbol s)   = s
   lisp_show (ACallable c) = '{' : lisp_show c ++ "}"
   lisp_show (AEnv e)      = '{' : lisp_show e ++ "}"
 

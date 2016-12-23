@@ -1,22 +1,16 @@
-(defvar nil ())
+(print-ln "OLD_CONTEXT: " (current-context))
+(print-ln "==================")
 
-(defmacro when (cond &rest body)
-  `(if ~cond (seq @body)))
+;; (load-module "examples/factorial.lisp")
+(load-context (context-from-file "examples/factorial.lisp"))
 
-(defmacro unless (cond &rest body)
-  `(when (not ~cond) @body))
+(print-ln "FACTORIAL CONTEXT: " (function-context factorial))
 
-(defmacro cond (&rest pairs)
-  (if (null pairs)
-      nil
-    `(if ~(head (head pairs))
-       ~(head (tail (head pairs)))
-       (cond @(tail pairs)))))
-
-(load-module "examples/factorial.lisp")
+(print-ln "==================")
+(print-ln "NEW_CONTEXT: " (current-context))
 
 ;;(print-ln (context-from-file "examples/factorial.lisp"))
 
-(define f (x) (factorial (+ x 1)))
+;; (define f (x) (factorial (+ x 1)))
 
-(f 12)
+(factorial 12)
