@@ -13,8 +13,6 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 executable Underlisp
-  ghc-options:
-                       -O0
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
