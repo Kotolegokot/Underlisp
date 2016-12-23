@@ -15,7 +15,7 @@
 
 (load-module "examples/factorial.lisp")
 
-(print-ln (context-from-file "examples/factorial.lisp"))
+;;(print-ln (context-from-file "examples/factorial.lisp"))
 
 (define f (x) (factorial (+ x 1)))
 

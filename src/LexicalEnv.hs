@@ -14,19 +14,25 @@ import qualified Data.Map as Map
 import Env
 import Expr
 import Callable
+import LispShow
 
 data LEnv a = LEnv [Map String a]
   deriving (Eq, Functor, Foldable, Traversable)
+
+instance (LispShow a, Expr LEnv a) => LispShow (LEnv a) where
+  lisp_show (LEnv xs) = foldr (\(level, map) acc -> acc ++ "level " ++ show level ++ ":\n" ++ lisp_show map ++ "\n")
+                        ""
+                        (zip [1..] xs)
 
 lreplace :: LEnv a -> Map String a -> LEnv a
 lreplace (LEnv (_:xs)) x' = LEnv (x' : xs)
 lreplace (LEnv [])     _  = undefined
 
-xadd :: LEnv a -> Map String a -> LEnv a
+xadd :: LispShow a => LEnv a -> Map String a -> LEnv a
 xadd (LEnv (x:xs)) x' = LEnv (x : x' : xs)
-xadd (LEnv [])     x' = undefined
+xadd (LEnv [])     _  = undefined
 
-instance (Expr LEnv a, Eq a) => Env LEnv a where
+instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
   empty          = LEnv [Map.empty]
   fromList l     = LEnv [Map.fromList l]
   pass (LEnv xs) = LEnv (Map.empty : xs)
@@ -46,7 +52,7 @@ instance (Expr LEnv a, Eq a) => Env LEnv a where
           x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (xadd e (Map.insert key value $ external e)) prototype sexprs bound
+                                            -> callable $ UserDefined (xadd e $ Map.fromList [(key, value)]) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                x
@@ -66,7 +72,7 @@ instance (Expr LEnv a, Eq a) => Env LEnv a where
     where x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (xadd e $ add `Map.union` (external e)) prototype sexprs bound
+                                            -> callable $ UserDefined (xadd e add) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                x

@@ -12,7 +12,7 @@ type EvalScope e a = Env e a => e a -> [a] -> IO (e a, a)
 -- Callable
 data Callable e a where
   -- lexical scope -> prototype -> s-expressions -> bound args
-  UserDefined :: Env e a => e a -> Prototype -> [a] -> [a] -> Callable e a
+  UserDefined :: (Env e a) => e a -> Prototype -> [a] -> [a] -> Callable e a
   -- lexical scope -> prototype -> s-expressions -> bound args
   Macro       :: Env e a => e a -> Prototype -> [a] -> [a] -> Callable e a
   -- name -> args count or rest -> function -> bound args

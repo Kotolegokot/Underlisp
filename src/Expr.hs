@@ -55,56 +55,61 @@ callable = atom . ACallable
 env :: (Expr e a, Eq a) => Map String a -> a
 env = atom . AEnv
 
+(.&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+p1 .&& p2 = \a -> p1 a && p2 a
+
+infixr 8 .&&
+
 is_int :: Expr e a => a -> Bool
-is_int = A.is_int . from_atom
+is_int = is_atom .&& A.is_int . from_atom
 
 from_int :: Expr e a => a -> Int
 from_int = A.from_int . from_atom
 
 is_float :: Expr e a => a -> Bool
-is_float = A.is_float . from_atom
+is_float = is_atom .&& A.is_float . from_atom
 
 from_float :: Expr e a => a -> Float
 from_float = A.from_float . from_atom
 
 is_number :: Expr e a => a -> Bool
-is_number = A.is_number . from_atom
+is_number = is_atom .&& A.is_number . from_atom
 
 from_number :: Expr e a => a -> Float
 from_number = A.from_number . from_atom
 
 is_string :: Expr e a => a -> Bool
-is_string = A.is_string . from_atom
+is_string = is_atom .&& A.is_string . from_atom
 
 from_string :: Expr e a => a -> String
 from_string = A.from_string . from_atom
 
 is_char :: Expr e a => a -> Bool
-is_char = A.is_char . from_atom
+is_char = is_atom .&& A.is_char . from_atom
 
 from_char :: Expr e a => a -> Char
 from_char = A.from_char . from_atom
 
 is_bool :: Expr e a => a -> Bool
-is_bool = A.is_bool . from_atom
+is_bool = is_atom .&& A.is_bool . from_atom
 
 from_bool :: Expr e a => a -> Bool
 from_bool = A.from_bool . from_atom
 
 is_symbol :: Expr e a => a -> Bool
-is_symbol = A.is_symbol . from_atom
+is_symbol = is_atom .&& A.is_symbol . from_atom
 
 from_symbol :: Expr e a => a -> String
 from_symbol = A.from_symbol . from_atom
 
 is_callable :: Expr e a => a -> Bool
-is_callable = A.is_callable . from_atom
+is_callable = is_atom .&& A.is_callable . from_atom
 
 from_callable :: Expr e a => a -> Callable e a
 from_callable = A.from_callable . from_atom
 
 is_env :: Expr e a => a -> Bool
-is_env = A.is_env . from_atom
+is_env = is_atom .&& A.is_env . from_atom
 
 from_env :: Expr e a => a -> Map String a
 from_env = A.from_env . from_atom

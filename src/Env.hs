@@ -4,8 +4,9 @@ module Env where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+import LispShow
 
-class (Functor e, Foldable e, Traversable e) => Env e a  where
+class (LispShow (e a), Functor e, Foldable e, Traversable e) => Env e a  where
   -- | environment with empty lexical scope
   empty    :: e a
 

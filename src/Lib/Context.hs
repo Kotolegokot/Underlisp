@@ -3,15 +3,14 @@
 module Lib.Context (spop_context,
                     spop_load_context,
                     spop_current_context) where
-
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
-import Env (Env (..))
 import qualified Reader
 import Callable
 import LexicalEnv
 import SExpr
+import LispShow
 
 spop_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context eval eval_scope e args = do
@@ -32,8 +31,9 @@ spop_load_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [S
 spop_load_context eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom (AEnv add) -> (Env.lappend e add, nil)
-pop_load_context eval eval_scope _   []    = error "load-context: just one argument required"
+    SAtom (AEnv add) -> (Env.xappend e (lisp_trace_id add), nil)
+    _                -> error "load-context: context expected"
+spop_load_context eval eval_scope _   []  = error "load-context: just one argument required"
 
 spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_current_context _ _ e [] = return (e, env $ Env.merge e)
