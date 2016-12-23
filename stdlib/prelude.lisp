@@ -61,3 +61,9 @@
 ;; tells whether x is an empty list
 (define nil? (x)
   (and (list? x) (null x)))
+
+;; prints error if ex is false
+(defmacro assert (ex)
+  `(when ~ex
+     (print-ln '~ex)
+     (error "assert failed")))
