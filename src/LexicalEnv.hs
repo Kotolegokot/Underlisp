@@ -24,14 +24,6 @@ instance (LispShow a, Expr LEnv a) => LispShow (LEnv a) where
                         ""
                         (zip [1..] xs)
 
-lreplace :: LEnv a -> Map String a -> LEnv a
-lreplace (LEnv (_:xs)) x' = LEnv (x' : xs)
-lreplace (LEnv [])     _  = undefined
-
-xadd :: LispShow a => LEnv a -> Map String a -> LEnv a
-xadd (LEnv (x:xs)) x' = LEnv (x : x' : xs)
-xadd (LEnv [])     _  = undefined
-
 instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
   empty          = LEnv [Map.empty]
   fromList l     = LEnv [Map.fromList l]
@@ -41,7 +33,7 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
     where x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (lreplace e (x' `Map.union` (lexical e))) prototype sexprs bound
+                                            -> callable $ UserDefined (linsert key value e) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                (Map.insert key value x)
@@ -52,7 +44,7 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
           x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (xadd e $ Map.fromList [(key, value)]) prototype sexprs bound
+                                            -> callable $ UserDefined (xinsert key value e) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                x
@@ -62,7 +54,7 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
     where x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (lreplace e $ x' `Map.union` (lexical e)) prototype sexprs bound
+                                            -> callable $ UserDefined (lappend e add) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                (add `Map.union` x)
@@ -72,7 +64,7 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
     where x' = fmap (\sexpr -> if is_callable sexpr
                                then case from_callable sexpr of
                                       UserDefined e prototype sexprs bound
-                                            -> callable $ UserDefined (xadd e add) prototype sexprs bound
+                                            -> callable $ UserDefined (xappend e add) prototype sexprs bound
                                       other -> callable other
                                else sexpr)
                x
