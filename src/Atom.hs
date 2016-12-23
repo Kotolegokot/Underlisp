@@ -33,7 +33,9 @@ instance (LispShow a) => LispShow (Atom e a) where
   lisp_show (AEnv e)      = '{' : lisp_show e ++ "}"
 
 instance LispShow a => LispShow (Map String a) where
-  lisp_show = unlines . Map.foldMapWithKey (\key value -> [key ++ " => " ++ lisp_show value])
+  lisp_show map = unlines $ Map.foldMapWithKey (\key value -> [key ++ space key ++ " => " ++ lisp_show value]) map
+    where indent    = maximum . fmap length $ Map.keys map
+          space key = replicate (indent - length key) ' '
 
 instance Eq (Atom e a) where
   (AInt i)      == (AInt i')      = i == i'
