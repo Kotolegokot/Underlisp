@@ -8,7 +8,7 @@ class LispShow a where
 instance LispShow a => LispShow [a] where
   lisp_show xs = "(" ++ lisp_show' xs ++ ")"
     where lisp_show' [x]    = lisp_show x
-          lisp_show' (x:xs) = lisp_show x ++ " " ++ lisp_show xs
+          lisp_show' (x:xs) = lisp_show x ++ " " ++ lisp_show' xs
           lisp_show' []     = ""
 
 lisp_print :: LispShow a => a -> IO ()
