@@ -1,10 +1,12 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Meta (spop_quote,
+module Lib.Meta (spop_macro,
+                 spop_quote,
                  spop_backquote,
                  spop_interprete,
                  spop_eval) where
 
+import Data.List (delete, elemIndices)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Env
@@ -15,7 +17,30 @@ import Util
 import LexicalEnvironment
 import Callable
 
--- special operator quote
+-- | special operator macro
+-- | (macro lambda-list [body])
+spop_macro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_macro _ _ e (lambda_list:body) = return (e, callable $ Macro e prototype body [])
+  where prototype = parse_lambda_list lambda_list
+spop_macro _ _ _ []                 = error "macro: at least one argument requried"
+
+-- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | and constructs a Prototype
+parse_lambda_list :: SExpr -> Prototype
+parse_lambda_list (SList lambda_list)
+  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
+  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = error "&rest must be last but one"
+  | otherwise                       = if rest
+                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
+                                      else Prototype (map from_symbol $ lambda_list) rest
+  where ixs   = elemIndices (symbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+parse_lambda_list _ = error "lambda list must be a list"
+
+-- | special operator quote
 spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
 spop_quote _    _ _       _     = error "quote: just one argument requried"

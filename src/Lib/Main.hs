@@ -16,13 +16,14 @@ import SExpr
 import LexicalEnvironment
 import Callable
 
--- special operator lambda
+-- | special operator lambda
+-- (lambda lambda-list [body])
 spop_lambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_lambda _ _ e (lambda_list:body) = return (e, callable $ UserDefined e prototype body [])
   where prototype = parse_lambda_list lambda_list
 spop_lambda _    _ _ [] = error "lambda: at least one argument expected"
 
--- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | takes an s-list of the form (arg1 arg2... [&rest argLast])
 -- | and constructs a Prototype
 parse_lambda_list :: SExpr -> Prototype
 parse_lambda_list (SList lambda_list)

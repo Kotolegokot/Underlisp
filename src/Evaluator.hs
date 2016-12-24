@@ -157,6 +157,11 @@ eval e (SList (first:rest))  = do
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
       (_, expr) <- eval_scope (Env.lappend local_env arg_bindings) sexprs
       return (e, expr)
+    SAtom (ACallable (Macro local_e prototype sexprs bound)) -> do
+      let arg_bindings = bind_args prototype (bound ++ rest)
+      (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
+      (_, expr') <- eval e expr
+      return (e, expr')
     SAtom (ACallable (BuiltIn _ _ f bound))                          -> do
       pairs <- mapM (eval e) rest
       result <- f (bound ++ map snd pairs)
@@ -181,6 +186,7 @@ start_env = Env.fromList $
     ("if",                           Just 3,  spop_if),
     ("defvar",                       Just 2,  spop_defvar),
     ("lambda",                       Nothing, spop_lambda),
+    ("macro",                        Nothing, spop_macro),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),
