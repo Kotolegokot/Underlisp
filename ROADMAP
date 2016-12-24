@@ -10,3 +10,5 @@ arrays
   and so forth...
 
 standard library
+
+bind_args -> Callable
