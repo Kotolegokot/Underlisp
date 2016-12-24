@@ -57,12 +57,12 @@ spop_let _    _          _       _                    = error "let: at least one
 
 -- special operator defvar
 spop_defvar :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_defvar eval eval_scope e [var, value]
+spop_defvar eval eval_scope e [var, s_value]
   | not $ is_symbol var = error "defvar: first argument must be a symbol"
   | otherwise           = do
       let key = from_symbol var
-      (_, value') <- eval e value
-      return (Env.linsert key value' e, nil)
+      (_, value) <- eval e s_value
+      return (Env.linsert key value e, nil)
 spop_defvar _    _           _       _ = error "defvar: two arguments required"
 
 -- built-in function type

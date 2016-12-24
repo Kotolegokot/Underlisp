@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Evaluator (evaluate_program, evaluate_module) where
+module Evaluator (evaluate_program
+                 , evaluate_module
+                 , evaluate_module_no_prelude) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -35,14 +37,20 @@ evaluate_module_no_prelude body = do
   return $ Env.merge e
 
 -- | evaluates a lexical scope
+eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
+
+-- | evaluates a lexical scope
 -- | 1. expands all macros in it
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
-eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-eval_scope e sexprs = do
-  (e', sexprs') <- expand_macros (Env.pass e) sexprs
-  eval_functions e' sexprs'
 
+--eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+--eval_scope e sexprs = do
+--  (e', sexprs') <- expand_macros (Env.pass e) sexprs
+--  eval_functions e' sexprs'
+
+{-
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
 expand_macros :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, [SExpr])
@@ -147,21 +155,20 @@ handle_define e (s_name:s_lambda_list:body)
   | otherwise              = (name, UserDefined e prototype body [])
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
-
+-}
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList (first:rest))  = do
   (_, first') <- eval e first
   case first' of
-    SAtom (ACallable (UserDefined local_env prototype sexprs bound)) -> do
+    SAtom (ACallable (UserDefined local_e prototype sexprs bound)) -> do
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
-      (_, expr) <- eval_scope (Env.lappend local_env arg_bindings) sexprs
+      (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       return (e, expr)
     SAtom (ACallable (Macro local_e prototype sexprs bound)) -> do
       let arg_bindings = bind_args prototype (bound ++ rest)
       (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
-      (_, expr') <- eval e expr
-      return (e, expr')
+      eval e expr
     SAtom (ACallable (BuiltIn _ _ f bound))                          -> do
       pairs <- mapM (eval e) rest
       result <- f (bound ++ map snd pairs)
@@ -187,6 +194,7 @@ start_env = Env.fromList $
     ("defvar",                       Just 2,  spop_defvar),
     ("lambda",                       Nothing, spop_lambda),
     ("macro",                        Nothing, spop_macro),
+    ("macro-expand",                 Just 1,  spop_macro_expand),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),

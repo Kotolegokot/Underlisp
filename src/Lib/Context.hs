@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lib.Context (spop_context,
                     spop_load_context,
+                    spop_import_context,
                     spop_current_context,
                     builtin_function_context) where
 import qualified Data.Map as Map
@@ -28,13 +29,21 @@ extract_symbols env keys = foldl (\acc key -> case Env.lookup key env of
                            Map.empty
                            keys
 
+spop_import_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_import_context eval _ e [arg] = do
+  (_, sexpr) <- eval e arg
+  return $ case sexpr of
+    SAtom (AEnv add) -> (Env.xappend e add, nil)
+    _                -> error "import-context: context expected"
+spop_import_context_    _ _ []     = error "import-context: just one argument required"
+
 spop_load_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_load_context eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom (AEnv add) -> (Env.xappend e add, nil)
+    SAtom (AEnv add) -> (Env.lappend e add, nil)
     _                -> error "load-context: context expected"
-spop_load_context _    _ _ []    = error "load-context: just one argument required"
+spop_load_context _   _ _ []     = error "load-context: just one argument required"
 
 spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_current_context _ _ e [] = return (e, env $ Env.merge e)

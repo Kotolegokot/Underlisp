@@ -1,17 +1,10 @@
-;;(print-ln "OLD_CONTEXT: " (current-context))
-;;(print-ln "==================")
+(define f (x) (* x x))
+(print-ln (f 10))
+(defvar previous-context (current-context))
 
-(load-module "examples/factorial.lisp")
-;;(load-context (context-from-file "examples/factorial.lisp"))
+(define f (x) (* x x x))
+(print-ln (f 10))
 
-;;(print-ln "FACTORIAL CONTEXT: " (function-context factorial))
-
-;;(print-ln "==================")
-;;(print-ln "NEW_CONTEXT: " (current-context))
-
-;;(print-ln (context-from-file "examples/factorial.lisp"))
-
-;; (define f (x) (factorial (+ x 1)))
-
-(print-ln (factorial 3))
-(print-ln (factorial 4))
+(seq
+ (load-context previous-context)
+ (print-ln (f 10)))
