@@ -204,6 +204,7 @@ start_env = Env.fromList $
     ("->",                           Just 2,  spop_impl),
     ("context",                      Nothing, spop_context),
     ("load-context",                 Just 1,  spop_load_context),
+    ("import-context",               Just 1,  spop_import_context),
     ("current-context",              Just 0,  spop_current_context),
     ("context-from-file",            Just 1,  spop_context_from_file),
     ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
