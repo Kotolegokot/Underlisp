@@ -5,7 +5,6 @@ import Control.Category
 import System.Environment
 import Interpreter
 
-
 main :: IO ()
 main = do
   args <- getArgs

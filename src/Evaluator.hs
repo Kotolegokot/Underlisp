@@ -180,6 +180,7 @@ start_env = Env.fromList $
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
     ("defvar",                       Just 2,  spop_defvar),
+    ("lambda",                       Nothing, spop_lambda),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),

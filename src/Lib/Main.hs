@@ -2,10 +2,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lib.Main (spop_let,
                  spop_defvar,
+                 spop_lambda,
                  builtin_type,
                  builtin_bind,
-                 builtin_error ) where
+                 builtin_error) where
 
+import Data.List (delete, elemIndices)
 import qualified Data.Map as Map
 import qualified Env
 import Env (Env)
@@ -13,6 +15,28 @@ import Data.Char (toUpper)
 import SExpr
 import LexicalEnvironment
 import Callable
+
+-- special operator lambda
+spop_lambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_lambda _ _ e (lambda_list:body) = return (e, callable $ UserDefined e prototype body [])
+  where prototype = parse_lambda_list lambda_list
+spop_lambda _    _ _ [] = error "lambda: at least one argument expected"
+
+-- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | and constructs a Prototype
+parse_lambda_list :: SExpr -> Prototype
+parse_lambda_list (SList lambda_list)
+  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
+  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = error "&rest must be last but one"
+  | otherwise                       = if rest
+                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
+                                      else Prototype (map from_symbol $ lambda_list) rest
+  where ixs   = elemIndices (symbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+parse_lambda_list _ = error "lambda list must be a list"
 
 -- special operator let
 spop_let :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
