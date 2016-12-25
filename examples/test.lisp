@@ -1,3 +1,3 @@
 (import-module "stdlib/io.lisp")
 
-(print-string "MEOW")
+(print-string-ln "MEOW")

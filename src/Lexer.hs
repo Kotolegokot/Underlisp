@@ -36,9 +36,12 @@ tokenize point sequence = tokenize' point [] None sequence
             '\n' -> tokenize' (forward_row    point) lexemes None    xs
             _    -> tokenize' (forward_column point) lexemes Comment xs
 
-          tokenize' point lexemes Char    (x:xs) = case x of
-            '\n' -> tokenize' (forward_row    point) ((Atom (AChar x), point) : lexemes) None xs
-            _    -> tokenize' (forward_column point) ((Atom (AChar x), point) : lexemes) None xs
+          tokenize' point lexemes Char sequence = parse_char point [] sequence
+            where parse_char point name xs@(x:rest)
+                    | x == '\n'                  = tokenize' (forward_row    point) ((translate_char name, point) : lexemes) None xs
+                    | isSpace x || elem x "[]()" = tokenize' (forward_column point) ((translate_char name, point) : lexemes) None xs
+                    | otherwise                  = parse_char (forward_column point) (name ++ [x]) rest
+                  parse_char point name [] = tokenize' point ((translate_char name, point) : lexemes) None []
 
           tokenize' point lexemes String sequence = parse_string point [] sequence
               where parse_string point string xs@(x:rest)
@@ -67,3 +70,11 @@ matching_bracket x = case x of
                        '{' -> '}'
                        '}' -> '{'
                        _   -> undefined
+
+translate_char :: String -> Lexeme
+translate_char name = Atom . AChar $ case name of
+  "space"   -> ' '
+  "newline" -> '\n'
+  "tab"     -> '\t'
+  [c]       -> c
+  other     -> error $ "undefined character name: '" ++ other ++ "'"
