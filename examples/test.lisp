@@ -1,3 +1,5 @@
 (import-module "stdlib/io.lisp")
+(import-module "stdlib/list.lisp")
 
-(print-string-ln "MEOW")
+(print-string-ln (cons #M #E))
+(print-string-ln (cons #M "EOW"))

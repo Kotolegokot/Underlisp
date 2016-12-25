@@ -6,7 +6,7 @@
 
 (define length (xs)
   (foldl (lambda (acc _) (+ acc 1)) 0 xs))
-  
+
 (define prepend (x xs)
   (append (list x) xs))
 
@@ -102,4 +102,7 @@
                xs
              (drop (- n 1) (tail xs))))))
 
-(defvar nil '())
+(define cons (a b)
+  (if (list? b)
+      (prepend a b)
+    (list a b)))
