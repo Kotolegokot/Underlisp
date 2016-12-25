@@ -229,10 +229,6 @@ start_env = Env.fromList $
     ("not",              Just 1,  builtin_not),
     ("=",                Just 2,  builtin_eq),
     ("<",                Just 2,  builtin_lt),
-    ("concat",           Nothing, builtin_concat),
-    ("str-to-int",       Just 1,  builtin_str_to_int),
-    ("str-to-float",     Just 1,  builtin_str_to_float),
-    ("str-length",       Just 1,  builtin_str_length),
     ("error",            Just 1,  builtin_error),
     ("function-context", Just 1, builtin_function_context) ])
 
@@ -240,7 +236,8 @@ spop_context_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr 
 spop_context_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
-    SAtom (AString filename) -> do
+    SList list -> do
+      let filename = map from_char list
       text <- readFile filename
       e' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
       return (e, env e')
@@ -251,7 +248,8 @@ spop_context_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> 
 spop_context_from_file_no_prelude eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
-    SAtom (AString filename) -> do
+    SList list -> do
+      let filename = map from_char list
       text <- readFile filename
       e' <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
       return (e, env e')

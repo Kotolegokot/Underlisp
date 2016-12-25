@@ -6,8 +6,7 @@ module Lib.Everything (module Lib.Boolean,
                        module Lib.Main,
                        module Lib.Math,
                        module Lib.Meta,
-                       module Lib.Ord,
-                       module Lib.String) where
+                       module Lib.Ord) where
 
 import Lib.Boolean
 import Lib.Context
@@ -18,4 +17,3 @@ import Lib.Main
 import Lib.Math
 import Lib.Meta
 import Lib.Ord
-import Lib.String

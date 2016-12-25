@@ -1,4 +1,4 @@
-(load-module "examples/factorial.lisp")
+(import-module "examples/factorial.lisp")
 
 ; check whether xs is empty or not
 (define null (xs)

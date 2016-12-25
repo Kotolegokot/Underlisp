@@ -15,7 +15,6 @@ import LispShow
 data Atom e a where
   AInt      ::                    Int              -> Atom e a
   AFloat    ::                    Float            -> Atom e a
-  AString   ::                    String           -> Atom e a
   AChar     ::                    Char             -> Atom e a
   ABool     ::                    Bool             -> Atom e a
   ASymbol   ::                    String           -> Atom e a
@@ -25,7 +24,6 @@ data Atom e a where
 instance (LispShow a) => LispShow (Atom e a) where
   lisp_show (AInt i)      = show i
   lisp_show (AFloat f)    = show f
-  lisp_show (AString s)   = show s
   lisp_show (AChar c)     = show c
   lisp_show (ABool b)     = show b
   lisp_show (ASymbol s)   = s
@@ -40,7 +38,6 @@ instance LispShow a => LispShow (Map String a) where
 instance Eq (Atom e a) where
   (AInt i)      == (AInt i')      = i == i'
   (AFloat f)    == (AFloat f')    = f == f'
-  (AString s)   == (AString s')   = s == s'
   (AChar c)     == (AChar c')     = c == c'
   (ABool b)     == (ABool b')     = b == b'
   (ASymbol s)   == (ASymbol s')   = s == s'
@@ -51,7 +48,6 @@ instance Eq (Atom e a) where
 instance Ord (Atom e a) where
   compare (AInt i)      (AInt i')      = compare i i'
   compare (AFloat f)    (AFloat f')    = compare f f'
-  compare (AString s)   (AString s')   = compare s s'
   compare (AChar c)     (AChar c')     = compare c c'
   compare (ABool b)     (ABool b')     = compare b b'
   compare (ASymbol s)   (ASymbol s')   = compare s s'
@@ -84,14 +80,6 @@ from_number :: Atom e a -> Float
 from_number (AInt i)   = fromIntegral i
 from_number (AFloat f) = f
 from_number _          = undefined
-
-is_string :: Atom e a -> Bool
-is_string (AString _) = True
-is_string _           = False
-
-from_string :: Atom e a -> String
-from_string (AString s) = s
-from_string _           = undefined
 
 is_char :: Atom e a -> Bool
 is_char (AChar _) = True
@@ -138,19 +126,16 @@ str2atom atom
   | isJust try_int    = AInt     $ fromJust try_int
   | isJust try_float  = AFloat   $ fromJust try_float
   | isJust try_char   = AChar    $ fromJust try_char
-  | isJust try_string = AString  $ fromJust try_string
   | isJust try_bool   = ABool    $ fromJust try_bool
   | otherwise         = ASymbol atom
   where try_int    = readMaybe atom :: Maybe Int
         try_float  = readMaybe atom :: Maybe Float
         try_char   = readMaybe atom :: Maybe Char
-        try_string = readMaybe atom :: Maybe String
         try_bool   = readMaybe atom :: Maybe Bool
 
 atom_type :: Atom e a -> String
 atom_type (AInt _)      = "Int"
 atom_type (AFloat _)    = "Float"
-atom_type (AString _)   = "String"
 atom_type (AChar _)     = "Char"
 atom_type (ABool _)     = "Bool"
 atom_type (ASymbol _)   = "Symbol"

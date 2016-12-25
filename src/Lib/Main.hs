@@ -78,6 +78,6 @@ builtin_bind _            = error "bind: at least one argument required"
 
 -- built-in function error
 builtin_error :: [SExpr] -> IO SExpr
-builtin_error [SAtom (AString err)] = error err
-builtin_error [_]                   = error "error: string expected"
-builtin_error _                     = error "error: just one argument required"
+builtin_error [SList err] = error (map from_char err)
+builtin_error [_]         = error "error: string expected"
+builtin_error _           = error "error: just one argument required"

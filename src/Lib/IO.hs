@@ -18,5 +18,5 @@ builtin_flush [] = hFlush stdout >> return nil
 builtin_flush _  = error "'flush' requires no arguments"
 
 builtin_get_line :: [SExpr] -> IO SExpr
-builtin_get_line [] = getLine >>= (return . string)
+builtin_get_line [] = getLine >>= (return . SList . map char)
 builtin_get_line _  = error "'get-line' requires no arguments"

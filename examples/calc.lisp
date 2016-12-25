@@ -1,5 +1,5 @@
-(load-module "stdlib/list.lisp")
-(load-module "examples/factorial.lisp")
+(import-module "stdlib/list.lisp")
+(import-module "examples/factorial.lisp")
 
 (print-ln "Hi! I'm a stupid calculator. I can either multiply or add two numbers or calculate a factorial.")
 (print-ln "Please, type either '+' or '*', and then two numbers, or 'factorial' and then one number")

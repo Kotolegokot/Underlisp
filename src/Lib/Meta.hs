@@ -106,8 +106,8 @@ spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SEx
 spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
-    SAtom (AString str) -> eval_scope context . Reader.read Undefined  $ str -- TODO: change Undefined to a normal point
-    _                   -> error "interprete: string expected"
+    SList str -> eval_scope context . Reader.read Undefined  $ map from_char str -- TODO: change Undefined to a normal point
+    _         -> error "interprete: string expected"
 spop_interprete _    _          _       _     = error "interprete: just one argument required"
 
 -- | special operator eval

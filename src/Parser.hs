@@ -27,6 +27,7 @@ parse_list b lexemes = case b of
                                then (SList $ reverse acc, xs)
                                else error $ "unmatching brackets: unclosed '" ++ [bracket] ++ "'"
             Atom a        -> parse_list' bracket (atom a : acc) xs
+            LString s     -> parse_list' bracket (SList (symbol "list" : map char s) : acc) xs
             Sugar str     -> let (quote, rest) = handle_sugar xs str
                              in parse_list' bracket (quote : acc) rest
         parse_list' _       _   []     = error "unexpected EOF in the middle of a list"
