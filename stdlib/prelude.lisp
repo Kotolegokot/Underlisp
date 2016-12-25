@@ -1,3 +1,12 @@
+;; (defmacro name lambda-list body)
+(defvar defmacro
+  (macro (name lambda-list &rest body)
+         `(defvar ~name (macro ~lambda-list @body))))
+
+;; (define name lambda-list body)
+(defmacro define (name lambda-list &rest body)
+  `(defvar ~name (lambda ~lambda-list @body)))
+
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
   `(if ~cond (seq @body)))
@@ -13,6 +22,10 @@
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
        (switch @(tail pairs)))))
+
+;; (import-module module-name)
+(defmacro import-module (filename)
+  `(import-context (context-from-file ~filename)))
 
 ;; (load-module module-name)
 (defmacro load-module (filename)
@@ -63,7 +76,7 @@
   (and (list? x) (null x)))
 
 ;; prints error if ex is false
-(defmacro assert (ex)
-  `(unless ~ex
-     (print-ln '~ex)
+(defmacro assert (cond)
+  `(unless ~cond
+     (print-ln '~cond)
      (error "assert failed")))

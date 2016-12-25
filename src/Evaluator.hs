@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Evaluator (evaluate_program, evaluate_module) where
+module Evaluator (evaluate_program
+                 , evaluate_module
+                 , evaluate_module_no_prelude) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -35,14 +37,20 @@ evaluate_module_no_prelude body = do
   return $ Env.merge e
 
 -- | evaluates a lexical scope
+eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
+
+-- | evaluates a lexical scope
 -- | 1. expands all macros in it
 -- | 2. collect all function definitions
 -- | 3. executes the remaining s-expressions successively
-eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-eval_scope e sexprs = do
-  (e', sexprs') <- expand_macros (Env.pass e) sexprs
-  eval_functions e' sexprs'
 
+--eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+--eval_scope e sexprs = do
+--  (e', sexprs') <- expand_macros (Env.pass e) sexprs
+--  eval_functions e' sexprs'
+
+{-
 -- | looks through a lexical scope, executes all defmacros,
 -- | and expands them
 expand_macros :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, [SExpr])
@@ -147,16 +155,20 @@ handle_define e (s_name:s_lambda_list:body)
   | otherwise              = (name, UserDefined e prototype body [])
   where name      = from_symbol s_name
         prototype = parse_lambda_list s_lambda_list
-
+-}
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList (first:rest))  = do
   (_, first') <- eval e first
   case first' of
-    SAtom (ACallable (UserDefined local_env prototype sexprs bound)) -> do
+    SAtom (ACallable (UserDefined local_e prototype sexprs bound)) -> do
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
-      (_, expr) <- eval_scope (Env.lappend local_env arg_bindings) sexprs
+      (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       return (e, expr)
+    SAtom (ACallable (Macro local_e prototype sexprs bound)) -> do
+      let arg_bindings = bind_args prototype (bound ++ rest)
+      (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
+      eval e expr
     SAtom (ACallable (BuiltIn _ _ f bound))                          -> do
       pairs <- mapM (eval e) rest
       result <- f (bound ++ map snd pairs)
@@ -180,6 +192,9 @@ start_env = Env.fromList $
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
     ("defvar",                       Just 2,  spop_defvar),
+    ("lambda",                       Nothing, spop_lambda),
+    ("macro",                        Nothing, spop_macro),
+    ("macro-expand",                 Just 1,  spop_macro_expand),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),
@@ -189,6 +204,7 @@ start_env = Env.fromList $
     ("->",                           Just 2,  spop_impl),
     ("context",                      Nothing, spop_context),
     ("load-context",                 Just 1,  spop_load_context),
+    ("import-context",               Just 1,  spop_import_context),
     ("current-context",              Just 0,  spop_current_context),
     ("context-from-file",            Just 1,  spop_context_from_file),
     ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
@@ -213,10 +229,6 @@ start_env = Env.fromList $
     ("not",              Just 1,  builtin_not),
     ("=",                Just 2,  builtin_eq),
     ("<",                Just 2,  builtin_lt),
-    ("concat",           Nothing, builtin_concat),
-    ("str-to-int",       Just 1,  builtin_str_to_int),
-    ("str-to-float",     Just 1,  builtin_str_to_float),
-    ("str-length",       Just 1,  builtin_str_length),
     ("error",            Just 1,  builtin_error),
     ("function-context", Just 1, builtin_function_context) ])
 
@@ -224,7 +236,8 @@ spop_context_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr 
 spop_context_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
-    SAtom (AString filename) -> do
+    SList list -> do
+      let filename = map from_char list
       text <- readFile filename
       e' <- evaluate_module $ Reader.read Undefined text -- TODO: change Undefined
       return (e, env e')
@@ -235,7 +248,8 @@ spop_context_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> 
 spop_context_from_file_no_prelude eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
-    SAtom (AString filename) -> do
+    SList list -> do
+      let filename = map from_char list
       text <- readFile filename
       e' <- evaluate_module_no_prelude $ Reader.read Undefined text -- TODO: change Undefined
       return (e, env e')

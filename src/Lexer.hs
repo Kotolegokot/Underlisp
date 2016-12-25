@@ -9,7 +9,7 @@ import SExpr
 import LexicalEnvironment
 import Util
 
-data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | Sugar String
+data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | LString String | Sugar String
   deriving Eq
 
 data State = None | Comment | String | OtherAtom
@@ -37,7 +37,7 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' point lexemes String sequence = parse_string point [] sequence
               where parse_string point string xs@(x:rest)
-                      | x == '"'  = tokenize' (forward_column point) ((Atom (AString $ reverse string), point) : lexemes) None rest
+                      | x == '"'  = tokenize' (forward_column point) ((LString (reverse string), point) : lexemes) None rest
                       | x == '\n' = parse_string (forward_row    point) (x : string) rest
                       | otherwise = parse_string (forward_column point) (x : string) rest
 

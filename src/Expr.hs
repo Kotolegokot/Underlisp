@@ -37,9 +37,6 @@ int = atom . AInt
 float :: Expr e a => Float -> a
 float = atom . AFloat
 
-string :: Expr e a => String -> a
-string = atom . AString
-
 char :: Expr e a => Char -> a
 char = atom . AChar
 
@@ -77,12 +74,6 @@ is_number = is_atom .&& A.is_number . from_atom
 
 from_number :: Expr e a => a -> Float
 from_number = A.from_number . from_atom
-
-is_string :: Expr e a => a -> Bool
-is_string = is_atom .&& A.is_string . from_atom
-
-from_string :: Expr e a => a -> String
-from_string = A.from_string . from_atom
 
 is_char :: Expr e a => a -> Bool
 is_char = is_atom .&& A.is_char . from_atom
