@@ -12,7 +12,7 @@ import Util
 data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | LString String | Sugar String
   deriving Eq
 
-data State = None | Comment | String | OtherAtom
+data State = None | Comment | Char | String | OtherAtom
   deriving (Eq, Show)
 
 -- | takes a string and splits it into lexems
@@ -25,6 +25,7 @@ tokenize point sequence = tokenize' point [] None sequence
             | x == '`'     = tokenize' (forward_column point) ((Sugar "backquote", point)           : lexemes) None    rest
             | x == '~'     = tokenize' (forward_column point) ((Sugar "interpolate", point)         : lexemes) None    rest
             | x == '@'     = tokenize' (forward_column point) ((Sugar "unfold", point)              : lexemes) None    rest
+            | x == '#'     = tokenize' (forward_column point) lexemes                                          Char    rest
             | x == '\n'    = tokenize' (forward_row    point) lexemes                                          None    rest
             | isSpace x    = tokenize' (forward_column point) lexemes                                          None    rest
             | x == '"'     = tokenize' (forward_column point) lexemes                                          String  rest
@@ -34,6 +35,10 @@ tokenize point sequence = tokenize' point [] None sequence
           tokenize' point lexemes Comment (x:xs) = case x of
             '\n' -> tokenize' (forward_row    point) lexemes None    xs
             _    -> tokenize' (forward_column point) lexemes Comment xs
+
+          tokenize' point lexemes Char    (x:xs) = case x of
+            '\n' -> tokenize' (forward_row    point) ((Atom (AChar x), point) : lexemes) None xs
+            _    -> tokenize' (forward_column point) ((Atom (AChar x), point) : lexemes) None xs
 
           tokenize' point lexemes String sequence = parse_string point [] sequence
               where parse_string point string xs@(x:rest)

@@ -24,7 +24,7 @@ data Atom e a where
 instance (LispShow a) => LispShow (Atom e a) where
   lisp_show (AInt i)      = show i
   lisp_show (AFloat f)    = show f
-  lisp_show (AChar c)     = show c
+  lisp_show (AChar c)     = ['#', c]
   lisp_show (ABool b)     = show b
   lisp_show (ASymbol s)   = s
   lisp_show (ACallable c) = '{' : lisp_show c ++ "}"
