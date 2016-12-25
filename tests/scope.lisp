@@ -25,3 +25,17 @@
   (assert (= (g 4) 19)))
 
  (assert (= (g 4) 19)))
+
+(import-module "stdlib/ord.lisp")
+
+(define f-1 (x)
+  (if (<= x 1)
+      1
+    (* x (f-2 (- x 1)))))
+
+(define f-2 (x)
+  (if (<= x 1)
+      1
+    (* x (f-1 (- x 1)))))
+
+(assert (= (f-1 5) 120))

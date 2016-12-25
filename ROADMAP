@@ -1,6 +1,9 @@
 pattern matching
 fix LispShow
-add REPL mode
+format function
+REPL mode
+basic numeric operations
+refactor lexer
 
 fractional
 long numbers
