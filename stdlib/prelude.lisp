@@ -54,8 +54,6 @@
   (= 'INT (type x)))
 (define float? (x)
   (= 'FLOAT (type x)))
-(define string? (x)
-  (= 'STRING (type x)))
 (define char? (x)
   (= 'CHAR (type x)))
 (define bool? (x)

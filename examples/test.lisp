@@ -1,3 +1,3 @@
-(defvar str "meow")
+(import-module "stdlib/io.lisp")
 
-(print-ln str)
+(print-string "MEOW")
