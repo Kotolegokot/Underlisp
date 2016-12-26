@@ -1,9 +1,7 @@
 pattern matching
-fix LispShow
 format function
 REPL mode
 basic numeric operations
-refactor lexer
 defined? function
 
 fractional
@@ -14,5 +12,3 @@ arrays
   and so forth...
 
 standard library
-
-bind_args -> Callable
