@@ -35,9 +35,13 @@
 
 (defun map (f xs)
   (if (null xs)
-      '()
+      nil
     (prepend (f (head xs))
              (map f (tail xs)))))
+
+(defun map-nil (f xs)
+  (map f xs)
+  nil)
 
 (defun foldl (f acc xs)
   (if (null xs)

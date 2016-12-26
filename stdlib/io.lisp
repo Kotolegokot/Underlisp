@@ -4,7 +4,7 @@
   (put-char #newline))
 
 (defun print-string (str)
-  (map put-char str))
+  (map-nil put-char str))
 
 (defun print-string-ln (str)
   (print-string str)

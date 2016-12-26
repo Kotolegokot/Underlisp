@@ -78,3 +78,5 @@
   `(unless ~cond
      (print-ln '~cond)
      (error "assert failed")))
+
+(define nil ())
