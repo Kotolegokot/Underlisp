@@ -3,11 +3,13 @@
 module Lib.Main (spop_let,
                  spop_define,
                  spop_lambda,
+                 spop_defined,
                  builtin_type,
                  builtin_bind,
                  builtin_error) where
 
 import Data.List (delete, elemIndices)
+import Data.Maybe (isJust)
 import qualified Data.Map as Map
 import qualified Env
 import Env (Env)
@@ -55,7 +57,15 @@ spop_let eval eval_scope e ((SList pairs):body) = do
 spop_let _    _          _       [_]                  = error "let: list expected"
 spop_let _    _          _       _                    = error "let: at least one argument expected"
 
--- special operator defvar
+spop_defined :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_defined eval _ e [arg] = do
+  (_, expr) <-eval e arg
+  return $ case expr of
+    SAtom (ASymbol s) -> (e, bool . isJust $ Env.lookup s e)
+    _                 -> error "defined?: symbol expected"
+spop_defined _    _ _ _    = error "defined?: just one argument required"
+
+-- special operator define
 spop_define :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_define eval eval_scope e [var, s_value]
   | not $ is_symbol var = error "define: first argument must be a symbol"

@@ -207,6 +207,7 @@ start_env = Env.fromList $
     ("current-context",              Just 0,  spop_current_context),
     ("context-from-file",            Just 1,  spop_context_from_file),
     ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
+    ("defined?",                     Just 1,  spop_defined),
     ("seq",                          Nothing, spop_seq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtin_type),
