@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Main (spop_let,
-                 spop_define,
-                 spop_lambda,
-                 spop_defined,
-                 builtin_type,
-                 builtin_bind,
-                 builtin_error) where
+module Lib.Main (spop_let
+                , spop_define
+                , spop_lambda
+                , spop_defined
+                , builtin_type
+                , builtin_bind
+                , builtin_error) where
 
 import Data.List (delete, elemIndices)
 import Data.Maybe (isJust)
@@ -67,7 +67,7 @@ spop_defined _    _ _ _    = error "defined?: just one argument required"
 
 -- special operator define
 spop_define :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_define eval eval_scope e [var, s_value]
+spop_define eval _ e [var, s_value]
   | not $ is_symbol var = error "define: first argument must be a symbol"
   | otherwise           = do
       let key = from_symbol var

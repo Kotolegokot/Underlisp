@@ -76,7 +76,8 @@
 ;; prints error if ex is false
 (defmacro assert (cond)
   `(unless ~cond
-     (print-ln '~cond)
+     (write '~cond)
+     (put-char #newline)
      (error "assert failed")))
 
 (define nil ())
