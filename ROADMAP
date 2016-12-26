@@ -5,8 +5,6 @@ REPL mode
 basic numeric operations
 refactor lexer
 defined? function
-defvar -> define
-define -> defun
 
 fractional
 long numbers

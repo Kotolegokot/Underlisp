@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Lib.Main (spop_let,
-                 spop_defvar,
+                 spop_define,
                  spop_lambda,
                  builtin_type,
                  builtin_bind,
@@ -56,14 +56,14 @@ spop_let _    _          _       [_]                  = error "let: list expecte
 spop_let _    _          _       _                    = error "let: at least one argument expected"
 
 -- special operator defvar
-spop_defvar :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_defvar eval eval_scope e [var, s_value]
-  | not $ is_symbol var = error "defvar: first argument must be a symbol"
+spop_define :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_define eval eval_scope e [var, s_value]
+  | not $ is_symbol var = error "define: first argument must be a symbol"
   | otherwise           = do
       let key = from_symbol var
       (_, value) <- eval e s_value
       return (Env.linsert key value e, nil)
-spop_defvar _    _           _       _ = error "defvar: two arguments required"
+spop_define _    _           _       _ = error "define: two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr

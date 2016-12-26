@@ -1,11 +1,11 @@
 ;; (defmacro name lambda-list body)
-(defvar defmacro
+(define defmacro
   (macro (name lambda-list &rest body)
-         `(defvar ~name (macro ~lambda-list @body))))
+         `(define ~name (macro ~lambda-list @body))))
 
 ;; (define name lambda-list body)
-(defmacro define (name lambda-list &rest body)
-  `(defvar ~name (lambda ~lambda-list @body)))
+(defmacro defun (name lambda-list &rest body)
+  `(define ~name (lambda ~lambda-list @body)))
 
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
@@ -41,36 +41,36 @@
   `(~f @(eval xs)))
 
 ;; otherwise is used with `switch` macro
-(defvar otherwise True)
+(define otherwise True)
 
 ;; not equal
-(define /= (x y)
+(defun /= (x y)
   (not (= x y)))
 
 ;; type predicates
-(define list? (x)
+(defun list? (x)
   (= 'LIST (type x)))
-(define int? (x)
+(defun int? (x)
   (= 'INT (type x)))
-(define float? (x)
+(defun float? (x)
   (= 'FLOAT (type x)))
-(define char? (x)
+(defun char? (x)
   (= 'CHAR (type x)))
-(define bool? (x)
+(defun bool? (x)
   (= 'BOOL (type x)))
-(define symbol? (x)
+(defun symbol? (x)
   (= 'SYMBOL (type x)))
-(define callable? (x)
+(defun callable? (x)
   (= 'CALLABLE (type x)))
-(define context? (x)
+(defun context? (x)
   (= 'CONTEXT (type x)))
 
 ;; tells whether x is an atom
-(define atom? (x)
+(defun atom? (x)
   (/= 'LIST (type x)))
 
 ;; tells whether x is an empty list
-(define nil? (x)
+(defun nil? (x)
   (and (list? x) (null x)))
 
 ;; prints error if ex is false

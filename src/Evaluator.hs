@@ -191,7 +191,7 @@ start_env = Env.fromList $
     (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) [
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
-    ("defvar",                       Just 2,  spop_defvar),
+    ("define",                       Just 2,  spop_define),
     ("lambda",                       Nothing, spop_lambda),
     ("macro",                        Nothing, spop_macro),
     ("macro-expand",                 Just 1,  spop_macro_expand),

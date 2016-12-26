@@ -1,15 +1,15 @@
 (import-module "stdlib/list.lisp")
 
-(define newline ()
+(defun newline ()
   (put-char #newline))
 
-(define print-string (str)
+(defun print-string (str)
   (map put-char str))
 
-(define print-string-ln (str)
+(defun print-string-ln (str)
   (print-string str)
   (newline))
 
-(define write-ln (s-expr)
+(defun write-ln (s-expr)
   (write s-expr)
   (newline))

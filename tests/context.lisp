@@ -1,10 +1,10 @@
-(define f (x) (* x x))
-(defvar outer-context (current-context))
+(defun f (x) (* x x))
+(define outer-context (current-context))
 
 (assert (= (f 3) 9))
 
 (seq
- (define f (x) (* x x x))
+ (defun f (x) (* x x x))
  (assert (= (f 3) 27))
 
  ;; f must remain same
@@ -22,7 +22,7 @@
   (assert (= (f 3) 9))))
 
 (seq
- (define f (x) (* x x x))
+ (defun f (x) (* x x x))
  (assert (= (f 3) 27))
 
  ;; f must change

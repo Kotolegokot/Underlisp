@@ -4,9 +4,9 @@
 (print-ln "Hi! I'm a stupid calculator. I can either multiply or add two numbers or calculate a factorial.")
 (print-ln "Please, type either '+' or '*', and then two numbers, or 'factorial' and then one number")
 
-(define get-int () (str-to-int (get-line)))
-(define get-float () (str-to-float (get-line)))
-(defvar print-number (bind print-ln "Your number is "))
+(defun get-int () (str-to-int (get-line)))
+(defun get-float () (str-to-float (get-line)))
+(defun print-number (bind print-ln "Your number is "))
 
 (let ((input (get-line)))
   (if (= input "*")
