@@ -4,4 +4,4 @@
 (print-string-ln (cons #M #E))
 (print-string-ln (cons #M "EOW"))
 
-(write "MEOW")
+(write-ln "MEOW")
