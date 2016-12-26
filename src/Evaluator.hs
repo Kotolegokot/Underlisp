@@ -213,6 +213,7 @@ start_env = Env.fromList $
     ("type",             Just 1,  builtin_type),
     ("bind",             Nothing, builtin_bind),
     ("put-char",         Just 1,  builtin_put_char),
+    ("write",            Just 1,  builtin_write),
     ("flush",            Just 0,  builtin_flush),
     ("get-line",         Just 0,  builtin_get_line),
     ("list",             Nothing, builtin_list),

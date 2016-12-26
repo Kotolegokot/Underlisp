@@ -1,4 +1,5 @@
 module Lib.IO (builtin_put_char
+              , builtin_write
               , builtin_flush
               , builtin_get_line) where
 
@@ -13,6 +14,10 @@ builtin_flush _  = error "flush: no arguments required"
 builtin_get_line :: [SExpr] -> IO SExpr
 builtin_get_line [] = getLine >>= (return . SList . map char)
 builtin_get_line _  = error "get-line: no arguments required"
+
+builtin_write :: [SExpr] -> IO SExpr
+builtin_write [arg] = putStr (lisp_show arg) >> return nil
+builtin_write []    = error "write: just one argument required"
 
 builtin_put_char :: [SExpr] -> IO SExpr
 builtin_put_char [SAtom (AChar c)] = putChar c >> return nil
