@@ -34,7 +34,7 @@ instance Expr LEnv SExpr where
 
   nil                 = SList []
   atom                = SAtom
-  list                = SList . map atom
+  list                = SList
 
 instance LispShow SExpr where
   lisp_show (SList xs) = lisp_show xs

@@ -50,22 +50,9 @@ spop_macro_expand eval eval_scope e [SList (first:args)] = do
       let arg_bindings = bind_args prototype (bound ++ args)
       (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       return (e, expr)
-    _                                                      -> error "macro-expand: macro invocation expected"
+    _                                                        -> error "macro-expand: macro invocation expected"
 spop_macro_expand _    _          _ [_]                  = error "macro-expand: list expected"
 spop_macro_expand _    _          _ _                    = error "macro-expand: just one argument required"
-
--- | creates argument bindings from a Prototype
--- | and arguments (s-expressions)
-bind_args :: Prototype -> [SExpr] -> Map String SExpr
-bind_args (Prototype arg_names False) args
-  | length arg_names > length args = error "too little arguments"
-  | length arg_names < length args = error "too many arguments"
-  | otherwise                      = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
-bind_args (Prototype arg_names True) args
-  | length arg_names - 1 > length args = error "too little arguments"
-  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
-                                             args'         = left ++ [SList right]
-                                         in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
 
 -- | special operator quote
 spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)

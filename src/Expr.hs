@@ -22,7 +22,7 @@ class Env e a => Expr e a | a -> e where
 
   nil       :: a
   atom      :: Atom e a -> a
-  list      :: [Atom e a] -> a
+  list      :: [a] -> a
 
   {-# MINIMAL from_list, from_atom, nil, atom, list, (is_list | is_atom) #-}
 

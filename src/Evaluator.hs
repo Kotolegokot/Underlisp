@@ -256,19 +256,6 @@ spop_context_from_file_no_prelude eval eval_scope e [arg] = do
     _                        -> error "context-from-file-no-prelude: string expected"
 spop_context_from_file_no_prelude _    _          _       _      = error "context-from-file-no-prelude: just one argument required"
 
--- | creates argument bindings from a Prototype
--- | and arguments (s-expressions)
-bind_args :: Prototype -> [SExpr] -> Map String SExpr
-bind_args (Prototype arg_names False) args
-  | length arg_names > length args = error "too little arguments"
-  | length arg_names < length args = error "too many arguments"
-  | otherwise                      = foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args)
-bind_args (Prototype arg_names True) args
-  | length arg_names - 1 > length args = error "too little arguments"
-  | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
-                                             args'         = left ++ [SList right]
-                                         in foldl (\context (name, value) -> Map.insert name value context) Map.empty (zip arg_names args')
-
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
 parse_lambda_list :: SExpr -> Prototype
