@@ -18,6 +18,7 @@ import SExpr
 import Util
 import LexicalEnvironment
 import Callable
+import Point
 
 -- | special operator macro
 -- | (macro lambda-list [body])

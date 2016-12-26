@@ -19,6 +19,7 @@ import Util
 import Callable
 import LispShow
 import Lib.Everything
+import Point
 
 evaluate_program :: [SExpr] -> IO ()
 evaluate_program body = do

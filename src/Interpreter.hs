@@ -7,6 +7,7 @@ import qualified Reader
 import qualified Evaluator
 import SExpr
 import Util
+import Point
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interprete_program :: String -> IO ()

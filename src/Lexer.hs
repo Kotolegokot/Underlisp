@@ -8,6 +8,7 @@ import Atom
 import SExpr
 import LexicalEnvironment
 import Util
+import Point
 
 data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | LString String | Sugar String
   deriving Eq
