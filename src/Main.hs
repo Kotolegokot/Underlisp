@@ -8,8 +8,7 @@ import Interpreter
 main :: IO ()
 main = do
   args <- getArgs
-  interprete_program (handle_args args)
-
-handle_args :: [String] -> String
-handle_args [filename] = filename
-handle_args _          = error "usage: program filename"
+  case args of
+    [filename] -> interprete_program filename
+    []         -> repl
+    _          -> error "usage: program filename"

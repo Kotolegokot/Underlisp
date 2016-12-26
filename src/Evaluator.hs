@@ -1,8 +1,6 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Evaluator (evaluate_program
-                 , evaluate_module
-                 , evaluate_module_no_prelude) where
+module Evaluator where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map

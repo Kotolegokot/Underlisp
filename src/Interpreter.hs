@@ -1,13 +1,16 @@
 module Interpreter (interprete_program
                    , interprete_module
-                   , interprete_module_no_prelude) where
+                   , interprete_module_no_prelude
+                   , repl) where
 
+import System.IO (hFlush, stdout)
 import Data.Map (Map)
 import qualified Reader
 import qualified Evaluator
 import SExpr
 import Util
 import Point
+import LispShow
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interprete_program :: String -> IO ()
@@ -20,6 +23,14 @@ interprete_module_no_prelude :: String -> IO (Map String SExpr)
 interprete_module_no_prelude filename = readFile filename >>=
   (Evaluator.evaluate_module_no_prelude . Reader.read (start_point filename))
 
---interprete_repl :: IO ()
---interprete_repl = interprete_repl' (start_point "stdin")
---  where interprete_repl'
+repl :: IO ()
+repl = do
+  prelude <- Evaluator.load_prelude
+  handle_lines (start_point "<interactive>") prelude
+  where handle_lines p e = do
+          putStr $ "[" ++ show (row p) ++ "]> "
+          hFlush stdout
+          line <- getLine
+          (e', expr) <- Evaluator.eval_scope e $ Reader.read p line
+          lisp_print expr
+          handle_lines (forward_row p) e'
