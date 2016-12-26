@@ -32,5 +32,6 @@ repl = do
           hFlush stdout
           line <- getLine
           (e', expr) <- Evaluator.eval_scope e $ Reader.read p line
+          putStr "=> "
           lisp_print expr
           handle_lines (forward_row p) e'
