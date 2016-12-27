@@ -45,7 +45,9 @@ eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList p (first:rest))  = do
   (_, first') <- eval e first
-  case first' of
+  handle (\le@(LispError p' msg) -> throw $ if p' == Undefined
+                                            then LispError p msg
+                                            else le) $ case first' of
     SAtom _ (ACallable (UserDefined local_e prototype sexprs bound)) -> do
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
