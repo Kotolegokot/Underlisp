@@ -1,10 +1,13 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Interpreter (interprete_program
                    , interprete_module
                    , interprete_module_no_prelude
                    , repl) where
 
-import qualified Control.Exception as E
-import System.IO (hFlush, hPutStrLn, stderr, stdout)
+import Control.Exception
+import System.IO
+import System.IO.Error (isEOFError)
 import Data.Map (Map)
 import qualified Reader
 import qualified Evaluator
@@ -31,8 +34,12 @@ repl = do
   where handle_lines p e = do
           putStr $ "[" ++ show (row p) ++ "]> "
           hFlush stdout
-          line <- getLine
-          (e', expr) <- E.catch (Evaluator.eval_scope e $ Reader.read p line) (\err -> do hPutStrLn stderr $ show (err :: E.ErrorCall)
-                                                                                          return (e, nil))
-          putStrLn $ "=> " ++ lisp_show expr
-          handle_lines (forward_row p) e'
+          handle (\(err :: IOError) -> if isEOFError err
+                                           then putStrLn "\nBye"
+                                           else ioError err) $ do
+            line <- getLine
+            (e', expr) <- catch (Evaluator.eval_scope e $ Reader.read p line)
+                          (\err -> do hPutStrLn stderr $ show (err :: ErrorCall)
+                                      return (e, nil))
+            putStrLn $ "=> " ++ lisp_show expr
+            handle_lines (forward_row p) e'
