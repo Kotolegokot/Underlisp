@@ -1,8 +1,6 @@
 module Main where
 
-import Control.Monad
-import Data.Tree
-import Control.Category
+import System.IO
 import System.Environment
 import Interpreter
 
@@ -12,4 +10,6 @@ main = do
   case args of
     [filename] -> interprete_program filename
     []         -> repl
-    _          -> error "usage: program filename"
+    _          -> do
+      exec <- getExecutablePath
+      hPutStrLn stderr $ "usage: '" ++ exec ++ "' <filename>"
