@@ -10,4 +10,5 @@ import Point
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
 read :: Point -> String -> [SExpr]
-read point = parse . tokenize point
+read = parse .: tokenize
+  where (.:) = (.) . (.)

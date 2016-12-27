@@ -30,7 +30,7 @@ tokenize point sequence = tokenize' point [] None sequence
             | x == '"'       = tokenize' (forward x point) lexemes                                          String  rest
             | x == ';'       = tokenize' (forward x point) lexemes                                          Comment rest
             | is_separator x = tokenize' (forward x point) lexemes                                          None    rest
-            | otherwise      = tokenize' (forward x point) lexemes                                          OtherAtom xs
+            | otherwise      = tokenize' point             lexemes                                          OtherAtom xs
 
           tokenize' point lexemes Comment (x:xs) = case x of
             '\n' -> tokenize' (forward x point) lexemes None    xs
@@ -38,7 +38,7 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' point lexemes Char sequence = parse_char point [] sequence
             where parse_char point name xs@(x:rest)
-                    | is_separator x = tokenize' (forward x point) ((translate_char point name, point) : lexemes) None xs
+                    | is_separator x = tokenize' point ((translate_char point name, point) : lexemes) None xs
                     | otherwise      = parse_char (forward x point) (name ++ [x]) rest
                   parse_char point name [] = tokenize' point ((translate_char point name, point) : lexemes) None []
 
@@ -50,7 +50,7 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' point lexemes OtherAtom sequence = parse_atom point [] sequence
               where parse_atom point atom xs@(x:rest)
-                      | is_separator x = tokenize' (forward x point) ((Atom (str2atom atom), point) : lexemes) None xs
+                      | is_separator x = tokenize' point ((Atom (str2atom atom), point) : lexemes) None xs
                       | otherwise      = parse_atom (forward_column point) (atom ++ [x]) rest
                     parse_atom point atom [] = tokenize' point ((Atom (str2atom atom), point) : lexemes) None []
 

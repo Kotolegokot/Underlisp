@@ -10,6 +10,6 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [filename] -> void $ interprete_module_no_prelude filename
+    [filename] -> interprete_program filename
     []         -> repl
     _          -> error "usage: program filename"

@@ -44,8 +44,6 @@ eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
 
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList p (first:rest))  = do
-  putStrLn $ lisp_show first
-  putStrLn $ show p
   (_, first') <- eval e first
   case first' of
     SAtom _ (ACallable (UserDefined local_e prototype sexprs bound)) -> do
