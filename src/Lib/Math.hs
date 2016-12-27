@@ -40,7 +40,7 @@ num_args sexprs = num_args' sexprs NTInt
         num_args' [] return_type = return_type
 
 builtin_float :: [SExpr] -> IO SExpr
-builtin_float [SAtom (AInt i)]         = return . float . fromIntegral $ i
-builtin_float [f@(SAtom (AFloat _))] = return f
-builtin_float [_]                = error "float: float or int expected"
-builtin_float _                  = error "float: just one argument requried"
+builtin_float [SAtom _ (AInt i)]         = return . float . fromIntegral $ i
+builtin_float [f@(SAtom _ (AFloat _))]   = return f
+builtin_float [sexpr]                    = report (point sexpr) "float: float or int expected"
+builtin_float _                          = error "float: just one argument requried"

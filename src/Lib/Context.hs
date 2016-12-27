@@ -33,16 +33,16 @@ spop_import_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> 
 spop_import_context eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom (AEnv add) -> (Env.xappend e add, nil)
-    _                -> error "import-context: context expected"
+    SAtom _ (AEnv add) -> (Env.xappend e add, nil)
+    _                  -> report (point sexpr) "import-context: context expected"
 spop_import_context_    _ _ []     = error "import-context: just one argument required"
 
 spop_load_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_load_context eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom (AEnv add) -> (Env.lappend e add, nil)
-    _                -> error "load-context: context expected"
+    SAtom _ (AEnv add) -> (Env.lappend e add, nil)
+    _                  -> report (point sexpr) "load-context: context expected"
 spop_load_context _   _ _ []     = error "load-context: just one argument required"
 
 spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
@@ -50,6 +50,6 @@ spop_current_context _ _ e [] = return (e, env $ Env.merge e)
 spop_current_context _ _ _ _  = error "current-context: no arguments required"
 
 builtin_function_context :: [SExpr] -> IO SExpr
-builtin_function_context [SAtom (ACallable (UserDefined e _ _ _))] = return . env $ Env.merge e
-builtin_function_context [_]                                       = error "function-context: function expected"
-builtin_function_context _                                         = error "function-context: just one argument required"
+builtin_function_context [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ Env.merge e
+builtin_function_context [sexpr]                                     = report (point sexpr) "function-context: function expected"
+builtin_function_context _                                           = error "function-context: just one argument required"

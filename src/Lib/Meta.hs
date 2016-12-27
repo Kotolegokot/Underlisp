@@ -30,10 +30,10 @@ spop_macro _ _ _ []                 = error "macro: at least one argument requri
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
 parse_lambda_list :: SExpr -> Prototype
-parse_lambda_list (SList lambda_list)
-  | not $ all is_symbol lambda_list = error "all items in a lambda list must be symbols"
-  | length ixs > 1                  = error "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2         = error "&rest must be last but one"
+parse_lambda_list (SList p lambda_list)
+  | not $ all is_symbol lambda_list = report p "all items in a lambda list must be symbols"
+  | length ixs > 1                  = report p "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = report p "&rest must be last but one"
   | otherwise                       = if rest
                                       then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
                                       else Prototype (map from_symbol $ lambda_list) rest
@@ -44,15 +44,15 @@ parse_lambda_list (SList lambda_list)
 parse_lambda_list _ = error "lambda list must be a list"
 
 spop_macro_expand :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_macro_expand eval eval_scope e [SList (first:args)] = do
+spop_macro_expand eval eval_scope e [SList p (first:args)] = do
   (_, first') <- eval e first
   case first' of
-    SAtom (ACallable (Macro local_e prototype sexprs bound)) -> do
+    SAtom _ (ACallable (Macro local_e prototype sexprs bound)) -> do
       let arg_bindings = bind_args prototype (bound ++ args)
       (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       return (e, expr)
-    _                                                        -> error "macro-expand: macro invocation expected"
-spop_macro_expand _    _          _ [_]                  = error "macro-expand: list expected"
+    _                                                          -> report p "macro-expand: macro invocation expected"
+spop_macro_expand _    _          _ [sexpr]              = report (point sexpr) "macro-expand: list expected"
 spop_macro_expand _    _          _ _                    = error "macro-expand: just one argument required"
 
 -- | special operator quote
@@ -62,26 +62,26 @@ spop_quote _    _ _       _     = error "quote: just one argument requried"
 
 -- | special operator backquote
 spop_backquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_backquote eval eval_scope context [SList (SAtom (ASymbol  "interpolate") : rest)]
-  | length rest /= 1 = error "interpolate: just one argument required"
+spop_backquote eval eval_scope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
+  | length rest /= 1 = report p "interpolate: just one argument required"
   | otherwise        = do
-      (_, expr) <- eval context $ head rest
-      return (context, expr)
-spop_backquote eval eval_scope context [SList list] = do
-  pairs <- mapM' (spop_backquote eval eval_scope context . return) list
-  return (context, SList $ map snd pairs)
+      (_, expr) <- eval e $ head rest
+      return (e, expr)
+spop_backquote eval eval_scope e [SList _ l] = do
+  pairs <- mapM' (spop_backquote eval eval_scope e . return) l
+  return (e, list $ map snd pairs)
     where mapM' :: (SExpr -> IO (LEnv SExpr, SExpr)) -> [SExpr] -> IO [(LEnv SExpr, SExpr)]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
-            SList [SAtom (ASymbol "unfold"), arg] -> do
-              (_, expr) <- eval context arg
+            SList _ [SAtom _ (ASymbol "unfold"), arg] -> do
+              (_, expr) <- eval e arg
               case expr of
-                SList list -> do
-                  exprs <- mapM (\sexpr -> return (context, sexpr)) list
+                SList _ l -> do
+                  exprs <- mapM (\sexpr -> return (e, sexpr)) l
                   rest <- mapM' f xs
                   return $ exprs ++ rest
-                _          -> error "unfold: list expected"
-            SList (SAtom (ASymbol "unfold"):_)           -> error "unfold: just one argument required"
+                other     -> report (point other) "unfold: list expected"
+            SList _ (SAtom p (ASymbol "unfold"):_)           -> report p "unfold: just one argument required"
             other                                -> do
               result <- f other
               rest   <- mapM' f xs
@@ -94,8 +94,8 @@ spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SEx
 spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
-    SList str -> eval_scope context . Reader.read Undefined  $ map from_char str -- TODO: change Undefined to a normal point
-    _         -> error "interprete: string expected"
+    SList p str -> eval_scope context . Reader.read p  $ map from_char str
+    _           -> report (point arg) "interprete: string expected"
 spop_interprete _    _          _       _     = error "interprete: just one argument required"
 
 -- | special operator eval

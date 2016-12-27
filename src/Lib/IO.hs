@@ -12,7 +12,7 @@ builtin_flush [] = hFlush stdout >> return nil
 builtin_flush _  = error "flush: no arguments required"
 
 builtin_get_line :: [SExpr] -> IO SExpr
-builtin_get_line [] = getLine >>= (return . SList . map char)
+builtin_get_line [] = getLine >>= (return . list . map char)
 builtin_get_line _  = error "get-line: no arguments required"
 
 builtin_write :: [SExpr] -> IO SExpr
@@ -20,6 +20,6 @@ builtin_write [arg] = putStr (lisp_show arg) >> return nil
 builtin_write []    = error "write: just one argument required"
 
 builtin_put_char :: [SExpr] -> IO SExpr
-builtin_put_char [SAtom (AChar c)] = putChar c >> return nil
-builtin_put_char [_]               = error "put-char: char expected"
-builtin_put_char _                 = error "put-char: just one argument required"
+builtin_put_char [SAtom _ (AChar c)] = putChar c >> return nil
+builtin_put_char [_]                 = error "put-char: char expected"
+builtin_put_char _                   = error "put-char: just one argument required"
