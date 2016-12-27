@@ -3,7 +3,8 @@ module Interpreter (interprete_program
                    , interprete_module_no_prelude
                    , repl) where
 
-import System.IO (hFlush, stdout)
+import qualified Control.Exception as E
+import System.IO (hFlush, hPutStrLn, stderr, stdout)
 import Data.Map (Map)
 import qualified Reader
 import qualified Evaluator
@@ -31,7 +32,7 @@ repl = do
           putStr $ "[" ++ show (row p) ++ "]> "
           hFlush stdout
           line <- getLine
-          (e', expr) <- Evaluator.eval_scope e $ Reader.read p line
-          putStr "=> "
-          lisp_print expr
+          (e', expr) <- E.catch (Evaluator.eval_scope e $ Reader.read p line) (\err -> do hPutStrLn stderr $ show (err :: E.ErrorCall)
+                                                                                          return (e, nil))
+          putStrLn $ "=> " ++ lisp_show expr
           handle_lines (forward_row p) e'
