@@ -1,16 +1,10 @@
-module Util (shit
-            , bind_args) where
+module Util where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Expr
 import Callable
 import Point
-
-shit :: Point -> String -> a
-shit Undefined                   msg = error msg
-shit (Point filename row column) msg = error $ prefix ++ msg
-  where prefix = filename ++ ":" ++ show column ++ ":" ++ show row ++ ": error: "
 
 bind_args :: Expr e a => Prototype -> [a] -> Map String a
 bind_args (Prototype arg_names False) args

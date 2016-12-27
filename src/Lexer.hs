@@ -38,15 +38,15 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' point lexemes Char sequence = parse_char point [] sequence
             where parse_char point name xs@(x:rest)
-                    | is_separator x = tokenize' (forward x point) ((translate_char name, point) : lexemes) None xs
+                    | is_separator x = tokenize' (forward x point) ((translate_char point name, point) : lexemes) None xs
                     | otherwise      = parse_char (forward x point) (name ++ [x]) rest
-                  parse_char point name [] = tokenize' point ((translate_char name, point) : lexemes) None []
+                  parse_char point name [] = tokenize' point ((translate_char point name, point) : lexemes) None []
 
           tokenize' point lexemes String sequence = parse_string point [] sequence
               where parse_string point string xs@(x:rest)
                       | x == '"'  = tokenize' (forward x point) ((LString (reverse string), point) : lexemes) None rest
                       | otherwise = parse_string (forward x point) (x : string) rest
-                    parse_string point string [] = shit point "unexpected EOF in the middle of a string"
+                    parse_string point string [] = report point "unexpected EOF in the middle of a string"
 
           tokenize' point lexemes OtherAtom sequence = parse_atom point [] sequence
               where parse_atom point atom xs@(x:rest)
@@ -66,13 +66,13 @@ matching_bracket x = case x of
                        '}' -> '{'
                        _   -> undefined
 
-translate_char :: String -> Lexeme
-translate_char name = Atom . AChar $ case name of
+translate_char :: Point -> String -> Lexeme
+translate_char point name = Atom . AChar $ case name of
   "space"   -> ' '
   "newline" -> '\n'
   "tab"     -> '\t'
   [c]       -> c
-  other     -> error $ "undefined character name: '" ++ other ++ "'"
+  other     -> report point $ "undefined character name: '" ++ other ++ "'"
 
 is_separator :: Char -> Bool
 is_separator a = (is_bracket a) || isSpace a

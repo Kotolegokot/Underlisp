@@ -19,4 +19,9 @@ forward '\n' = forward_row
 forward _    = forward_column
 
 start_point :: String -> Point
-start_point filename = Point filename 0 0
+start_point filename = Point filename 1 0
+
+report :: Point -> String -> a
+report Undefined                   msg = error msg
+report (Point filename row column) msg = error $ prefix ++ msg
+  where prefix = filename ++ ":" ++ show row ++ ":" ++ show column ++ ": error: "
