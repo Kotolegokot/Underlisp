@@ -34,7 +34,7 @@ repl = do
   handle_lines (start_point "<interactive>") prelude
   where handle_lines :: Point -> LEnv SExpr -> IO ()
         handle_lines p e = do
-          putStr $ "[" ++ show (_row p) ++ "]> "
+          putStr $ "[" ++ show (p_row p) ++ "]> "
           hFlush stdout
           handle (\(err :: IOError) -> if isEOFError err
                                            then putStrLn "\nBye"

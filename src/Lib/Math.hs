@@ -4,6 +4,7 @@ module Lib.Math (builtin_sum,
                  builtin_divide,
                  builtin_float) where
 import SExpr
+import Exception
 
 builtin_sum :: [SExpr] -> IO SExpr
 builtin_sum sexprs = case num_args sexprs of

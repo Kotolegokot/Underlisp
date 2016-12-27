@@ -19,6 +19,7 @@ import Util
 import LexicalEnvironment
 import Callable
 import Point
+import Exception
 
 -- | special operator macro
 -- | (macro lambda-list [body])

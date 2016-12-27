@@ -6,6 +6,7 @@ import SExpr
 import Expr
 import Lexer
 import Point
+import Exception
 
 -- | takes a list of lexemes and generates a complete s-expression
 parse :: [(Lexeme, Point)] -> [SExpr]

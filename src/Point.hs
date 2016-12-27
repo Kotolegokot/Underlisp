@@ -1,18 +1,18 @@
 module Point where
 
-data Point = Point { _filename :: String
-                   , _row      :: Int
-                   , _column   :: Int }
+data Point = Point { p_filename :: String
+                   , p_row      :: Int
+                   , p_column   :: Int }
            | Undefined
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Read)
 
 row :: (Int -> Int) -> Point -> Point
 row _ Undefined = Undefined
-row f point     = point { _row = f $ _row point }
+row f point     = point { p_row = f $ p_row point }
 
 column :: (Int -> Int) -> Point -> Point
 column _ Undefined = Undefined
-column f point     = point { _column = f $ _column point }
+column f point     = point { p_column = f $ p_column point }
 
 forward_row :: Point -> Point
 forward_row = row (+1)
@@ -26,8 +26,3 @@ forward _    = forward_column
 
 start_point :: String -> Point
 start_point filename = Point filename 1 0
-
-report :: Point -> String -> a
-report Undefined                   msg = error msg
-report (Point filename row column) msg = error $ prefix ++ msg
-  where prefix = filename ++ ":" ++ show row ++ ":" ++ show column ++ ": error: "

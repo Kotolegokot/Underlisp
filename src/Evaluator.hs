@@ -18,9 +18,9 @@ import Callable
 import LispShow
 import Lib.Everything
 import Point
+import Exception
 
-prelude_path :: String
-prelude_path = "stdlib/prelude.lisp"
+prelude_path = "stdlib/prelude.lisp" :: String
 
 evaluate_program :: [SExpr] -> IO ()
 evaluate_program body = do

@@ -4,7 +4,6 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Expr
 import Callable
-import Point
 
 bind_args :: Expr e a => Prototype -> [a] -> Map String a
 bind_args (Prototype arg_names False) args
@@ -16,3 +15,6 @@ bind_args (Prototype arg_names True) args
   | otherwise                          = let (left, right) = splitAt (length arg_names - 1) args
                                              args'         = left ++ [list right]
                                          in Map.fromList (zip arg_names args')
+
+(.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.:) = (.) . (.)

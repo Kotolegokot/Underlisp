@@ -13,6 +13,7 @@ import Callable
 import LexicalEnvironment
 import SExpr
 import LispShow
+import Exception
 
 spop_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context eval eval_scope e args = do

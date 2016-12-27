@@ -7,6 +7,7 @@ import SExpr
 import qualified Env
 import LexicalEnvironment
 import Callable
+import Exception
 
 spop_if :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_if eval eval_scope e [cond_sexpr]                          = spop_if eval eval_scope e [cond_sexpr, nil,        nil]

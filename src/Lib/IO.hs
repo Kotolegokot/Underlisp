@@ -6,6 +6,7 @@ module Lib.IO (builtin_put_char
 import System.IO (stdout, hFlush)
 import SExpr
 import LispShow
+import Exception
 
 builtin_flush :: [SExpr] -> IO SExpr
 builtin_flush [] = hFlush stdout >> return nil

@@ -5,6 +5,7 @@ module Lib.List (builtin_list,
                  builtin_append) where
 
 import SExpr
+import Exception
 
 builtin_list :: [SExpr] -> IO SExpr
 builtin_list = return . list

@@ -9,6 +9,7 @@ import SExpr
 import LexicalEnvironment
 import Util
 import Point
+import Exception
 
 data Lexeme = Open Char | Closed Char | Atom (Atom LEnv SExpr) | LString String | Sugar String
   deriving Eq

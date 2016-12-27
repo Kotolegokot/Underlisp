@@ -8,6 +8,7 @@ module Lib.Boolean (builtin_not,
 import SExpr
 import LexicalEnvironment
 import Callable
+import Exception
 
 builtin_not :: [SExpr] -> IO SExpr
 builtin_not [sexpr] = return . bool . not . from_bool $ sexpr

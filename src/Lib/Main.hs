@@ -17,6 +17,7 @@ import Data.Char (toUpper)
 import SExpr
 import LexicalEnvironment
 import Callable
+import Exception
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
