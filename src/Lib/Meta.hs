@@ -26,7 +26,7 @@ import Exception
 spop_macro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_macro _ _ e (lambda_list:body) = return (e, callable $ Macro e prototype body [])
   where prototype = parse_lambda_list lambda_list
-spop_macro _ _ _ []                 = error "macro: at least one argument requried"
+spop_macro _ _ _ []                 = report_undef "macro: at least one argument requried"
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -42,7 +42,7 @@ parse_lambda_list (SList p lambda_list)
         ix    = head ixs
         rest  = length ixs == 1
         count = length lambda_list
-parse_lambda_list _ = error "lambda list must be a list"
+parse_lambda_list _ = report_undef "lambda list must be a list"
 
 spop_macro_expand :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_macro_expand eval eval_scope e [SList p (first:args)] = do
@@ -54,12 +54,12 @@ spop_macro_expand eval eval_scope e [SList p (first:args)] = do
       return (e, expr)
     _                                                          -> report p "macro-expand: macro invocation expected"
 spop_macro_expand _    _          _ [sexpr]              = report (point sexpr) "macro-expand: list expected"
-spop_macro_expand _    _          _ _                    = error "macro-expand: just one argument required"
+spop_macro_expand _    _          _ _                    = report_undef "macro-expand: just one argument required"
 
 -- | special operator quote
 spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
-spop_quote _    _ _       _     = error "quote: just one argument requried"
+spop_quote _    _ _       _     = report_undef "quote: just one argument requried"
 
 -- | special operator backquote
 spop_backquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
@@ -88,7 +88,7 @@ spop_backquote eval eval_scope e [SList _ l] = do
               rest   <- mapM' f xs
               return $ result : rest
 spop_backquote _    _          context [arg]        = return (context, arg)
-spop_backquote _    _          _       _            = error "backquote: just one argument required"
+spop_backquote _    _          _       _            = report_undef "backquote: just one argument required"
 
 -- | special operator interprete
 spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
@@ -97,11 +97,11 @@ spop_interprete eval eval_scope context [arg] = do
   case expr of
     SList p str -> eval_scope context . Reader.read p  $ map from_char str
     _           -> report (point arg) "interprete: string expected"
-spop_interprete _    _          _       _     = error "interprete: just one argument required"
+spop_interprete _    _          _       _     = report_undef "interprete: just one argument required"
 
 -- | special operator eval
 spop_eval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_eval eval _ context [arg] = do
   (_, expr) <- eval context arg
   eval context expr
-spop_eval _    _ _       _     = error "eval: just one argument required"
+spop_eval _    _ _       _     = report_undef "eval: just one argument required"

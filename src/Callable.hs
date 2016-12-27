@@ -1,10 +1,15 @@
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE RankNTypes         #-}
-module Callable where
-
+module Callable (Callable (..)
+                , bind
+                , Eval
+                , EvalScope
+                , module Prototype) where
 import LispShow
 import Env
+import Prototype
+import Exception
 
 type Eval      e a = Env e a => e a -> a   -> IO (e a, a)
 type EvalScope e a = Env e a => e a -> [a] -> IO (e a, a)
@@ -30,32 +35,20 @@ instance LispShow a => LispShow (Callable e a) where
 bind :: Callable e a -> [a] -> Callable e a
 
 bind (UserDefined scope prototype@(Prototype arg_names rest) sexprs bound) args
-  | rest && length arg_names < (length bound + length args) = error "too many arguments"
+  | rest && length arg_names < (length bound + length args) = report_undef "too many arguments"
   | otherwise                                               = UserDefined scope prototype sexprs (bound ++ args)
 
 bind (Macro scope prototype@(Prototype arg_names rest) sexprs bound) args
-  | rest && length arg_names < (length bound + length args) = error "too many arguments"
+  | rest && length arg_names < (length bound + length args) = report_undef "too many arguments"
   | otherwise                                               = Macro scope prototype sexprs (bound ++ args)
 
 bind (BuiltIn name (Just args_count) f bound) args
-  | args_count < (length bound + length args) = error "too many arguments"
+  | args_count < (length bound + length args) = report_undef "too many arguments"
   | otherwise                                 = BuiltIn name (Just args_count) f (bound ++ args)
 bind (BuiltIn name Nothing f bound) args = BuiltIn name Nothing f (bound ++ args)
 
 bind (SpecialOp name (Just args_count) f bound) args
-  | args_count < (length bound + length args) = error "too many arguments"
+  | args_count < (length bound + length args) = report_undef "too many arguments"
   | otherwise                                 = SpecialOp name (Just args_count) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
 -- bind --
-
--- Prototype
-data Prototype = Prototype [String] Bool
-  deriving (Eq, Show)
-
-instance LispShow Prototype where
-  lisp_show (Prototype args rest)
-    | rest      = "(" ++ show_list args ++ ")"
-    | otherwise = "(" ++ show_list args ++ ")"
-    where show_list [x]    = if rest then x else "&rest " ++ x
-          show_list (x:xs) = x ++ " " ++ show_list xs
-          show_list []     = []

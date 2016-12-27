@@ -20,13 +20,13 @@ spop_context eval eval_scope e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
   return $ if not $ all is_symbol symbols
-           then error "context: symbol expected"
+           then report_undef "context: symbol expected"
            else (e, env $ extract_symbols e $ map from_symbol symbols)
 
 extract_symbols :: LEnv SExpr -> [String] -> Map String SExpr
 extract_symbols env keys = foldl (\acc key -> case Env.lookup key env of
                                      Just value -> Map.insert key value acc
-                                     Nothing    -> error $ "context: undefined symbol '" ++ key ++ "'")
+                                     Nothing    -> report_undef $ "context: undefined symbol '" ++ key ++ "'")
                            Map.empty
                            keys
 
@@ -36,7 +36,7 @@ spop_import_context eval _ e [arg] = do
   return $ case sexpr of
     SAtom _ (AEnv add) -> (Env.xappend e add, nil)
     _                  -> report (point sexpr) "import-context: context expected"
-spop_import_context_    _ _ []     = error "import-context: just one argument required"
+spop_import_context_    _ _ []     = report_undef "import-context: just one argument required"
 
 spop_load_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_load_context eval _ e [arg] = do
@@ -44,13 +44,13 @@ spop_load_context eval _ e [arg] = do
   return $ case sexpr of
     SAtom _ (AEnv add) -> (Env.lappend e add, nil)
     _                  -> report (point sexpr) "load-context: context expected"
-spop_load_context _   _ _ []     = error "load-context: just one argument required"
+spop_load_context _   _ _ []     = report_undef "load-context: just one argument required"
 
 spop_current_context :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_current_context _ _ e [] = return (e, env $ Env.merge e)
-spop_current_context _ _ _ _  = error "current-context: no arguments required"
+spop_current_context _ _ _ _  = report_undef "current-context: no arguments required"
 
 builtin_function_context :: [SExpr] -> IO SExpr
 builtin_function_context [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ Env.merge e
 builtin_function_context [sexpr]                                     = report (point sexpr) "function-context: function expected"
-builtin_function_context _                                           = error "function-context: just one argument required"
+builtin_function_context _                                           = report_undef "function-context: just one argument required"

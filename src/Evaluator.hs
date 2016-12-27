@@ -132,7 +132,7 @@ spop_context_from_file eval eval_scope e [arg] = do
       e' <- evaluate_module $ Reader.read p text
       return (e, env e')
     other     -> report (point other) "context-from-file: string expected"
-spop_context_from_file _    _          _        _    = error "context-from-file: just one argument required"
+spop_context_from_file _    _          _        _    = report_undef "context-from-file: just one argument required"
 
 spop_context_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_context_from_file_no_prelude eval eval_scope e [arg] = do
@@ -144,7 +144,7 @@ spop_context_from_file_no_prelude eval eval_scope e [arg] = do
       e' <- evaluate_module_no_prelude $ Reader.read p text
       return (e, env e')
     other        -> report (point other) "context-from-file-no-prelude: string expected"
-spop_context_from_file_no_prelude _    _          _       _      = error "context-from-file-no-prelude: just one argument required"
+spop_context_from_file_no_prelude _    _          _       _      = report_undef "context-from-file-no-prelude: just one argument required"
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -160,4 +160,4 @@ parse_lambda_list (SList p lambda_list)
         ix    = head ixs
         rest  = length ixs == 1
         count = length lambda_list
-parse_lambda_list _ = error "lambda list must be a list"
+parse_lambda_list _ = report_undef "lambda list must be a list"

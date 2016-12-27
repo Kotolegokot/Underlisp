@@ -1,6 +1,7 @@
 module Exception (LispError (..)
                  , handle_lisp_error
                  , report
+                 , report_undef
                  , catch
                  , throw
                  , handle) where
@@ -11,7 +12,6 @@ import Data.Dynamic
 import Control.Exception
 
 import Point
-import Util
 
 data LispError = LispError { le_point :: Point
                            , le_msg   :: String }
@@ -19,8 +19,13 @@ data LispError = LispError { le_point :: Point
 
 instance Exception LispError
 
+(.:) = (.) . (.)
+
 report :: Point -> String -> a
 report = throw .: LispError
+
+report_undef :: String -> a
+report_undef = report Undefined
 
 handle_lisp_error :: IO () -> IO ()
 handle_lisp_error = (`catch` show_error)
