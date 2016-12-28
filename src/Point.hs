@@ -15,7 +15,7 @@ column _ Undefined = Undefined
 column f point     = point { p_column = f $ p_column point }
 
 forward_row :: Point -> Point
-forward_row = row (+1)
+forward_row = row (+1) . column (const 0)
 
 forward_column :: Point -> Point
 forward_column = column (+1)

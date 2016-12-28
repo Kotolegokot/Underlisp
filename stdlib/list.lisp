@@ -112,3 +112,9 @@
   (if (list? b)
       (prepend a b)
     (list a b)))
+
+(defun find (x xs)
+  (switch
+   ((null xs)       False)
+   ((= x (head xs)) True)
+   (otherwise       (find x (tail xs)))))
