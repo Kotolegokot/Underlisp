@@ -2,7 +2,9 @@ module Util where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Data.List (elemIndices, delete)
 import Expr
+import SExpr
 import Prototype
 import Exception
 
@@ -19,3 +21,19 @@ bind_args (Prototype arg_names True) args
 
 (.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
 (.:) = (.) . (.)
+
+-- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+-- | and constructs a Prototype
+parse_lambda_list :: SExpr -> Prototype
+parse_lambda_list (SList p lambda_list)
+  | not $ all is_symbol lambda_list = report p "all items in a lambda list must be symbols"
+  | length ixs > 1                  = report p "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2         = report p "&rest must be last but one"
+  | otherwise                       = if rest
+                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
+                                      else Prototype (map from_symbol $ lambda_list) rest
+  where ixs   = elemIndices (symbol "&rest") lambda_list
+        ix    = head ixs
+        rest  = length ixs == 1
+        count = length lambda_list
+parse_lambda_list _ = report_undef "lambda list must be a list"

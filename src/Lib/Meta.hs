@@ -7,7 +7,6 @@ module Lib.Meta (spop_macro,
                  spop_interprete,
                  spop_eval) where
 
-import Data.List (delete, elemIndices)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -27,22 +26,6 @@ spop_macro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -
 spop_macro _ _ e (lambda_list:body) = return (e, callable $ Macro e prototype body [])
   where prototype = parse_lambda_list lambda_list
 spop_macro _ _ _ []                 = report_undef "at least one argument requried"
-
--- | takes an s-list of the form (arg1 arg2... [&rst argLast])
--- | and constructs a Prototype
-parse_lambda_list :: SExpr -> Prototype
-parse_lambda_list (SList p lambda_list)
-  | not $ all is_symbol lambda_list = report p "all items in a lambda list must be symbols"
-  | length ixs > 1                  = report p "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2         = report p "&rest must be last but one"
-  | otherwise                       = if rest
-                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
-                                      else Prototype (map from_symbol $ lambda_list) rest
-  where ixs   = elemIndices (symbol "&rest") lambda_list
-        ix    = head ixs
-        rest  = length ixs == 1
-        count = length lambda_list
-parse_lambda_list _ = report_undef "lambda list must be a list"
 
 spop_macro_expand :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_macro_expand eval eval_scope e [SList p (first:args)] = do
