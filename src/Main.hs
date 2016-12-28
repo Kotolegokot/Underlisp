@@ -8,7 +8,7 @@ import Exception
 main :: IO ()
 main = do
   args <- getArgs
-  handle_lisp_error $ case args of
+  case args of
     [filename] -> interprete_program filename
     []         -> repl
     _          -> do
