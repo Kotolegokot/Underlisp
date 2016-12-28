@@ -99,7 +99,7 @@ from_bool _         = undefined
 
 is_symbol :: Atom e a -> Bool
 is_symbol (ASymbol _) = True
-is_symbol _           = undefined
+is_symbol _           = False
 
 from_symbol :: Atom e a -> String
 from_symbol (ASymbol s) = s
