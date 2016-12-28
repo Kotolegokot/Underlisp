@@ -1,6 +1,8 @@
 (import-module "stdlib/io.lisp")
 (import-module "stdlib/functional.lisp")
 
+;;(write-ln (initial-env))
+
 (import-module "examples/dfa.lisp")
 
 (define dfa-1 (dfa 0 '(1) (lambda (state symbol)

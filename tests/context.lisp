@@ -1,5 +1,5 @@
 (defun f (x) (* x x))
-(define outer-context (current-context))
+(define outer-env (current-env))
 
 (assert (= (f 3) 9))
 
@@ -8,9 +8,9 @@
  (assert (= (f 3) 27))
 
  ;; f must remain same
- ;; because import-context can't
+ ;; because import-env can't
  ;; rewrite local functions
- (import-context outer-context)
+ (import-env outer-env)
  (assert (= (f 3) 27))
 
  ;; but in this case
@@ -18,7 +18,7 @@
  ;; because now both f's
  ;; are external
  (seq
-  (import-context outer-context)
+  (import-env outer-env)
   (assert (= (f 3) 9))))
 
 (seq
@@ -26,9 +26,9 @@
  (assert (= (f 3) 27))
 
  ;; f must change
- ;; because load-context
+ ;; because load-env
  ;; can rewrite local
  ;; functions
- (load-context outer-context)
+ (load-env outer-env)
  (assert (= (f 3) 9))
 )

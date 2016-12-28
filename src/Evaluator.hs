@@ -94,12 +94,12 @@ start_env = Env.fromList $
     ("and",                          Nothing, spop_and),
     ("or",                           Nothing, spop_or),
     ("->",                           Just 2,  spop_impl),
-    ("context",                      Nothing, spop_context),
-    ("load-context",                 Just 1,  spop_load_context),
-    ("import-context",               Just 1,  spop_import_context),
-    ("current-context",              Just 0,  spop_current_context),
-    ("context-from-file",            Just 1,  spop_context_from_file),
-    ("context-from-file-no-prelude", Just 1,  spop_context_from_file_no_prelude),
+    ("env",                          Nothing, spop_env),
+    ("load-env",                     Just 1,  spop_load_env),
+    ("import-env",                   Just 1,  spop_import_env),
+    ("current-env",                  Just 0,  spop_current_env),
+    ("env-from-file",                Just 1,  spop_env_from_file),
+    ("env-from-file-no-prelude",     Just 1,  spop_env_from_file_no_prelude),
     ("defined?",                     Just 1,  spop_defined),
     ("seq",                          Nothing, spop_seq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
@@ -123,10 +123,11 @@ start_env = Env.fromList $
     ("=",                Just 2,  builtin_eq),
     ("<",                Just 2,  builtin_lt),
     ("error",            Just 1,  builtin_error),
-    ("function-context", Just 1, builtin_function_context) ])
+    ("initial-env",      Just 0,  builtin_initial_env),
+    ("function-env",     Just 1,  builtin_function_env) ])
 
-spop_context_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_context_from_file eval eval_scope e [arg] = do
+spop_env_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_env_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SList p l -> do
@@ -134,11 +135,11 @@ spop_context_from_file eval eval_scope e [arg] = do
       text <- readFile filename
       e' <- evaluate_module $ Reader.read p text
       return (e, env e')
-    other     -> report (point other) "context-from-file: string expected"
-spop_context_from_file _    _          _        _    = report_undef "context-from-file: just one argument required"
+    other     -> report (point other) "string expected"
+spop_env_from_file _    _          _        _    = report_undef "just one argument required"
 
-spop_context_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_context_from_file_no_prelude eval eval_scope e [arg] = do
+spop_env_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_env_from_file_no_prelude eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SList p list -> do
@@ -146,5 +147,11 @@ spop_context_from_file_no_prelude eval eval_scope e [arg] = do
       text <- readFile filename
       e' <- evaluate_module_no_prelude $ Reader.read p text
       return (e, env e')
-    other        -> report (point other) "context-from-file-no-prelude: string expected"
-spop_context_from_file_no_prelude _    _          _       _      = report_undef "context-from-file-no-prelude: just one argument required"
+    other        -> report (point other) "string expected"
+spop_env__from_file_no_prelude _    _          _       _      = report_undef "just one argument required"
+
+builtin_initial_env :: [SExpr] -> IO SExpr
+builtin_initial_env [] = do
+  prelude <- load_prelude
+  return . env $ Env.merge prelude
+builtin_initial_env _  = report_undef "no arguments requried"

@@ -25,16 +25,16 @@
 
 ;; (import-module module-name)
 (defmacro import-module (filename)
-  `(import-context (context-from-file ~filename)))
+  `(import-env (env-from-file ~filename)))
 
 ;; (load-module module-name)
 (defmacro load-module (filename)
-  `(load-context (context-from-file ~filename)))
+  `(load-env (env-from-file ~filename)))
 
 ;; (load-module-no-prelude module-name)
 (defmacro load-module-no-prelude (filename)
-  `(load-context
-    (context-from-file-no-prelude ~filename)))
+  `(load-env
+    (env-from-file-no-prelude ~filename)))
 
 ;; (apply function list)
 (defmacro apply (f xs)
@@ -62,8 +62,8 @@
   (= 'SYMBOL (type x)))
 (defun callable? (x)
   (= 'CALLABLE (type x)))
-(defun context? (x)
-  (= 'CONTEXT (type x)))
+(defun env? (x)
+  (= 'ENV (type x)))
 
 ;; tells whether x is an atom
 (defun atom? (x)
