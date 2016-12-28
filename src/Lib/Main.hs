@@ -53,7 +53,7 @@ spop_let eval eval_scope e ((SList p pairs):body) = do
               (_, expr) <- eval acc value
               handle_pairs xs (Env.linsert var expr acc)
             (SList _ [expr1, _]) -> report (point expr1) "let: first item in a binding pair must be a keyword"
-            _                    -> report_undef "let: bindings must be of the following form: (var value)"
+            _                    -> report (point x) "let: (var value) pair expected"
           handle_pairs []     acc = return acc
 spop_let _    _          _       [expr]               = report (point expr) "let: list expected"
 spop_let _    _          _       _                    = report_undef "let: at least one argument expected"

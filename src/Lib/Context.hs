@@ -21,12 +21,12 @@ spop_context eval eval_scope e args = do
   let symbols = map snd pairs
   return $ if not $ all is_symbol symbols
            then report_undef "context: symbol expected"
-           else (e, env $ extract_symbols e $ map from_symbol symbols)
+           else (e, env $ extract_symbols e $ map (\s -> (from_symbol s, point s)) symbols)
 
-extract_symbols :: LEnv SExpr -> [String] -> Map String SExpr
-extract_symbols env keys = foldl (\acc key -> case Env.lookup key env of
-                                     Just value -> Map.insert key value acc
-                                     Nothing    -> report_undef $ "context: undefined symbol '" ++ key ++ "'")
+extract_symbols :: LEnv SExpr -> [(String, Point)] -> Map String SExpr
+extract_symbols e keys = foldl (\acc (key, p) -> case Env.lookup key e of
+                                   Just value -> Map.insert key value acc
+                                   Nothing    -> report p $ "context: undefined symbol '" ++ key ++ "'")
                            Map.empty
                            keys
 

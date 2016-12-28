@@ -12,7 +12,7 @@ import Exception
 
 builtin_not :: [SExpr] -> IO SExpr
 builtin_not [sexpr] = return . bool . not . from_bool $ sexpr
-builtin_not _       = report_undef "'not' requires just one argument"
+builtin_not _       = report_undef "not: just one argument required"
 
 spop_and :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_and eval eval_scope context (x:xs) = do

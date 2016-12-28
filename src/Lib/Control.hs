@@ -24,6 +24,6 @@ spop_if eval eval_scope e [cond_sexpr, true_sexpr, false_sexpr] = do
 spop_if _    _          _        _                                    = report_undef "if: 1 to 3 arguments requried"
 
 spop_seq :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_seq _ eval_scope context args = do
-  (_, expr) <- eval_scope context args
-  return (context, expr)
+spop_seq _ eval_scope e args = do
+  (_, expr) <- eval_scope e args
+  return (e, expr)
