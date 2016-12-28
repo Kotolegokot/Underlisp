@@ -24,7 +24,7 @@ import Exception
 spop_lambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_lambda _ _ e (lambda_list:body) = return (e, callable $ UserDefined e prototype body [])
   where prototype = parse_lambda_list lambda_list
-spop_lambda _    _ _ [] = report_undef "lambda: at least one argument expected"
+spop_lambda _    _ _ [] = report_undef "at least one argument expected"
 
 -- | takes an s-list of the form (arg1 arg2... [&rest argLast])
 -- | and constructs a Prototype
@@ -52,43 +52,43 @@ spop_let eval eval_scope e ((SList p pairs):body) = do
             (SList _ [SAtom _ (ASymbol var), value]) -> do
               (_, expr) <- eval acc value
               handle_pairs xs (Env.linsert var expr acc)
-            (SList _ [expr1, _]) -> report (point expr1) "let: first item in a binding pair must be a keyword"
-            _                    -> report (point x) "let: (var value) pair expected"
+            (SList _ [expr1, _]) -> report (point expr1) "first item in a binding pair must be a keyword"
+            _                    -> report (point x) "(var value) pair expected"
           handle_pairs []     acc = return acc
-spop_let _    _          _       [expr]               = report (point expr) "let: list expected"
-spop_let _    _          _       _                    = report_undef "let: at least one argument expected"
+spop_let _    _          _       [expr]               = report (point expr) "list expected"
+spop_let _    _          _       _                    = report_undef "at least one argument expected"
 
 spop_defined :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_defined eval _ e [arg] = do
   (_, expr) <- eval e arg
   return $ case expr of
     SAtom _ (ASymbol s) -> (e, bool $ s `Env.member` e)
-    _                   -> report (point expr) "defined?: symbol expected"
-spop_defined _    _ _ _    = report_undef "defined?: just one argument required"
+    _                   -> report (point expr) "symbol expected"
+spop_defined _    _ _ _    = report_undef "just one argument required"
 
 -- special operator define
 spop_define :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_define eval _ e [var, s_value]
-  | not $ is_symbol var = report (point var) "define: first argument must be a symbol"
+  | not $ is_symbol var = report (point var) "first argument must be a symbol"
   | otherwise           = do
       let key = from_symbol var
       (_, value) <- eval e s_value
       return (Env.linsert key value e, nil)
-spop_define _    _           _       _ = report_undef "define: two arguments required"
+spop_define _    _           _       _ = report_undef "two arguments required"
 
 -- built-in function type
 builtin_type :: [SExpr] -> IO SExpr
 builtin_type [sexpr] = return . symbol . map toUpper . expr_type $ sexpr
-builtin_type _       = report_undef "type: just one argument required"
+builtin_type _       = report_undef "just one argument required"
 
 builtin_bind :: [SExpr] -> IO SExpr
 builtin_bind (first:args) = return $ case first of
                                        SAtom _ (ACallable c) -> callable $ bind c args
-                                       _                     -> report (point first) "bind: callable expected"
-builtin_bind _            = report_undef "bind: at least one argument required"
+                                       _                     -> report (point first) "callable expected"
+builtin_bind _            = report_undef "at least one argument required"
 
 -- built-in function error
 builtin_error :: [SExpr] -> IO SExpr
 builtin_error [SList p err] = report p (map from_char err)
-builtin_error [sexpr]       = report (point sexpr) "error: string expected"
-builtin_error _             = error "error: just one argument required"
+builtin_error [sexpr]       = report (point sexpr) "string expected"
+builtin_error _             = error "just one argument required"

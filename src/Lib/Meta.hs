@@ -26,7 +26,7 @@ import Exception
 spop_macro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_macro _ _ e (lambda_list:body) = return (e, callable $ Macro e prototype body [])
   where prototype = parse_lambda_list lambda_list
-spop_macro _ _ _ []                 = report_undef "macro: at least one argument requried"
+spop_macro _ _ _ []                 = report_undef "at least one argument requried"
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -52,19 +52,19 @@ spop_macro_expand eval eval_scope e [SList p (first:args)] = do
       let arg_bindings = bind_args prototype (bound ++ args)
       (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       return (e, expr)
-    _                                                          -> report p "macro-expand: macro invocation expected"
-spop_macro_expand _    _          _ [sexpr]              = report (point sexpr) "macro-expand: list expected"
-spop_macro_expand _    _          _ _                    = report_undef "macro-expand: just one argument required"
+    _                                                          -> report p "macro invocation expected"
+spop_macro_expand _    _          _ [sexpr]              = report (point sexpr) "list expected"
+spop_macro_expand _    _          _ _                    = report_undef "just one argument required"
 
 -- | special operator quote
 spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_quote eval _ context [arg] = return (context, arg)
-spop_quote _    _ _       _     = report_undef "quote: just one argument requried"
+spop_quote _    _ _       _     = report_undef "just one argument requried"
 
 -- | special operator backquote
 spop_backquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_backquote eval eval_scope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
-  | length rest /= 1 = report p "interpolate: just one argument required"
+  | length rest /= 1 = report p "just one argument required"
   | otherwise        = do
       (_, expr) <- eval e $ head rest
       return (e, expr)
@@ -81,14 +81,14 @@ spop_backquote eval eval_scope e [SList _ l] = do
                   exprs <- mapM (\sexpr -> return (e, sexpr)) l
                   rest <- mapM' f xs
                   return $ exprs ++ rest
-                other     -> report (point other) "unfold: list expected"
-            SList _ (SAtom p (ASymbol "unfold"):_)           -> report p "unfold: just one argument required"
+                other     -> report (point other) "list expected"
+            SList _ (SAtom p (ASymbol "unfold"):_)           -> report p "just one argument required"
             other                                -> do
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
 spop_backquote _    _          context [arg]        = return (context, arg)
-spop_backquote _    _          _       _            = report_undef "backquote: just one argument required"
+spop_backquote _    _          _       _            = report_undef "just one argument required"
 
 -- | special operator interprete
 spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
@@ -96,12 +96,12 @@ spop_interprete eval eval_scope context [arg] = do
   (_, expr) <- eval context arg
   case expr of
     SList p str -> eval_scope context . Reader.read p  $ map from_char str
-    _           -> report (point arg) "interprete: string expected"
-spop_interprete _    _          _       _     = report_undef "interprete: just one argument required"
+    _           -> report (point arg) "string expected"
+spop_interprete _    _          _       _     = report_undef "just one argument required"
 
 -- | special operator eval
 spop_eval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_eval eval _ context [arg] = do
   (_, expr) <- eval context arg
   eval context expr
-spop_eval _    _ _       _     = report_undef "eval: just one argument required"
+spop_eval _    _ _       _     = report_undef "just one argument required"
