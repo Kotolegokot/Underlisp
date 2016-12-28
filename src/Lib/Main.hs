@@ -91,4 +91,4 @@ builtin_bind _            = report_undef "at least one argument required"
 builtin_error :: [SExpr] -> IO SExpr
 builtin_error [SList p err] = report p (map from_char err)
 builtin_error [sexpr]       = report (point sexpr) "string expected"
-builtin_error _             = error "just one argument required"
+builtin_error _             = report_undef "just one argument required"
