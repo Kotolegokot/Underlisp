@@ -21,10 +21,12 @@ class Env e a => Expr e a | a -> e where
   from_atom :: a -> Atom e a
 
   nil       :: a
+  nil = list []
+
   atom      :: Atom e a -> a
   list      :: [a] -> a
 
-  {-# MINIMAL from_list, from_atom, nil, atom, list, (is_list | is_atom) #-}
+  {-# MINIMAL from_list, from_atom, atom, list, (is_list | is_atom) #-}
 
 expr_type :: Expr e a => a -> String
 expr_type x = if is_list x

@@ -11,6 +11,7 @@ import System.IO.Error (isEOFError)
 import Data.Map (Map)
 import qualified Reader
 import qualified Evaluator
+import LexicalEnvironment
 import SExpr
 import Util
 import Point
@@ -31,8 +32,9 @@ repl :: IO ()
 repl = do
   prelude <- Evaluator.load_prelude
   handle_lines (start_point "<interactive>") prelude
-  where handle_lines p e = do
-          putStr $ "[" ++ show (row p) ++ "]> "
+  where handle_lines :: Point -> LEnv SExpr -> IO ()
+        handle_lines p e = do
+          putStr $ "[" ++ show (p_row p) ++ "]> "
           hFlush stdout
           handle (\(err :: IOError) -> if isEOFError err
                                            then putStrLn "\nBye"

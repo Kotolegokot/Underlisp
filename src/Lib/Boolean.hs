@@ -8,10 +8,11 @@ module Lib.Boolean (builtin_not,
 import SExpr
 import LexicalEnvironment
 import Callable
+import Exception
 
 builtin_not :: [SExpr] -> IO SExpr
 builtin_not [sexpr] = return . bool . not . from_bool $ sexpr
-builtin_not _       = error "'not' requires just one argument"
+builtin_not _       = report_undef "just one argument required"
 
 spop_and :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_and eval eval_scope context (x:xs) = do
@@ -35,4 +36,4 @@ spop_impl eval _ context [arg1, arg2] = do
   if not $ from_bool expr1
     then return (context, bool True)
     else eval context arg2
-spop_impl _    _  _      _            = error "->: two arguments requried"
+spop_impl _    _  _      _            = report_undef "two arguments requried"
