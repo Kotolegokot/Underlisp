@@ -1,3 +1,5 @@
+(import-module "stdlib/ord.lisp")
+
 (defun reverse (xs)
   (if (null xs)
       '()

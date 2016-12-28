@@ -1,56 +1,55 @@
 (load-module "stdlib/list.lisp")
 
 ;; swap a function's args
-(define flip (f)
+(defun flip (f)
   (lambda (x y) (f y x)))
 
 ;; compose two functions
-(define compose (f g)
+(defun compose (f g)
   (lambda (x) (f (g x))))
 
 ;; the identity
-(define id (x)
-  x)
+(defun id (x) x)
 
 ;; const returns the same value regardless its argument
-(define const (x)
+(defun const (x)
   (lambda (y) x))
 
 ;; same as (compose x1 (compose x2 (... xn)))
-(define <<< (&rest fs)
+(defun <<< (&rest fs)
   (if (null fs)
       id
     (compose (head fs) (apply <<< (tail fs)))))
 
 ;; same as (compose xn (compose x{n - 1} (... x1)))
-(define >>> (&rest fs)
+(defun >>> (&rest fs)
   (if (null fs)
       id
     (compose (apply >>> (tail fs)) (head fs))))
 
 ;; makes a function that takes a list take any
 ;; number of arguments
-(define curry (f)
+(defun curry (f)
   (lambda (&rest rest)
     (f rest)))
 
 ;; make a function that takes any number of
 ;; arguments take a list
-(define uncurry (f)
+(defun uncurry (f)
   [apply f])
 
 ;; make a one parameter function take a list
 ;; and modify its head
-(define first (f)
+(defun first (f)
   (lambda (list)
-    (prepend (f (head list))
-            (tail list))))
-
+    (let ((e1 (nth 0 list))
+          (e2 (nth 1 list)))
+      (cons (f e1) e2))))
 
 ;; make a one parameter function take a list
 ;; and modify its second element
-(define second (f)
+(defun second (f)
   (lambda (list)
-    (prepend (head list)
-            (prepend (f (head (tail list)))
-                    (tail (tail list))))))
+    (let ((e1 (nth 0 list))
+          (e2 (nth 1 list)))
+      (cons e1 (f e2)))))
