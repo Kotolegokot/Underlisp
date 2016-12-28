@@ -3,6 +3,7 @@ module Exception (LispError (..)
                  , report_undef
                  , catch
                  , throw
+                 , rethrow
                  , handle) where
 
 import System.IO
@@ -18,6 +19,7 @@ data LispError = LispError { le_point :: Point
   deriving (Eq, Typeable)
 
 instance Exception LispError
+
 instance Show LispError where
   show (LispError Undefined cmd msg)                   = cmd ++ ": " ++ msg
   show (LispError (Point filename row column) cmd msg) = msg'
@@ -28,3 +30,6 @@ report point msg = throw $ LispError point "" msg
 
 report_undef :: String -> a
 report_undef = report Undefined
+
+rethrow :: Exception e => (e -> e) -> IO a -> IO a
+rethrow f = handle (\e -> throw $ f e)

@@ -45,9 +45,9 @@ eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList p (first:rest))  = do
   (_, first') <- eval e first
-  handle (\le@(LispError p' cmd msg) -> throw $ if p' == Undefined
-                                                then LispError p cmd msg
-                                                else le) $ case first' of
+  rethrow (\le -> if le_point le == Undefined
+                  then le { le_point = p }
+                  else le) $ case first' of
     SAtom _ (ACallable (UserDefined local_e prototype sexprs bound))      -> do
       pairs <- mapM (eval e) rest
       let arg_bindings = bind_args prototype (bound ++ map snd pairs)
@@ -58,13 +58,13 @@ eval e (SList p (first:rest))  = do
       (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
       (e', expr') <- eval e expr
       return (e', replace_point expr' p)
-    SAtom _ (ACallable (BuiltIn name _ f bound))                          -> do
-      handle (\le -> throw $ le { le_cmd = name }) $ do
+    SAtom _ (ACallable (BuiltIn name _ f bound))                          ->
+      rethrow (\le -> le { le_cmd = name }) $ do
         pairs <- mapM (eval e) rest
         result <- f (bound ++ map snd pairs)
         return (e, replace_point result p)
-    SAtom _ (ACallable (SpecialOp name _ f bound))                        -> do
-      handle (\le -> throw $ le { le_cmd = name }) $ do
+    SAtom _ (ACallable (SpecialOp name _ f bound))                        ->
+      rethrow (\le -> le { le_cmd = name }) $ do
         (e', expr) <- f eval eval_scope e (bound ++ rest)
         return (e', replace_point expr p)
     _-> report p $ "unable to execute s-expression: '" ++ lisp_show first' ++ "'"
