@@ -58,12 +58,16 @@ eval e (SList p (first:rest))  = do
       (e', expr') <- eval e expr
       return (e', replace_point expr' p)
     SAtom _ (ACallable (BuiltIn name _ f bound))                          ->
-      rethrow (\le -> le { le_cmd = name }) $ do
+      rethrow (\le -> if null $ le_cmd le
+                      then le { le_cmd = name }
+                      else le) $ do
         pairs <- mapM (eval e) rest
         result <- f (bound ++ map snd pairs)
         return (e, replace_point result p)
     SAtom _ (ACallable (SpecialOp name _ f bound))                        ->
-      rethrow (\le -> le { le_cmd = name }) $ do
+      rethrow (\le -> if null $ le_cmd le
+                      then le { le_cmd = name }
+                      else le) $ do
         (e', expr) <- f eval eval_scope e (bound ++ rest)
         return (e', replace_point expr p)
     _-> report p $ "unable to execute s-expression: '" ++ lisp_show first' ++ "'"
