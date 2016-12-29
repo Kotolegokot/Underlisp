@@ -81,6 +81,7 @@ load_prelude = do
 start_env :: LEnv SExpr
 start_env = Env.fromList $
     (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) [
+    ("gensym",                       Just 0,  spop_gensym),
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
     ("define",                       Just 2,  spop_define),

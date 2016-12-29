@@ -5,6 +5,7 @@ module Lib.Meta (spop_macro,
                  spop_quote,
                  spop_backquote,
                  spop_interprete,
+                 spop_gensym,
                  spop_eval) where
 
 import qualified Data.Set as Set
@@ -81,6 +82,16 @@ spop_interprete eval eval_scope context [arg] = do
     SList p str -> eval_scope context . Reader.read p  $ map from_char str
     _           -> report (point arg) "string expected"
 spop_interprete _    _          _       _     = report_undef "just one argument required"
+
+spop_gensym :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_gensym _ _ e@(LEnv g xs) [] = do
+  let (g', sym) = gensym g e
+  return (LEnv g' xs, sym)
+  where gensym :: Int -> LEnv SExpr -> (Int, SExpr)
+        gensym n e = case Env.lookup ("G-" ++ show n) e of
+          Just _  -> gensym (n + 1) e
+          Nothing -> (n + 1, symbol $ "G-" ++ show n)
+spop_gensym _ _ _ _  = report_undef "no arguments required"
 
 -- | special operator eval
 spop_eval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
