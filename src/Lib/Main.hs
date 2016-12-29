@@ -5,7 +5,7 @@ module Lib.Main (spop_let
                 , spop_lambda
                 , spop_defined
                 , builtin_type
-                , builtin_bind
+                , spop_bind
                 , builtin_error) where
 
 import Data.List (delete, elemIndices)
@@ -81,11 +81,19 @@ builtin_type :: [SExpr] -> IO SExpr
 builtin_type [sexpr] = return . symbol . map toUpper . expr_type $ sexpr
 builtin_type _       = report_undef "just one argument required"
 
-builtin_bind :: [SExpr] -> IO SExpr
-builtin_bind (first:args) = return $ case first of
-                                       SAtom _ (ACallable c) -> callable $ bind c args
-                                       _                     -> report (point first) "callable expected"
-builtin_bind _            = report_undef "at least one argument required"
+spop_bind :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spop_bind eval _ e (first:args) = do
+  (_, first') <- eval e first
+  if not $ is_callable first'
+    then report (point first) "callable expected"
+    else case from_callable first' of
+           m@(Macro _ _ _ _)      -> return (e, callable $ bind m args)
+           so@(SpecialOp _ _ _ _) -> return (e, callable $ bind so args)
+           other                  -> do
+             pairs <- mapM (eval e) args
+             let args' = map snd pairs
+             return (e, callable $ bind other args')
+spop_bind _   _ _ []            = report_undef "at least one argument required"
 
 -- built-in function error
 builtin_error :: [SExpr] -> IO SExpr

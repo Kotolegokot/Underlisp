@@ -88,6 +88,7 @@ start_env = Env.fromList $
     ("lambda",                       Nothing, spop_lambda),
     ("macro",                        Nothing, spop_macro),
     ("macro-expand",                 Just 1,  spop_macro_expand),
+    ("bind",                         Nothing, spop_bind),
     ("quote",                        Just 1,  spop_quote),
     ("backquote",                    Just 1,  spop_backquote),
     ("interprete",                   Just 1,  spop_interprete),
@@ -105,7 +106,6 @@ start_env = Env.fromList $
     ("seq",                          Nothing, spop_seq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtin_type),
-    ("bind",             Nothing, builtin_bind),
     ("put-char",         Just 1,  builtin_put_char),
     ("write",            Just 1,  builtin_write),
     ("flush",            Just 0,  builtin_flush),
