@@ -5,9 +5,9 @@ module SExpr (SExpr (..)
              , module Expr
              , module Point
              , Atom (..)
-             , str2atom
+             , strToAtom
              , point
-             , replace_point) where
+             , replacePoint) where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -32,26 +32,26 @@ instance Eq SExpr where
   _         == _          = False
 
 instance Expr LEnv SExpr where
-  is_list (SList _ _)   = True
-  is_list _             = False
+  isList (SList _ _)   = True
+  isList _             = False
 
-  from_list (SList _ l) = l
-  from_list _           = undefined
+  fromList (SList _ l) = l
+  fromList _           = undefined
 
-  from_atom (SAtom _ a) = a
-  from_atom _           = undefined
+  fromAtom (SAtom _ a) = a
+  fromAtom _           = undefined
 
   atom                  = SAtom Undefined
   list                  = SList Undefined
 
 instance LispShow SExpr where
-  lisp_show (SList _ xs) = lisp_show xs
-  lisp_show (SAtom _ a)  = lisp_show a
+  lispShow (SList _ xs) = lispShow xs
+  lispShow (SAtom _ a)  = lispShow a
 
 point :: SExpr -> Point
 point (SList p _) = p
 point (SAtom p _) = p
 
-replace_point :: SExpr -> Point -> SExpr
-replace_point (SList _ s) p = SList p s
-replace_point (SAtom _ a) p = SAtom p a
+replacePoint :: SExpr -> Point -> SExpr
+replacePoint (SList _ s) p = SList p s
+replacePoint (SAtom _ a) p = SAtom p a

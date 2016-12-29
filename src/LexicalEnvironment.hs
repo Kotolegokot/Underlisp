@@ -21,7 +21,7 @@ data LEnv a = LEnv Int [Map String a]
   deriving (Eq, Functor, Foldable, Traversable)
 
 instance (LispShow a, Expr LEnv a) => LispShow (LEnv a) where
-  lisp_show (LEnv _ xs) = foldr (\(level, map) acc -> acc ++ "level " ++ show level ++ ":\n" ++ lisp_show map ++ "\n")
+  lispShow (LEnv _ xs) = foldr (\(level, map) acc -> acc ++ "level " ++ show level ++ ":\n" ++ lispShow map ++ "\n")
                           ""
                           (zip [1..] xs)
 
@@ -31,8 +31,8 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
   pass (LEnv g xs) = LEnv g (Map.empty : xs)
 
   linsert key value (LEnv g (x:xs)) = LEnv g (x' : xs)
-    where x' = fmap (\sexpr -> if is_callable sexpr
-                               then case from_callable sexpr of
+    where x' = fmap (\sexpr -> if isCallable sexpr
+                               then case fromCallable sexpr of
                                       UserDefined e prototype sexprs bound
                                             -> callable $ UserDefined (linsert key value e) prototype sexprs bound
                                       other -> callable other
@@ -42,8 +42,8 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
 
   xinsert key value (LEnv g (x:xs)) = LEnv g (x' : ext : xs)
     where ext = Map.fromList [(key, value)]
-          x' = fmap (\sexpr -> if is_callable sexpr
-                               then case from_callable sexpr of
+          x' = fmap (\sexpr -> if isCallable sexpr
+                               then case fromCallable sexpr of
                                       UserDefined e prototype sexprs bound
                                             -> callable $ UserDefined (xinsert key value e) prototype sexprs bound
                                       other -> callable other
@@ -52,8 +52,8 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
   xinsert _   _     (LEnv _ [])     = undefined
 
   lappend (LEnv g (x:xs)) add = LEnv g (x' : xs)
-    where x' = fmap (\sexpr -> if is_callable sexpr
-                               then case from_callable sexpr of
+    where x' = fmap (\sexpr -> if isCallable sexpr
+                               then case fromCallable sexpr of
                                       UserDefined e prototype sexprs bound
                                             -> callable $ UserDefined (lappend e add) prototype sexprs bound
                                       other -> callable other
@@ -62,8 +62,8 @@ instance (Expr LEnv a, LispShow a, Eq a) => Env LEnv a where
   lappend (LEnv _ [])     _   = undefined
 
   xappend (LEnv g (x:xs)) add = LEnv g (x' : add : xs)
-    where x' = fmap (\sexpr -> if is_callable sexpr
-                               then case from_callable sexpr of
+    where x' = fmap (\sexpr -> if isCallable sexpr
+                               then case fromCallable sexpr of
                                       UserDefined e prototype sexprs bound
                                             -> callable $ UserDefined (xappend e add) prototype sexprs bound
                                       other -> callable other

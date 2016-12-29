@@ -1,47 +1,47 @@
-module Lib.Math (builtin_sum,
-                 builtin_substract,
-                 builtin_product,
-                 builtin_divide,
-                 builtin_float) where
+module Lib.Math (builtinSum,
+                 builtinSubstract,
+                 builtinProduct,
+                 builtinDivide,
+                 builtinFloat) where
 import SExpr
 import Exception
 
-builtin_sum :: [SExpr] -> IO SExpr
-builtin_sum sexprs = case num_args sexprs of
-                       NTInt   -> return . int . sum . fmap from_int $ sexprs
-                       NTFloat -> return . float . sum . fmap from_number $ sexprs
+builtinSum :: [SExpr] -> IO SExpr
+builtinSum sexprs = case numArgs sexprs of
+                      NTInt   -> return . int . sum . fmap fromInt $ sexprs
+                      NTFloat -> return . float . sum . fmap fromNumber $ sexprs
 
-builtin_substract :: [SExpr] -> IO SExpr
-builtin_substract sexprs@[num1, num2] = case num_args sexprs of
-                                          NTInt   -> return . int $ from_int num1 - from_int num2
-                                          NTFloat -> return . float $ from_number num1 - from_number num2
-builtin_substract _                   = report_undef "two arguments required"
+builtinSubstract :: [SExpr] -> IO SExpr
+builtinSubstract sexprs@[num1, num2] = case numArgs sexprs of
+                                         NTInt   -> return . int $ fromInt num1 - fromInt num2
+                                         NTFloat -> return . float $ fromNumber num1 - fromNumber num2
+builtinSubstract _                   = reportUndef "two arguments required"
 
-builtin_product :: [SExpr] -> IO SExpr
-builtin_product sexprs = case num_args sexprs of
-                                NTInt   -> return . int . product . fmap from_int $ sexprs
-                                NTFloat -> return . float . product . fmap from_number $ sexprs
+builtinProduct :: [SExpr] -> IO SExpr
+builtinProduct sexprs = case numArgs sexprs of
+                               NTInt   -> return . int . product . fmap fromInt $ sexprs
+                               NTFloat -> return . float . product . fmap fromNumber $ sexprs
 
-builtin_divide :: [SExpr] -> IO SExpr
-builtin_divide sexprs@[num1, num2] = case num_args sexprs of
-                                       NTInt   -> return . int $ from_int num1 - from_int num2
-                                       NTFloat -> return . float $ from_number num1 - from_number num2
-builtin_divide _                   = report_undef "two arguments required"
+builtinDivide :: [SExpr] -> IO SExpr
+builtinDivide sexprs@[num1, num2] = case numArgs sexprs of
+                                      NTInt   -> return . int $ fromInt num1 - fromInt num2
+                                      NTFloat -> return . float $ fromNumber num1 - fromNumber num2
+builtinDivide _                   = reportUndef "two arguments required"
 
 data NumType = NTInt | NTFloat
-num_args :: [SExpr] -> NumType
-num_args sexprs = num_args' sexprs NTInt
-  where num_args' (x:xs) NTInt
-          | is_int x   = num_args' xs NTInt
-          | is_float x = num_args' xs NTFloat
+numArgs :: [SExpr] -> NumType
+numArgs sexprs = numArgs' sexprs NTInt
+  where numArgs' (x:xs) NTInt
+          | isInt x   = numArgs' xs NTInt
+          | isFloat x = numArgs' xs NTFloat
           | otherwise  = report (point x) "float or int expected"
-        num_args' (x:xs) NTFloat
-          | is_number x = num_args' xs NTFloat
+        numArgs' (x:xs) NTFloat
+          | isNumber x = numArgs' xs NTFloat
           | otherwise   = report (point x) "float or int expected"
-        num_args' [] return_type = return_type
+        numArgs' [] return_type = return_type
 
-builtin_float :: [SExpr] -> IO SExpr
-builtin_float [SAtom _ (AInt i)]         = return . float . fromIntegral $ i
-builtin_float [f@(SAtom _ (AFloat _))]   = return f
-builtin_float [sexpr]                    = report (point sexpr) "float or int expected"
-builtin_float _                          = report_undef "just one argument requried"
+builtinFloat :: [SExpr] -> IO SExpr
+builtinFloat [SAtom _ (AInt i)]         = return . float . fromIntegral $ i
+builtinFloat [f@(SAtom _ (AFloat _))]   = return f
+builtinFloat [sexpr]                    = report (point sexpr) "float or int expected"
+builtinFloat _                          = reportUndef "just one argument requried"

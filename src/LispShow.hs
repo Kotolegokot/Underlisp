@@ -3,19 +3,19 @@ module LispShow where
 import Debug.Trace (trace)
 
 class LispShow a where
-  lisp_show :: a -> String
+  lispShow :: a -> String
 
 instance LispShow a => LispShow [a] where
-  lisp_show xs = "(" ++ lisp_show' xs ++ ")"
-    where lisp_show' [x]    = lisp_show x
-          lisp_show' (x:xs) = lisp_show x ++ " " ++ lisp_show' xs
-          lisp_show' []     = ""
+  lispShow xs = "(" ++ lispShow' xs ++ ")"
+    where lispShow' [x]    = lispShow x
+          lispShow' (x:xs) = lispShow x ++ " " ++ lispShow' xs
+          lispShow' []     = ""
 
-lisp_print :: LispShow a => a -> IO ()
-lisp_print = putStrLn . lisp_show
+lispPrint :: LispShow a => a -> IO ()
+lispPrint = putStrLn . lispShow
 
-lisp_trace :: LispShow a => a -> b -> b
-lisp_trace = trace . lisp_show
+lispTrace :: LispShow a => a -> b -> b
+lispTrace = trace . lispShow
 
-lisp_trace_id :: LispShow a => a -> a
-lisp_trace_id a = lisp_trace a a
+lispTraceId :: LispShow a => a -> a
+lispTraceId a = lispTrace a a

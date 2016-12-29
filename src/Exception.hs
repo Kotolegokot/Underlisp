@@ -1,6 +1,6 @@
 module Exception (LispError (..)
                  , report
-                 , report_undef
+                 , reportUndef
                  , catch
                  , throw
                  , rethrow
@@ -13,9 +13,9 @@ import Control.Exception
 
 import Point
 
-data LispError = LispError { le_point :: Point
-                           , le_cmd   :: String
-                           , le_msg   :: String }
+data LispError = LispError { lePoint :: Point
+                           , leCmd   :: String
+                           , leMsg   :: String }
   deriving (Eq, Typeable)
 
 instance Exception LispError
@@ -28,8 +28,8 @@ instance Show LispError where
 report :: Point -> String -> a
 report point msg = throw $ LispError point "" msg
 
-report_undef :: String -> a
-report_undef = report Undefined
+reportUndef :: String -> a
+reportUndef = report Undefined
 
 rethrow :: Exception e => (e -> e) -> IO a -> IO a
 rethrow f = handle (\e -> throw $ f e)

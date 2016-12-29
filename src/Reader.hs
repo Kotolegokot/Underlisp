@@ -4,7 +4,6 @@ import Prelude hiding (read)
 import SExpr
 import Lexer
 import Parser
-import Util
 import Point
 
 -- | first stage of any lisp interpreter

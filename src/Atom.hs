@@ -22,16 +22,16 @@ data Atom e a where
   AEnv      :: Eq a =>            Map String a     -> Atom e a
 
 instance (LispShow a) => LispShow (Atom e a) where
-  lisp_show (AInt i)      = show i
-  lisp_show (AFloat f)    = show f
-  lisp_show (AChar c)     = ['#', c]
-  lisp_show (ABool b)     = show b
-  lisp_show (ASymbol s)   = s
-  lisp_show (ACallable c) = '{' : lisp_show c ++ "}"
-  lisp_show (AEnv e)      = '{' : lisp_show e ++ "}"
+  lispShow (AInt i)      = show i
+  lispShow (AFloat f)    = show f
+  lispShow (AChar c)     = ['#', c]
+  lispShow (ABool b)     = show b
+  lispShow (ASymbol s)   = s
+  lispShow (ACallable c) = '{' : lispShow c ++ "}"
+  lispShow (AEnv e)      = '{' : lispShow e ++ "}"
 
 instance LispShow a => LispShow (Map String a) where
-  lisp_show map = unlines $ Map.foldMapWithKey (\key value -> [key ++ space key ++ " => " ++ lisp_show value]) map
+  lispShow map = unlines $ Map.foldMapWithKey (\key value -> [key ++ space key ++ " => " ++ lispShow value]) map
     where indent    = maximum . fmap length $ Map.keys map
           space key = replicate (indent - length key) ' '
 
@@ -55,89 +55,89 @@ instance Ord (Atom e a) where
   compare (AEnv e)      (AEnv e')      = undefined
   compare _             _              = undefined
 
-is_int :: Atom e a -> Bool
-is_int (AInt _) = True
-is_int _        = False
+isInt :: Atom e a -> Bool
+isInt (AInt _) = True
+isInt _        = False
 
-from_int :: Atom e a -> Int
-from_int (AInt i) = i
-from_int _        = undefined
+fromInt :: Atom e a -> Int
+fromInt (AInt i) = i
+fromInt _        = undefined
 
-is_float :: Atom e a -> Bool
-is_float (AFloat _) = True
-is_float _          = False
+isFloat :: Atom e a -> Bool
+isFloat (AFloat _) = True
+isFloat _          = False
 
-from_float :: Atom e a -> Float
-from_float (AFloat f) = f
-from_float _          = undefined
+fromFloat :: Atom e a -> Float
+fromFloat (AFloat f) = f
+fromFloat _          = undefined
 
-is_number :: Atom e a -> Bool
-is_number (AInt _)   = True
-is_number (AFloat _) = True
-is_number _          = False
+isNumber :: Atom e a -> Bool
+isNumber (AInt _)   = True
+isNumber (AFloat _) = True
+isNumber _          = False
 
-from_number :: Atom e a -> Float
-from_number (AInt i)   = fromIntegral i
-from_number (AFloat f) = f
-from_number _          = undefined
+fromNumber :: Atom e a -> Float
+fromNumber (AInt i)   = fromIntegral i
+fromNumber (AFloat f) = f
+fromNumber _          = undefined
 
-is_char :: Atom e a -> Bool
-is_char (AChar _) = True
-is_char _         = False
+isChar :: Atom e a -> Bool
+isChar (AChar _) = True
+isChar _         = False
 
-from_char :: Atom e a -> Char
-from_char (AChar c) = c
-from_char _         = undefined
+fromChar :: Atom e a -> Char
+fromChar (AChar c) = c
+fromChar _         = undefined
 
-is_bool :: Atom e a -> Bool
-is_bool (ABool _) = True
-is_bool _         = False
+isBool :: Atom e a -> Bool
+isBool (ABool _) = True
+isBool _         = False
 
-from_bool :: Atom e a -> Bool
-from_bool (ABool b) = b
-from_bool _         = undefined
+fromBool :: Atom e a -> Bool
+fromBool (ABool b) = b
+fromBool _         = undefined
 
-is_symbol :: Atom e a -> Bool
-is_symbol (ASymbol _) = True
-is_symbol _           = False
+isSymbol :: Atom e a -> Bool
+isSymbol (ASymbol _) = True
+isSymbol _           = False
 
-from_symbol :: Atom e a -> String
-from_symbol (ASymbol s) = s
-from_symbol _           = undefined
+fromSymbol :: Atom e a -> String
+fromSymbol (ASymbol s) = s
+fromSymbol _           = undefined
 
-is_callable :: Atom e a -> Bool
-is_callable (ACallable _) = True
-is_callable _             = False
+isCallable :: Atom e a -> Bool
+isCallable (ACallable _) = True
+isCallable _             = False
 
-from_callable :: Atom e a -> Callable e a
-from_callable (ACallable c) = c
-from_callable _             = undefined
+fromCallable :: Atom e a -> Callable e a
+fromCallable (ACallable c) = c
+fromCallable _             = undefined
 
-is_env :: Atom e a -> Bool
-is_env (AEnv _) = True
-is_env _        = False
+isEnv :: Atom e a -> Bool
+isEnv (AEnv _) = True
+isEnv _        = False
 
-from_env :: Atom e a -> Map String a
-from_env (AEnv e) = e
-from_env _        = undefined
+fromEnv :: Atom e a -> Map String a
+fromEnv (AEnv e) = e
+fromEnv _        = undefined
 
-str2atom :: String -> Atom e a
-str2atom atom
-  | isJust try_int    = AInt     $ fromJust try_int
-  | isJust try_float  = AFloat   $ fromJust try_float
-  | isJust try_char   = AChar    $ fromJust try_char
-  | isJust try_bool   = ABool    $ fromJust try_bool
-  | otherwise         = ASymbol atom
-  where try_int    = readMaybe atom :: Maybe Int
-        try_float  = readMaybe atom :: Maybe Float
-        try_char   = readMaybe atom :: Maybe Char
-        try_bool   = readMaybe atom :: Maybe Bool
+strToAtom :: String -> Atom e a
+strToAtom atom
+  | isJust tryInt    = AInt     $ fromJust tryInt
+  | isJust tryFloat  = AFloat   $ fromJust tryFloat
+  | isJust tryChar   = AChar    $ fromJust tryChar
+  | isJust tryBool   = ABool    $ fromJust tryBool
+  | otherwise        = ASymbol atom
+  where tryInt    = readMaybe atom :: Maybe Int
+        tryFloat  = readMaybe atom :: Maybe Float
+        tryChar   = readMaybe atom :: Maybe Char
+        tryBool   = readMaybe atom :: Maybe Bool
 
-atom_type :: Atom e a -> String
-atom_type (AInt _)      = "Int"
-atom_type (AFloat _)    = "Float"
-atom_type (AChar _)     = "Char"
-atom_type (ABool _)     = "Bool"
-atom_type (ASymbol _)   = "Symbol"
-atom_type (ACallable _) = "Callable"
-atom_type (AEnv _)      = "Env"
+atomType :: Atom e a -> String
+atomType (AInt _)      = "Int"
+atomType (AFloat _)    = "Float"
+atomType (AChar _)     = "Char"
+atomType (ABool _)     = "Bool"
+atomType (ASymbol _)   = "Symbol"
+atomType (ACallable _) = "Callable"
+atomType (AEnv _)      = "Env"

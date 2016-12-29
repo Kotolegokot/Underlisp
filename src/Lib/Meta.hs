@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Meta (spop_macro,
-                 spop_macro_expand,
-                 spop_quote,
-                 spop_backquote,
-                 spop_interprete,
-                 spop_gensym,
-                 spop_eval) where
+module Lib.Meta (spopMacro,
+                 spopMacroExpand,
+                 spopQuote,
+                 spopBackquote,
+                 spopInterprete,
+                 spopGensym,
+                 spopEval) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -23,37 +23,37 @@ import Exception
 
 -- | special operator macro
 -- | (macro lambda-list [body])
-spop_macro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_macro _ _ e (lambda_list:body) = return (e, callable $ Macro e prototype body [])
-  where prototype = parse_lambda_list lambda_list
-spop_macro _ _ _ []                 = report_undef "at least one argument requried"
+spopMacro :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopMacro _ _ e (lambdaList:body) = return (e, callable $ Macro e prototype body [])
+  where prototype = parseLambdaList lambdaList
+spopMacro _ _ _ []                 = reportUndef "at least one argument requried"
 
-spop_macro_expand :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_macro_expand eval eval_scope e [SList p (first:args)] = do
+spopMacroExpand :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopMacroExpand eval evalScope e [SList p (first:args)] = do
   (_, first') <- eval e first
   case first' of
-    SAtom _ (ACallable (Macro local_e prototype sexprs bound)) -> do
-      let arg_bindings = bind_args prototype (bound ++ args)
-      (_, expr) <- eval_scope (Env.lappend local_e arg_bindings) sexprs
+    SAtom _ (ACallable (Macro localE prototype sexprs bound)) -> do
+      let argBindings = bindArgs prototype (bound ++ args)
+      (_, expr) <- evalScope (Env.lappend localE argBindings) sexprs
       return (e, expr)
-    _                                                          -> report p "macro invocation expected"
-spop_macro_expand _    _          _ [sexpr]              = report (point sexpr) "list expected"
-spop_macro_expand _    _          _ _                    = report_undef "just one argument required"
+    _                                                         -> report p "macro invocation expected"
+spopMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
+spopMacroExpand _    _          _ _                    = reportUndef "just one argument required"
 
 -- | special operator quote
-spop_quote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_quote eval _ context [arg] = return (context, arg)
-spop_quote _    _ _       _     = report_undef "just one argument requried"
+spopQuote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopQuote eval _ e [arg] = return (e, arg)
+spopQuote _    _ _ _     = reportUndef "just one argument requried"
 
 -- | special operator backquote
-spop_backquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_backquote eval eval_scope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
+spopBackquote :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopBackquote eval evalScope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = report p "just one argument required"
   | otherwise        = do
       (_, expr) <- eval e $ head rest
       return (e, expr)
-spop_backquote eval eval_scope e [SList _ l] = do
-  pairs <- mapM' (spop_backquote eval eval_scope e . return) l
+spopBackquote eval evalScope e [SList _ l] = do
+  pairs <- mapM' (spopBackquote eval evalScope e . return) l
   return (e, list $ map snd pairs)
     where mapM' :: (SExpr -> IO (LEnv SExpr, SExpr)) -> [SExpr] -> IO [(LEnv SExpr, SExpr)]
           mapM' f []     = return []
@@ -71,31 +71,31 @@ spop_backquote eval eval_scope e [SList _ l] = do
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
-spop_backquote _    _          context [arg]        = return (context, arg)
-spop_backquote _    _          _       _            = report_undef "just one argument required"
+spopBackquote _    _          e [arg]        = return (e, arg)
+spopBackquote _    _          _ _            = reportUndef "just one argument required"
 
 -- | special operator interprete
-spop_interprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_interprete eval eval_scope context [arg] = do
-  (_, expr) <- eval context arg
+spopInterprete :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopInterprete eval evalScope e [arg] = do
+  (_, expr) <- eval e arg
   case expr of
-    SList p str -> eval_scope context . Reader.read p  $ map from_char str
+    SList p str -> evalScope e . Reader.read p  $ map fromChar str
     _           -> report (point arg) "string expected"
-spop_interprete _    _          _       _     = report_undef "just one argument required"
+spopInterprete _    _         _ _     = reportUndef "just one argument required"
 
-spop_gensym :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_gensym _ _ e@(LEnv g xs) [] = do
+spopGensym :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopGensym _ _ e@(LEnv g xs) [] = do
   let (g', sym) = gensym g e
   return (LEnv g' xs, sym)
   where gensym :: Int -> LEnv SExpr -> (Int, SExpr)
         gensym n e = case Env.lookup ("G-" ++ show n) e of
           Just _  -> gensym (n + 1) e
           Nothing -> (n + 1, symbol $ "G-" ++ show n)
-spop_gensym _ _ _ _  = report_undef "no arguments required"
+spopGensym _ _ _ _  = reportUndef "no arguments required"
 
 -- | special operator eval
-spop_eval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_eval eval _ context [arg] = do
-  (_, expr) <- eval context arg
-  eval context expr
-spop_eval _    _ _       _     = report_undef "just one argument required"
+spopEval :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopEval eval _ e [arg] = do
+  (_, expr) <- eval e arg
+  eval e expr
+spopEval _    _ _ _     = reportUndef "just one argument required"

@@ -9,7 +9,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [filename] -> interprete_program filename
+    [filename] -> interpreteProgram filename
     []         -> repl
     _          -> do
       exec <- getExecutablePath

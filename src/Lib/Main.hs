@@ -1,12 +1,12 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Main (spop_let
-                , spop_define
-                , spop_lambda
-                , spop_defined
-                , builtin_type
-                , spop_bind
-                , builtin_error) where
+module Lib.Main (spopLet
+                , spopDefine
+                , spopLambda
+                , spopDefined
+                , builtinType
+                , spopBind
+                , builtinError) where
 
 import Data.List (delete, elemIndices)
 import Data.Maybe (isJust)
@@ -21,82 +21,82 @@ import Exception
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
-spop_lambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_lambda _ _ e (lambda_list:body) = return (e, callable $ UserDefined e prototype body [])
-  where prototype = parse_lambda_list lambda_list
-spop_lambda _    _ _ [] = report_undef "at least one argument expected"
+spopLambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopLambda _ _ e (lambdaList:body) = return (e, callable $ UserDefined e prototype body [])
+  where prototype = parseLambdaList lambdaList
+spopLambda _    _ _ [] = reportUndef "at least one argument expected"
 
 -- | takes an s-list of the form (arg1 arg2... [&rest argLast])
 -- | and constructs a Prototype
-parse_lambda_list :: SExpr -> Prototype
-parse_lambda_list (SList p lambda_list)
-  | not $ all is_symbol lambda_list = report p "all items in a lambda list must be symbols"
-  | length ixs > 1                  = report p "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2         = report p "&rest must be last but one"
-  | otherwise                       = if rest
-                                      then Prototype (delete "&rest" . map from_symbol $ lambda_list) rest
-                                      else Prototype (map from_symbol $ lambda_list) rest
-  where ixs   = elemIndices (symbol "&rest") lambda_list
+parseLambdaList :: SExpr -> Prototype
+parseLambdaList (SList p lambdaList)
+  | not $ all isSymbol lambdaList = report p "all items in a lambda list must be symbols"
+  | length ixs > 1                = report p "more than one &rest in a lambda list is forbidden"
+  | rest && ix /= count - 2       = report p "&rest must be last but one"
+  | otherwise                     = if rest
+                                    then Prototype (delete "&rest" . map fromSymbol $ lambdaList) rest
+                                    else Prototype (map fromSymbol $ lambdaList) rest
+  where ixs   = elemIndices (symbol "&rest") lambdaList
         ix    = head ixs
         rest  = length ixs == 1
-        count = length lambda_list
-parse_lambda_list _ = report_undef "lambda list must be a list"
+        count = length lambdaList
+parseLambdaList _ = reportUndef "lambda list must be a list"
 
 -- special operator let
-spop_let :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_let eval eval_scope e ((SList p pairs):body) = do
-  e' <- handle_pairs pairs e
-  (_, expr) <- eval_scope e' body
+spopLet :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopLet eval evalScope e ((SList p pairs):body) = do
+  e' <- handlePairs pairs e
+  (_, expr) <- evalScope e' body
   return (e, expr)
-    where handle_pairs (x:xs) acc = case x of
+    where handlePairs (x:xs) acc = case x of
             (SList _ [SAtom _ (ASymbol var), value]) -> do
               (_, expr) <- eval acc value
-              handle_pairs xs (Env.linsert var expr acc)
+              handlePairs xs (Env.linsert var expr acc)
             (SList _ [expr1, _]) -> report (point expr1) "first item in a binding pair must be a keyword"
             _                    -> report (point x) "(var value) pair expected"
-          handle_pairs []     acc = return acc
-spop_let _    _          _       [expr]               = report (point expr) "list expected"
-spop_let _    _          _       _                    = report_undef "at least one argument expected"
+          handlePairs []     acc = return acc
+spopLet _    _          _       [expr]               = report (point expr) "list expected"
+spopLet _    _          _       _                    = reportUndef "at least one argument expected"
 
-spop_defined :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_defined eval _ e [arg] = do
+spopDefined :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopDefined eval _ e [arg] = do
   (_, expr) <- eval e arg
   return $ case expr of
     SAtom _ (ASymbol s) -> (e, bool $ s `Env.member` e)
     _                   -> report (point expr) "symbol expected"
-spop_defined _    _ _ _    = report_undef "just one argument required"
+spopDefined _    _ _ _     = reportUndef "just one argument required"
 
 -- special operator define
-spop_define :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_define eval _ e [var, s_value]
-  | not $ is_symbol var = report (point var) "first argument must be a symbol"
+spopDefine :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopDefine eval _ e [var, sValue]
+  | not $ isSymbol var = report (point var) "first argument must be a symbol"
   | otherwise           = do
-      let key = from_symbol var
-      (_, value) <- eval e s_value
+      let key = fromSymbol var
+      (_, value) <- eval e sValue
       return (Env.linsert key value e, nil)
-spop_define _    _           _       _ = report_undef "two arguments required"
+spopDefine _    _           _       _ = reportUndef "two arguments required"
 
 -- built-in function type
-builtin_type :: [SExpr] -> IO SExpr
-builtin_type [sexpr] = return . symbol . map toUpper . expr_type $ sexpr
-builtin_type _       = report_undef "just one argument required"
+builtinType :: [SExpr] -> IO SExpr
+builtinType [sexpr] = return . symbol . map toUpper . exprType $ sexpr
+builtinType _       = reportUndef "just one argument required"
 
-spop_bind :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_bind eval _ e (first:args) = do
+spopBind :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopBind eval _ e (first:args) = do
   (_, first') <- eval e first
-  if not $ is_callable first'
+  if not $ isCallable first'
     then report (point first) "callable expected"
-    else case from_callable first' of
+    else case fromCallable first' of
            m@(Macro _ _ _ _)      -> return (e, callable $ bind m args)
            so@(SpecialOp _ _ _ _) -> return (e, callable $ bind so args)
            other                  -> do
              pairs <- mapM (eval e) args
              let args' = map snd pairs
              return (e, callable $ bind other args')
-spop_bind _   _ _ []            = report_undef "at least one argument required"
+spopBind _   _ _ []            = reportUndef "at least one argument required"
 
 -- built-in function error
-builtin_error :: [SExpr] -> IO SExpr
-builtin_error [SList p err] = report p (map from_char err)
-builtin_error [sexpr]       = report (point sexpr) "string expected"
-builtin_error _             = report_undef "just one argument required"
+builtinError :: [SExpr] -> IO SExpr
+builtinError [SList p err] = report p (map fromChar err)
+builtinError [sexpr]       = report (point sexpr) "string expected"
+builtinError _             = reportUndef "just one argument required"

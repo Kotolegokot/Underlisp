@@ -1,39 +1,39 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Boolean (builtin_not,
-                    spop_and,
-                    spop_or,
-                    spop_impl) where
+module Lib.Boolean (builtinNot,
+                    spopAnd,
+                    spopOr,
+                    spopImpl) where
 
 import SExpr
 import LexicalEnvironment
 import Callable
 import Exception
 
-builtin_not :: [SExpr] -> IO SExpr
-builtin_not [sexpr] = return . bool . not . from_bool $ sexpr
-builtin_not _       = report_undef "just one argument required"
+builtinNot :: [SExpr] -> IO SExpr
+builtinNot [sexpr] = return . bool . not . fromBool $ sexpr
+builtinNot _       = reportUndef "just one argument required"
 
-spop_and :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_and eval eval_scope context (x:xs) = do
+spopAnd :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopAnd eval evalScope context (x:xs) = do
   (_, expr) <- eval context x
-  case from_bool expr of
-    True  -> spop_and eval eval_scope context xs
+  case fromBool expr of
+    True  -> spopAnd eval evalScope context xs
     False -> return (context, bool False)
-spop_and _    _          context []     = return (context, bool True)
+spopAnd _    _          context []     = return (context, bool True)
 
-spop_or :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_or eval eval_scope context (x:xs) = do
+spopOr :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopOr eval evalScope context (x:xs) = do
   (_, expr) <- eval context x
-  case from_bool expr of
+  case fromBool expr of
     True  -> return (context, bool True)
-    False -> spop_or eval eval_scope context xs
+    False -> spopOr eval evalScope context xs
 spop_or _    _          context []     = return (context, bool False)
 
-spop_impl :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spop_impl eval _ context [arg1, arg2] = do
+spopImpl :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopImpl eval _ context [arg1, arg2] = do
   (_, expr1) <- eval context arg1
-  if not $ from_bool expr1
+  if not $ fromBool expr1
     then return (context, bool True)
     else eval context arg2
-spop_impl _    _  _      _            = report_undef "two arguments requried"
+spop_impl _    _  _      _            = reportUndef "two arguments requried"

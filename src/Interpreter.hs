@@ -1,8 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Interpreter (interprete_program
-                   , interprete_module
-                   , interprete_module_no_prelude
+module Interpreter (interpreteProgram
+                   , interpreteModule
+                   , interpreteModuleNoPrelude
                    , repl) where
 
 import Control.Exception
@@ -19,30 +19,30 @@ import LispShow
 import Exception
 
 -- | a lisp interpretator is just a reader and evaluator joined together
-interprete_program :: String -> IO ()
-interprete_program filename = readFile filename >>= (Evaluator.evaluate_program . Reader.read (start_point filename))
+interpreteProgram :: String -> IO ()
+interpreteProgram filename = readFile filename >>= (Evaluator.evaluateProgram . Reader.read (startPoint filename))
 
-interprete_module :: String -> IO (Map String SExpr)
-interprete_module filename  = readFile filename >>= (Evaluator.evaluate_module . Reader.read (start_point filename))
+interpreteModule :: String -> IO (Map String SExpr)
+interpreteModule filename  = readFile filename >>= (Evaluator.evaluateModule . Reader.read (startPoint filename))
 
-interprete_module_no_prelude :: String -> IO (Map String SExpr)
-interprete_module_no_prelude filename = readFile filename >>=
-  (Evaluator.evaluate_module_no_prelude . Reader.read (start_point filename))
+interpreteModuleNoPrelude :: String -> IO (Map String SExpr)
+interpreteModuleNoPrelude filename = readFile filename >>=
+  (Evaluator.evaluateModuleNoPrelude . Reader.read (startPoint filename))
 
 repl :: IO ()
 repl = do
-  prelude <- Evaluator.load_prelude
-  handle_lines (start_point "<interactive>") prelude
-  where handle_lines :: Point -> LEnv SExpr -> IO ()
-        handle_lines p e = do
-          putStr $ "[" ++ show (p_row p) ++ "]> "
+  prelude <- Evaluator.loadPrelude
+  handleLines (startPoint "<interactive>") prelude
+  where handleLines :: Point -> LEnv SExpr -> IO ()
+        handleLines p e = do
+          putStr $ "[" ++ show (pRow p) ++ "]> "
           hFlush stdout
           handle (\(err :: IOError) -> if isEOFError err
                                            then putStrLn "\nBye"
                                            else ioError err) $ do
             line <- getLine
-            (e', expr) <- catch (Evaluator.eval_scope e $ Reader.read p line)
+            (e', expr) <- catch (Evaluator.evalScope e $ Reader.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
-            putStrLn $ "=> " ++ lisp_show expr
-            handle_lines (forward_row p) e'
+            putStrLn $ "=> " ++ lispShow expr
+            handleLines (forwardRow p) e'

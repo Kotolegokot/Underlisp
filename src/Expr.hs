@@ -11,14 +11,14 @@ import qualified Data.Map as Map
 import Env
 
 class Env e a => Expr e a | a -> e where
-  is_list   :: a -> Bool
-  is_list = not . is_atom
+  isList   :: a -> Bool
+  isList = not . isAtom
 
-  is_atom   :: a -> Bool
-  is_atom = not . is_list
+  isAtom   :: a -> Bool
+  isAtom = not . isList
 
-  from_list :: a -> [a]
-  from_atom :: a -> Atom e a
+  fromList :: a -> [a]
+  fromAtom :: a -> Atom e a
 
   nil       :: a
   nil = list []
@@ -26,12 +26,12 @@ class Env e a => Expr e a | a -> e where
   atom      :: Atom e a -> a
   list      :: [a] -> a
 
-  {-# MINIMAL from_list, from_atom, atom, list, (is_list | is_atom) #-}
+  {-# MINIMAL fromList, fromAtom, atom, list, (isList | isAtom) #-}
 
-expr_type :: Expr e a => a -> String
-expr_type x = if is_list x
+exprType :: Expr e a => a -> String
+exprType x = if isList x
               then "List"
-              else atom_type $ from_atom x
+              else atomType $ fromAtom x
 
 int :: Expr e a => Int -> a
 int = atom . AInt
@@ -59,50 +59,50 @@ p1 .&& p2 = \a -> p1 a && p2 a
 
 infixr 8 .&&
 
-is_int :: Expr e a => a -> Bool
-is_int = is_atom .&& A.is_int . from_atom
+isInt :: Expr e a => a -> Bool
+isInt = isAtom .&& A.isInt . fromAtom
 
-from_int :: Expr e a => a -> Int
-from_int = A.from_int . from_atom
+fromInt :: Expr e a => a -> Int
+fromInt = A.fromInt . fromAtom
 
-is_float :: Expr e a => a -> Bool
-is_float = is_atom .&& A.is_float . from_atom
+isFloat :: Expr e a => a -> Bool
+isFloat = isAtom .&& A.isFloat . fromAtom
 
-from_float :: Expr e a => a -> Float
-from_float = A.from_float . from_atom
+fromFloat :: Expr e a => a -> Float
+fromFloat = A.fromFloat . fromAtom
 
-is_number :: Expr e a => a -> Bool
-is_number = is_atom .&& A.is_number . from_atom
+isNumber :: Expr e a => a -> Bool
+isNumber = isAtom .&& A.isNumber . fromAtom
 
-from_number :: Expr e a => a -> Float
-from_number = A.from_number . from_atom
+fromNumber :: Expr e a => a -> Float
+fromNumber = A.fromNumber . fromAtom
 
-is_char :: Expr e a => a -> Bool
-is_char = is_atom .&& A.is_char . from_atom
+isChar :: Expr e a => a -> Bool
+isChar = isAtom .&& A.isChar . fromAtom
 
-from_char :: Expr e a => a -> Char
-from_char = A.from_char . from_atom
+fromChar :: Expr e a => a -> Char
+fromChar = A.fromChar . fromAtom
 
-is_bool :: Expr e a => a -> Bool
-is_bool = is_atom .&& A.is_bool . from_atom
+isBool :: Expr e a => a -> Bool
+isBool = isAtom .&& A.isBool . fromAtom
 
-from_bool :: Expr e a => a -> Bool
-from_bool = A.from_bool . from_atom
+fromBool :: Expr e a => a -> Bool
+fromBool = A.fromBool . fromAtom
 
-is_symbol :: Expr e a => a -> Bool
-is_symbol = is_atom .&& A.is_symbol . from_atom
+isSymbol :: Expr e a => a -> Bool
+isSymbol = isAtom .&& A.isSymbol . fromAtom
 
-from_symbol :: Expr e a => a -> String
-from_symbol = A.from_symbol . from_atom
+fromSymbol :: Expr e a => a -> String
+fromSymbol = A.fromSymbol . fromAtom
 
-is_callable :: Expr e a => a -> Bool
-is_callable = is_atom .&& A.is_callable . from_atom
+isCallable :: Expr e a => a -> Bool
+isCallable = isAtom .&& A.isCallable . fromAtom
 
-from_callable :: Expr e a => a -> Callable e a
-from_callable = A.from_callable . from_atom
+fromCallable :: Expr e a => a -> Callable e a
+fromCallable = A.fromCallable . fromAtom
 
-is_env :: Expr e a => a -> Bool
-is_env = is_atom .&& A.is_env . from_atom
+isEnv :: Expr e a => a -> Bool
+isEnv = isAtom .&& A.isEnv . fromAtom
 
-from_env :: Expr e a => a -> Map String a
-from_env = A.from_env . from_atom
+fromEnv :: Expr e a => a -> Map String a
+fromEnv = A.fromEnv . fromAtom
