@@ -21,17 +21,20 @@ import Exception
 
 prelude_path = "stdlib/prelude.lisp" :: String
 
+-- | evaluates a module and returns nothing
 evaluate_program :: [SExpr] -> IO ()
 evaluate_program body = do
   prelude <- load_prelude
   void $ eval_scope prelude body
 
+-- | evaluates a module
 evaluate_module :: [SExpr] -> IO (Map String SExpr)
 evaluate_module body = do
   prelude <- load_prelude
   (e, _) <- eval_scope prelude body
   return $ Env.merge e
 
+-- | evaluates a module without prelude loaded
 evaluate_module_no_prelude :: [SExpr] -> IO (Map String SExpr)
 evaluate_module_no_prelude body = do
   (e, _) <- eval_scope start_env body
@@ -41,6 +44,7 @@ evaluate_module_no_prelude body = do
 eval_scope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 eval_scope e = foldM (\(prev_e, _) sexpr -> eval prev_e sexpr) (Env.pass e, nil)
 
+-- | evaluates an s-expression
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
 eval e (SList p (first:rest))  = do
   (_, first') <- eval e first
@@ -76,16 +80,19 @@ eval e (SAtom p (ASymbol sym)) = case Env.lookup sym e of
   Nothing    -> report p $ "undefined identificator '" ++ sym ++ "'"
 eval e sexpr                   = return (e, sexpr)
 
+-- | loads prelude and start environment
 load_prelude :: IO (LEnv SExpr)
 load_prelude = do
   text <- readFile prelude_path
   (e, _) <- eval_scope start_env $ Reader.read (start_point prelude_path) text
   return e
 
+-- | start environment
+-- | contains built-in functions and special operators
 start_env :: LEnv SExpr
 start_env = Env.fromList $
     (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) [
-    ("gensym",                       Just 0,  spop_gensym),
+    ("gensym",                       Just 0,  spop_gennsym),
     ("let",                          Nothing, spop_let),
     ("if",                           Just 3,  spop_if),
     ("define",                       Just 2,  spop_define),
@@ -131,6 +138,7 @@ start_env = Env.fromList $
     ("initial-env",      Just 0,  builtin_initial_env),
     ("function-env",     Just 1,  builtin_function_env) ])
 
+-- | loads environment from a file
 spop_env_from_file :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_env_from_file eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
@@ -143,6 +151,7 @@ spop_env_from_file eval eval_scope e [arg] = do
     other     -> report (point other) "string expected"
 spop_env_from_file _    _          _        _    = report_undef "just one argument required"
 
+-- | loads environment from a file without prelude loaded
 spop_env_from_file_no_prelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spop_env_from_file_no_prelude eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
@@ -155,6 +164,7 @@ spop_env_from_file_no_prelude eval eval_scope e [arg] = do
     other        -> report (point other) "string expected"
 spop_env__from_file_no_prelude _    _          _       _      = report_undef "just one argument required"
 
+-- | returns start environment plus prelude
 builtin_initial_env :: [SExpr] -> IO SExpr
 builtin_initial_env [] = do
   prelude <- load_prelude

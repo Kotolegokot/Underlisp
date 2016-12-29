@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE RankNTypes         #-}
 module Callable (Callable (..)
                 , bind
@@ -17,7 +16,7 @@ type EvalScope e a = Env e a => e a -> [a] -> IO (e a, a)
 -- Callable
 data Callable e a where
   -- lexical scope -> prototype -> s-expressions -> bound args
-  UserDefined :: (Env e a) => e a -> Prototype -> [a] -> [a] -> Callable e a
+  UserDefined :: Env e a => e a -> Prototype -> [a] -> [a] -> Callable e a
   -- lexical scope -> prototype -> s-expressions -> bound args
   Macro       :: Env e a => e a -> Prototype -> [a] -> [a] -> Callable e a
   -- name -> args count or rest -> function -> bound args
@@ -31,7 +30,7 @@ instance LispShow a => LispShow (Callable e a) where
   lisp_show (BuiltIn   name _ _ bound)        = "built-in function '" ++ name ++ "' " ++ lisp_show bound
   lisp_show (SpecialOp name _ _ bound)        = "special operator '" ++ name ++ "' " ++ lisp_show bound
 
--- bind --
+
 bind :: Callable e a -> [a] -> Callable e a
 
 bind (UserDefined scope prototype@(Prototype arg_names rest) sexprs bound) args
@@ -51,4 +50,3 @@ bind (SpecialOp name (Just args_count) f bound) args
   | args_count < (length bound + length args) = report_undef "too many arguments"
   | otherwise                                 = SpecialOp name (Just args_count) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
--- bind --
