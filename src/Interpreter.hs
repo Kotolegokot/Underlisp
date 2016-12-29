@@ -16,6 +16,7 @@ import SExpr
 import Util
 import Point
 import LispShow
+import Exception
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interprete_program :: String -> IO ()
@@ -41,7 +42,7 @@ repl = do
                                            else ioError err) $ do
             line <- getLine
             (e', expr) <- catch (Evaluator.eval_scope e $ Reader.read p line)
-                          (\err -> do hPutStrLn stderr $ show (err :: ErrorCall)
+                          (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
             putStrLn $ "=> " ++ lisp_show expr
             handle_lines (forward_row p) e'
