@@ -1,5 +1,3 @@
-(import-module "stdlib/ord.lisp")
-
 (defun reverse (xs)
   (if (null xs)
       '()
@@ -27,13 +25,13 @@
       (last (tail xs)))))
 
 (defun nth (n xs)
-  (switch ((null xs)       (error "nth: empty list"))
-          ((>= n (length xs)) (error "nth: out of bounds"))
-          ((< n 0)            (error "nth: negative index"))
-          (otherwise
-           (if (= n 0)
-               (head xs)
-             (nth (- n 1) (tail xs))))))
+  (cond ((null xs)       (error "nth: empty list"))
+	((>= n (length xs)) (error "nth: out of bounds"))
+	((< n 0)            (error "nth: negative index"))
+	(otherwise
+	 (if (= n 0)
+	     (head xs)
+	   (nth (- n 1) (tail xs))))))
 
 (defun map (f xs)
   (if (null xs)
@@ -93,20 +91,20 @@
       (find (p (tail xs))))))
 
 (defun take (n xs)
-  (switch ((> n (length xs)) (error "take: out of bounds"))
-          ((< n 0)           (error "take: negative number"))
-          (otherwise
-           (if (= n 0)
-               '()
-             (prepend (head xs) (take (- n 1) (tail xs)))))))
+  (cond ((> n (length xs)) (error "take: out of bounds"))
+	((< n 0)           (error "take: negative number"))
+	(otherwise
+	 (if (= n 0)
+	     '()
+	   (prepend (head xs) (take (- n 1) (tail xs)))))))
 
 (defun drop (n xs)
-  (switch ((> n (length xs)) (error "drop: out of bounds"))
-          ((< n 0)           (error "drop: negative number"))
-          (otherwise
-           (if (= n 0)
-               xs
-             (drop (- n 1) (tail xs))))))
+  (cond ((> n (length xs)) (error "drop: out of bounds"))
+	((< n 0)           (error "drop: negative number"))
+	(otherwise
+	 (if (= n 0)
+	     xs
+	   (drop (- n 1) (tail xs))))))
 
 (defun cons (a b)
   (if (list? b)
@@ -114,7 +112,7 @@
     (list a b)))
 
 (defun find (x xs)
-  (switch
+  (cond
    ((null xs)       False)
    ((= x (head xs)) True)
    (otherwise       (find x (tail xs)))))

@@ -12,4 +12,4 @@
 
   (let ((expr-var (gensym)))
     `(let ((~expr-var ~expr))
-       (switch @(handle-pairs expr-var pairs)))))
+       (cond @(handle-pairs expr-var pairs)))))

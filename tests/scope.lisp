@@ -26,8 +26,6 @@
 
  (assert (= (g 4) 19)))
 
-(import-module "stdlib/ord.lisp")
-
 (defun f-1 (x)
   (if (<= x 1)
       1

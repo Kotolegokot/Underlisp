@@ -15,13 +15,13 @@
 (defmacro unless (cond &rest body)
   `(when (not ~cond) @body))
 
-;; (switch (condition1 exp1) (condition2 exp2) ...)
-(defmacro switch (&rest pairs)
+;; (cond (condition1 exp1) (condition2 exp2) ...)
+(defmacro cond (&rest pairs)
   (if (null pairs)
-      ''()
+      ()
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
-       (switch @(tail pairs)))))
+       (cond @(tail pairs)))))
 
 ;; (import-module module-name)
 (defmacro import-module (filename)
@@ -40,7 +40,7 @@
 (defmacro apply (f xs)
   `(~f @(eval xs)))
 
-;; otherwise is used with `switch` macro
+;; otherwise is used with `cond` macro
 (define otherwise True)
 
 ;; not equal
@@ -153,7 +153,7 @@
   (> x 0))
 
 (defun atan2 (y x)
-  (switch
+  (cond
    ((pos? x)                 (atan (/ y x)))
    ((and (zero? x) (pos? y)) (/ pi 2))
    ((and (neg? x)  (pos? y)) (+ pi (atan (/ y x))))

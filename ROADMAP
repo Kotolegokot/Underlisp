@@ -14,8 +14,6 @@ data types:
 standard library:
   basic numeric operations
   input-output operators (format in particular)
-  switch -> cond
-
 
 implement in stdlib:
   ^
