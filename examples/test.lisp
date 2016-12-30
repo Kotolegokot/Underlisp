@@ -1,29 +1,22 @@
-(import-module "stdlib/io.lisp")
-(import-module "stdlib/functional.lisp")
+;;(import-module "stdlib/io.lisp")
+;;(import-module "stdlib/functional.lisp")
 
-;;(write-ln (initial-env))
+(import-module "examples/dfa.lisp")
 
-;; (import-module "examples/dfa.lisp")
+(set dfa-1
+     (dfa 0 '(1) (lambda (state symbol)
+		   (case state
+			 (0 (case symbol
+				  (#0 0)
+				  (#1 1)))
+			 (1 (case symbol
+				  (#0 0)
+				  (#1 1)))))))
 
-;; (define dfa-1 (dfa 0 '(1) (lambda (state symbol)
-;;                             (cond
-;;                              ((= state 0)
-;;                               (cond
-;;                                ((= symbol #1) 1)
-;;                                ((= symbol #0) 0)))
-;;                              ((= state 1)
-;;                               (cond
-;;                                ((= symbol #1) 1)
-;;                                ((= symbol #0) 0)))))))
+(print-string "Enter sequence: ")
+(flush)
+(set str (get-line))
 
-;; (print-string "Enter sequence: ")
-;; (flush)
-;; (define str (get-line))
-
-;; (if (dfa.test dfa-1 str)
-;;     (print-string-ln "SUCCESS")
-;;   (print-string-ln "PIZDETZ"))
-
-(cond
- ((= 1 2)   (print-string-ln "MEOW"))
- (otherwise (print-string-ln "BARK")))
+(if (dfa.test dfa-1 str)
+    (print-string-ln "SUCCESS")
+  (print-string-ln "PIZDETZ"))
