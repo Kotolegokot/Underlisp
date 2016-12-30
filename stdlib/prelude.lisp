@@ -452,10 +452,10 @@
   (head (tail (div-mod x y))))
 
 (defun sign (x)
-  (cond
-   ((zero? x) 0)
-   ((neg?  x) -1)
-   ((pos?  x) 1)))
+  (case (compare x 0)
+	('EQ 0)
+	('LT -1)
+	('GT 1)))
 
 (define succ [+ 1])
 (define pred [(flip -) 1])
