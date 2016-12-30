@@ -162,7 +162,7 @@
              (zip-with f (tail xs) (tail ys)))))
 
 (defun elem (y xs)
-  (foldl (lambda (acc x) (if (= x y) True acc)) False xs))
+  (foldl (lambda (acc x) (or (= x y) acc)) False xs))
 
 (defun filter (p xs)
   (if (null xs)
@@ -179,7 +179,7 @@
 
 (defun find (p xs)
   (if (null xs)
-      '()
+      ()
     (if (p (head xs))
         (head xs)
       (find (p (tail xs))))))
@@ -204,12 +204,6 @@
   (if (list? b)
       (prepend a b)
     (list a b)))
-
-(defun find (x xs)
-  (cond
-   ((null xs)       False)
-   ((= x (head xs)) True)
-   (otherwise       (find x (tail xs)))))
 
 (defmacro case (expr &rest pairs)
   (defun handle-pairs (expr-var pairs)
