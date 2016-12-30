@@ -1,7 +1,8 @@
 pattern matching
 FFI
 call stack
-define and set should be distinct things
+adequate REPL
+partial exporting in modules
 
 data types:
   fractional
