@@ -6,7 +6,10 @@ module Lib.Environment (spopEnv
                        , spopCurrentEnv
                        , builtinFunctionEnv
                        , spopGetArgs
-                       , spopWithArgs) where
+                       , spopWithArgs
+                       , builtinGetEnv) where
+
+import System.Posix.Env (setEnv, getEnv)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
@@ -72,3 +75,13 @@ spopWithArgs eval evalScope e (args:sexprs) = do
   (_, expr) <- evalScope e' sexprs
   return (e, expr)
 spopWithArgs _    _         _ _             = reportUndef "at least one argument required"
+
+builtinGetEnv :: [SExpr] -> IO SExpr
+builtinGetEnv [name]
+  | not $ isString name = report (point name) "string expected"
+  | otherwise           = do
+      result <- getEnv $ fromString name
+      return $ case result of
+        Just value -> toString value
+        Nothing    -> nil
+builtinGetEnv _ = reportUndef "just one argument required"

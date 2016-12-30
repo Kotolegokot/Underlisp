@@ -112,3 +112,6 @@ isString = isList .&& (all Expr.isChar . Expr.fromList)
 
 fromString :: Expr e a => a -> String
 fromString = map Expr.fromChar . Expr.fromList
+
+toString :: Expr e a => String -> a
+toString = list . map char
