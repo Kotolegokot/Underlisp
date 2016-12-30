@@ -239,9 +239,11 @@
   (print-string str)
   (newline))
 
+(defun write (s-expr)
+  (print-string (to-string s-expr)))
+
 (defun write-ln (s-expr)
-  (write s-expr)
-  (newline))
+  (print-string-ln (to-string s-expr)))
 
 ;; swap a function's args
 (defun flip (f)
