@@ -52,10 +52,6 @@
   `(load-env
     (env-from-file-no-prelude ~filename)))
 
-;; (apply function list)
-(defmacro apply (f xs)
-  `(~f @(eval xs)))
-
 ;; otherwise is used with `cond` macro
 (define otherwise True)
 
@@ -218,7 +214,7 @@
 (defmacro case (expr &rest pairs)
   (defun handle-pairs (expr-var pairs)
     (if (null pairs)
-	nil
+	()
       (let ((first (head pairs)))
 	(prepend
 	 `((= ~expr-var ~(head first))
@@ -244,6 +240,41 @@
 
 (defun write-ln (s-expr)
   (print-string-ln (to-string s-expr)))
+
+(defun format (template &rest args)
+  ;; state := none | tilde
+  (defun format' (state template args)
+    (case state
+	  ('none (if (null template)
+		     ()
+		   (if (= (head template) #~)
+		       (format' 'tilde (tail template) args)
+		     (prepend (head template)
+			      (format' 'none (tail template) args)))))
+	  ('tilde (if (null template)
+		      (error "EOL after ~")
+		    (cond
+		     ((= (head template) #%)
+		      (prepend #newline
+			       (format' 'none (tail template) args)))
+		     ((= (head template) #~)
+		      (prepend #~
+			       (format' 'none (tail template) args)))
+		     ((= (head template) #a)
+		      (append (to-string (head args))
+			      (format' 'none (tail template) (tail args))))
+		     ((= (head template) #c)
+		      (if (not (char? (head args)))
+			  (error "char expected")
+			(prepend (head args)
+				(format' 'none (tail template) (tail args)))))
+		     (otherwise
+		      (prepend (head template)
+			       (format' 'none (tail template) args))))))))
+  (format' 'none template args))
+
+;;(defun print-format (template &rest args)
+;;  (print-string (apply format (prepend template args))))
 
 ;; swap a function's args
 (defun flip (f)
