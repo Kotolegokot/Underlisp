@@ -47,5 +47,7 @@ repl = do
             (e', expr) <- catch (Evaluator.evalScope e $ Reader.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
-            putStrLn $ "=> " ++ lispShow expr
+            putStrLn $ "=> " ++ if isString expr
+                                then fromString expr
+                                else lispShow expr
             handleLines (forwardRow p) e'
