@@ -87,32 +87,36 @@
 
 ;; cosecant
 (defun csc (x)
-  (/ 1 (sin x)))
+  (recip  (sin x)))
 
 ;; secant
 (defun sec (x)
-  (/ 1 (cos x)))
+  (recip (cos x)))
 
 ;; arccosecant
 (defun acsc (x)
-  (asin (/ 1 x)))
+  (asin (recip x)))
 
 ;; arcsecant
 (defun asec (x)
-  (acos (/ 1 x)))
+  (acos (recip x)))
 
 ;; hyperbolic cosecant
 (defun csch (x)
-  (/ 1 (sinh x)))
+  (recip (sinh x)))
 
 ;; hyperbolic secant
 (defun sech (x)
-  (/ 1 (cosh x)))
+  (recip (cosh x)))
 
 ;; hyperbolic arccosecant
 (defun acsch (x)
-  (asinh (/ 1 x)))
+  (asinh (recip x)))
 
 ;; hyperbolic arcsecant
 (defun asech (x)
-  (acosh (/ 1 x)))
+  (acosh (recip x)))
+
+;; reciprocal fraction
+(defun recip (x)
+  (/ 1 (float x)))
