@@ -22,10 +22,10 @@ import Exception
 preludePath = "stdlib/prelude.lisp" :: String
 
 -- | evaluates a module and returns nothing
-evaluateProgram :: [SExpr] -> IO ()
-evaluateProgram body = do
+evaluateProgram :: [SExpr] -> [String] -> IO ()
+evaluateProgram body args = do
   prelude <- loadPrelude
-  void $ evalScope prelude body
+  void $ evalScope (setArgs args prelude) body
 
 -- | evaluates a module
 evaluateModule :: [SExpr] -> IO (Map String SExpr)
@@ -96,6 +96,7 @@ startEnv = Env.fromList $
     ("env-from-file",                Just 1,  spopEnvFromFile),
     ("env-from-file-no-prelude",     Just 1,  spopEnvFromFileNoPrelude),
     ("defined?",                     Just 1,  spopDefined),
+    ("get-args",                     Just 0,  spopGetArgs),
     ("seq",                          Nothing, spopSeq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtinType),

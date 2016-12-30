@@ -1,6 +1,3 @@
-;;(import-module "stdlib/io.lisp")
-;;(import-module "stdlib/functional.lisp")
-
 (import-module "examples/dfa.lisp")
 
 (set dfa-1
@@ -13,10 +10,15 @@
 				  (#0 0)
 				  (#1 1)))))))
 
-(print-string "Enter sequence: ")
-(flush)
-(set str (get-line))
+(setfun show-usage ()
+  (print-string-ln "Usage: prog <sequence>"))
 
-(if (dfa.test dfa-1 str)
-    (print-string-ln "SUCCESS")
-  (print-string-ln "PIZDETZ"))
+(set args (get-args))
+(if (/= (length args) 1)
+    (show-usage)
+  (seq
+   (set sequence (head args))
+
+   (if (dfa.test dfa-1 sequence)
+       (print-string-ln "SUCCESS")
+     (print-string-ln "PIZDETZ"))))

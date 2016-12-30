@@ -19,11 +19,14 @@ import LispShow
 import Exception
 
 -- | a lisp interpretator is just a reader and evaluator joined together
-interpreteProgram :: String -> IO ()
-interpreteProgram filename = readFile filename >>= (Evaluator.evaluateProgram . Reader.read (startPoint filename))
+interpreteProgram :: String -> [String] -> IO ()
+interpreteProgram filename args = do
+  text <- readFile filename
+  let sexprs = Reader.read (startPoint filename) text
+  Evaluator.evaluateProgram sexprs args
 
 interpreteModule :: String -> IO (Map String SExpr)
-interpreteModule filename  = readFile filename >>= (Evaluator.evaluateModule . Reader.read (startPoint filename))
+interpreteModule filename = readFile filename >>= (Evaluator.evaluateModule . Reader.read (startPoint filename))
 
 interpreteModuleNoPrelude :: String -> IO (Map String SExpr)
 interpreteModuleNoPrelude filename = readFile filename >>=

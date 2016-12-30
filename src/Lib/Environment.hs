@@ -1,10 +1,11 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Environment (spopEnv,
-                        spopLoadEnv,
-                        spopImportEnv,
-                        spopCurrentEnv,
-                        builtinFunctionEnv) where
+module Lib.Environment (spopEnv
+                       , spopLoadEnv
+                       , spopImportEnv
+                       , spopCurrentEnv
+                       , builtinFunctionEnv
+                       , spopGetArgs) where
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
@@ -54,3 +55,7 @@ builtinFunctionEnv :: [SExpr] -> IO SExpr
 builtinFunctionEnv [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ Env.merge e
 builtinFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
 builtinFunctionEnv _                                           = reportUndef "just one argument required"
+
+spopGetArgs :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopGetArgs _ _ e [] = return (e, list . map (list . map char) $ getArgs e)
+spopGetArgs _ _ _ _  = reportUndef "no arguments required"

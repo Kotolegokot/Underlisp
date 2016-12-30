@@ -1,8 +1,6 @@
 ;;; DFA = (start state, accepting states, delta function)
 ;;; delta = state, symbol -> state
 
-(import-module "stdlib/list.lisp")
-
 ;; dfa : start-state, accepting-states, delta -> dfa
 (defun dfa (start-state accepting-states delta)
   (list start-state accepting-states delta))
@@ -15,4 +13,4 @@
   (let ((last-state (foldl (dfa.delta dfa)
                            (dfa.start-state dfa)
                            sequence)))
-    (find last-state (dfa.accepting-states dfa))))
+    (elem last-state (dfa.accepting-states dfa))))

@@ -84,9 +84,9 @@ spopInterprete eval evalScope e [arg] = do
 spopInterprete _    _         _ _     = reportUndef "just one argument required"
 
 spopGensym :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spopGensym _ _ e@(LEnv g xs) [] = do
-  let (g', sym) = gensym g e
-  return (LEnv g' xs, sym)
+spopGensym _ _ e [] = do
+  let (g, sym) = gensym (getG e) e
+  return (setG g e, sym)
   where gensym :: Int -> LEnv SExpr -> (Int, SExpr)
         gensym n e = case Env.lookup ("G-" ++ show n) e of
           Just _  -> gensym (n + 1) e
