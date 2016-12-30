@@ -406,3 +406,6 @@
    ((zero? x) 0)
    ((neg?  x) -1)
    ((pos?  x) 1)))
+
+(define succ [+ 1])
+(define pred [(flip -) 1])

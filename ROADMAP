@@ -12,8 +12,4 @@ data types:
     and so forth...
 
 standard library:
-  basic numeric operations
   input-output operators (format in particular)
-
-succ
-pred
