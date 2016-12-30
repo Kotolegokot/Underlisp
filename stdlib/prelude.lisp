@@ -119,12 +119,52 @@
 ;; reciprocal fraction
 (defun recip (x)
   (/ 1 (float x)))
+;; less or equal
+(defun <= (x y)
+  (or (< x y)
+      (= x y)))
 
-;; (defun atan2 (y x)
-;;   (switch
-;;    ((> x 0)               (atan (/ y x)))
-;;    ((and (= x 0)  (> y 0)) (/ pi 2))
-;;    ((and (< x 0)  (> y 0)) (+ pi (atan (/ y x))))
-;;    ((or
-;;      (and (<= x 0) (< y 0))
-;;      (and
+;; greater than
+(defun > (x y)
+  (not (<= x y)))
+
+;; greater or equal
+(defun >= (x y)
+  (not (< x y)))
+
+;; (compare x) returns 'LT, 'EQ, or 'GT
+(defun compare (x y)
+  (if (= x y)
+      'EQ
+    (if (< x y)
+      'LT
+      'GT)))
+
+(defun neg (x)
+  (* -1 x))
+
+(defun zero? (x)
+  (= x 0))
+
+(defun neg? (x)
+  (< x 0))
+
+(defun pos? (x)
+  (> x 0))
+
+(defun atan2 (y x)
+  (switch
+   ((pos? x)                 (atan (/ y x)))
+   ((and (zero? x) (pos? y)) (/ pi 2))
+   ((and (neg? x)  (pos? y)) (+ pi (atan (/ y x))))
+   ((or
+     (and (<= x 0) (neg? y))
+     (and (neg? x) (negative-zero? y))
+     (and (negative-zero? x) (negative-zero? y)))
+    (neg (atan2 (neg y) x)))
+   ((and (zero? y)
+	 (or (neg? x)
+	     (negative-zero? x)))
+    pi)
+   ((and (zero? x) (zero? y)) y)
+   (otherwise (+ x y))))

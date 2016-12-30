@@ -43,6 +43,8 @@ instance Eq (Atom e a) where
   (ASymbol s)   == (ASymbol s')   = s == s'
   (ACallable c) == (ACallable c') = undefined
   (AEnv e)      == (AEnv e')      = e == e'
+  (AInt i)      == (AFloat f)     = (fromIntegral i) == f
+  (AFloat f)    == (AInt i)       = f == (fromIntegral i)
   _             == _              = False
 
 instance Ord (Atom e a) where
