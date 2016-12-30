@@ -81,9 +81,10 @@
      (error "assert failed")))
 
 (define nil ())
-(define PI  3.14159265359)
-(define E   2.71828182845)
-(define INF Infinity)
+(define pi  3.14159265359)
+(define e   2.71828182845)
+(define inf Infinity)
+(define nan NaN)
 
 ;; cosecant
 (defun csc (x)
@@ -120,3 +121,9 @@
 ;; reciprocal fraction
 (defun recip (x)
   (/ 1 (float x)))
+
+(defun nan? (x)
+  (= x NaN))
+
+(defun inf? (x)
+  (= x Infinity))
