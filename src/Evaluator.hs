@@ -75,6 +75,7 @@ eval e (SList p (first:rest))  = do
         (e', expr) <- f eval evalScope e (bound ++ rest)
         return (e', replacePoint expr p)
     _-> report p $ "unable to execute s-expression: '" ++ lispShow first' ++ "'"
+eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym)) = case Env.lookup sym e of
   Just value -> return (e, replacePoint value p)
   Nothing    -> report p $ "undefined identificator '" ++ sym ++ "'"

@@ -1,7 +1,7 @@
 pattern matching
 FFI
-forbid '_' identifier
 call stack
+define and set should be distinct things
 
 data types:
   fractional
