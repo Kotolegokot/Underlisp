@@ -382,3 +382,9 @@
 
 (defun mod (x y)
   (head (tail (div-mod x y))))
+
+(defun sign (x)
+  (cond
+   ((zero? x) 0)
+   ((neg?  x) -1)
+   ((pos?  x) 1)))

@@ -55,6 +55,8 @@ instance Ord (Atom e a) where
   compare (ASymbol s)   (ASymbol s')   = compare s s'
   compare (ACallable _) (ACallable _') = undefined
   compare (AEnv e)      (AEnv e')      = undefined
+  compare (AInt i)      (AFloat f)     = compare (fromIntegral i) f
+  compare (AFloat f)    (AInt i)       = compare f (fromIntegral i)
   compare _             _              = undefined
 
 isInt :: Atom e a -> Bool
