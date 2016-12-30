@@ -81,5 +81,38 @@
      (error "assert failed")))
 
 (define nil ())
-(define PI 3.14159265359)
-(define E  2.71828182845)
+(define PI  3.14159265359)
+(define E   2.71828182845)
+(define INF Infinity)
+
+;; cosecant
+(defun csc (x)
+  (/ 1 (sin x)))
+
+;; secant
+(defun sec (x)
+  (/ 1 (cos x)))
+
+;; arccosecant
+(defun acsc (x)
+  (asin (/ 1 x)))
+
+;; arcsecant
+(defun asec (x)
+  (acos (/ 1 x)))
+
+;; hyperbolic cosecant
+(defun csch (x)
+  (/ 1 (sinh x)))
+
+;; hyperbolic secant
+(defun sech (x)
+  (/ 1 (cosh x)))
+
+;; hyperbolic arccosecant
+(defun acsch (x)
+  (asinh (/ 1 x)))
+
+;; hyperbolic arcsecant
+(defun asech (x)
+  (acosh (/ 1 x)))
