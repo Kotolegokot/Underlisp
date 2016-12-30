@@ -161,6 +161,8 @@ startEnv = Env.fromList $
     ("denormalized?",    Just 1,  builtinIsDenormalized),
     ("negative-zero?",   Just 1,  builtinIsNegativeZero),
     ("IEEE?",            Just 1,  builtinIsIEEE),
+    ("quot-rem",         Just 2,  builtinQuotRem),
+    ("div-mod",          Just 2,  builtinDivMod),
     ("not",              Just 1,  builtinNot),
     ("=",                Just 2,  builtinEQ),
     ("<",                Just 2,  builtinLT),

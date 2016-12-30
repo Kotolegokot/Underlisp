@@ -80,6 +80,207 @@
      (put-char #newline)
      (error "assert failed")))
 
+(defun reverse (xs)
+  (if (null xs)
+      '()
+    (append (reverse (tail xs))
+            (list (head xs)))))
+
+(defun length (xs)
+  (foldl (lambda (acc _) (+ acc 1)) 0 xs))
+
+(defun prepend (x xs)
+  (append (list x) xs))
+
+(defun init (xs)
+  (if (null xs)
+      (error "init: empty list")
+    (if (= 1 (length xs))
+            '()
+      (prepend (head xs) (init (tail xs))))))
+
+(defun last (xs)
+  (if (null xs)
+      (error "last: empty list")
+    (if (= 1 (length xs))
+        xs
+      (last (tail xs)))))
+
+(defun nth (n xs)
+  (cond ((null xs)       (error "nth: empty list"))
+	((>= n (length xs)) (error "nth: out of bounds"))
+	((< n 0)            (error "nth: negative index"))
+	(otherwise
+	 (if (= n 0)
+	     (head xs)
+	   (nth (- n 1) (tail xs))))))
+
+(defun map (f xs)
+  (if (null xs)
+      nil
+    (prepend (f (head xs))
+             (map f (tail xs)))))
+
+(defun map-nil (f xs)
+  (map f xs)
+  nil)
+
+(defun foldl (f acc xs)
+  (if (null xs)
+      acc
+    (foldl f (f acc (head xs))
+           (tail xs))))
+
+(defun foldr (f acc xs)
+  (if (null xs)
+      acc
+    (foldr f (f (last xs) acc)
+           (init xs))))
+
+(defun zip (xs ys)
+  (if (or (null xs) (null ys))
+      '()
+    (prepend (list (head xs) (head ys))
+             (zip (tail xs) (tail ys)))))
+
+(defun zip-with (f xs ys)
+  (if (or (null xs) (null ys))
+      '()
+    (prepend (f (head xs) (head ys))
+             (zip-with f (tail xs) (tail ys)))))
+
+(defun elem (y xs)
+  (foldl (lambda (acc x) (if (= x y) True acc)) False xs))
+
+(defun filter (p xs)
+  (if (null xs)
+      '()
+    (if (p (head xs))
+        (prepend (head xs) (filter p (tail xs)))
+      (filter p (tail xs)))))
+
+(defun all (p xs)
+  (foldl (lambda (acc x) (if (p x) acc False)) True xs))
+
+(defun any (p xs)
+  (foldl (lambda (acc x) (if (p x) True acc)) False xs))
+
+(defun find (p xs)
+  (if (null xs)
+      '()
+    (if (p (head xs))
+        (head xs)
+      (find (p (tail xs))))))
+
+(defun take (n xs)
+  (cond ((> n (length xs)) (error "take: out of bounds"))
+	((< n 0)           (error "take: negative number"))
+	(otherwise
+	 (if (= n 0)
+	     '()
+	   (prepend (head xs) (take (- n 1) (tail xs)))))))
+
+(defun drop (n xs)
+  (cond ((> n (length xs)) (error "drop: out of bounds"))
+	((< n 0)           (error "drop: negative number"))
+	(otherwise
+	 (if (= n 0)
+	     xs
+	   (drop (- n 1) (tail xs))))))
+
+(defun cons (a b)
+  (if (list? b)
+      (prepend a b)
+    (list a b)))
+
+(defun find (x xs)
+  (cond
+   ((null xs)       False)
+   ((= x (head xs)) True)
+   (otherwise       (find x (tail xs)))))
+
+(defmacro case (expr &rest pairs)
+  (defun handle-pairs (expr-var pairs)
+    (if (null pairs)
+	nil
+      (let ((first (head pairs)))
+	(prepend
+	 `((= ~expr-var ~(head first))
+	   ~(head (tail first)))
+	 (handle-pairs expr-var (tail pairs))))))
+
+  (let ((expr-var (gensym)))
+    `(let ((~expr-var ~expr))
+       (cond @(handle-pairs expr-var pairs)))))
+
+(defun newline ()
+  (put-char #newline))
+
+(defun print-string (str)
+  (map-nil put-char str))
+
+(defun print-string-ln (str)
+  (print-string str)
+  (newline))
+
+(defun write-ln (s-expr)
+  (write s-expr)
+  (newline))
+
+;; swap a function's args
+(defun flip (f)
+  (lambda (x y) (f y x)))
+
+;; compose two functions
+(defun compose (f g)
+  (lambda (x) (f (g x))))
+
+;; the identity
+(defun id (x) x)
+
+;; const returns the same value regardless its argument
+(defun const (x)
+  (lambda (y) x))
+
+;; same as (compose x1 (compose x2 (... xn)))
+(defun <<< (&rest fs)
+  (if (null fs)
+      id
+    (compose (head fs) (apply <<< (tail fs)))))
+
+;; same as (compose xn (compose x{n - 1} (... x1)))
+(defun >>> (&rest fs)
+  (if (null fs)
+      id
+    (compose (apply >>> (tail fs)) (head fs))))
+
+;; makes a function that takes a list take any
+;; number of arguments
+(defun curry (f)
+  (lambda (&rest rest)
+    (f rest)))
+
+;; make a function that takes any number of
+;; arguments take a list
+(defun uncurry (f)
+  [apply f])
+
+;; make a one parameter function take a list
+;; and modify its head
+(defun first (f)
+  (lambda (list)
+    (let ((e1 (nth 0 list))
+          (e2 (nth 1 list)))
+      (cons (f e1) e2))))
+
+;; make a one parameter function take a list
+;; and modify its second element
+(defun second (f)
+  (lambda (list)
+    (let ((e1 (nth 0 list))
+          (e2 (nth 1 list)))
+      (cons e1 (f e2)))))
+
 (define nil ())
 (define pi  3.14159265359)
 (define e   2.71828182845)
@@ -119,6 +320,7 @@
 ;; reciprocal fraction
 (defun recip (x)
   (/ 1 (float x)))
+
 ;; less or equal
 (defun <= (x y)
   (or (< x y)
@@ -168,3 +370,15 @@
     pi)
    ((and (zero? x) (zero? y)) y)
    (otherwise (+ x y))))
+
+(defun quot (x y)
+  (head (quot-rem x y)))
+
+(defun rem (x y)
+  (head (tail (quot-rem x y))))
+
+(defun div (x y)
+  (head (div-mod x y)))
+
+(defun mod (x y)
+  (head (tail (div-mod x y))))

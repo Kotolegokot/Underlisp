@@ -32,7 +32,9 @@ module Lib.Math (builtinSum
                 , builtinIsInfinite
                 , builtinIsDenormalized
                 , builtinIsNegativeZero
-                , builtinIsIEEE) where
+                , builtinIsIEEE
+                , builtinQuotRem
+                , builtinDivMod) where
 
 import Numeric.Special.Trigonometric
 import SExpr
@@ -258,3 +260,19 @@ builtinIsIEEE [num]
   | isFloat num = return . bool . isIEEE $ fromFloat num
   | otherwise   = report (point num) "float expected"
 builtinIsIEEE _ = reportUndef "just one argument required"
+
+builtinQuotRem :: [SExpr] -> IO SExpr
+builtinQuotRem [num1, num2]
+  | not $ isInt num1 = report (point num1) "int expected"
+  | not $ isInt num2 = report (point num2) "int expected"
+  | otherwise        = return $ list [int quot, int rem]
+    where (quot, rem) = quotRem (fromInt num1) (fromInt num2)
+builtinQuotRem _ = reportUndef "two arguments required"
+
+builtinDivMod :: [SExpr] -> IO SExpr
+builtinDivMod [num1, num2]
+  | not $ isInt num1 = report (point num1) "int expected"
+  | not $ isInt num2 = report (point num2) "int expected"
+  | otherwise        = return $ list [int div, int mod]
+    where (div, mod) = divMod (fromInt num1) (fromInt num2)
+builtinDivMod _ = reportUndef "two arguments required"
