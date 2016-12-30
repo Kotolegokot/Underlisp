@@ -83,8 +83,6 @@
 (define nil ())
 (define pi  3.14159265359)
 (define e   2.71828182845)
-(define inf Infinity)
-(define nan NaN)
 
 ;; cosecant
 (defun csc (x)
@@ -122,8 +120,11 @@
 (defun recip (x)
   (/ 1 (float x)))
 
-(defun nan? (x)
-  (= x NaN))
-
-(defun inf? (x)
-  (= x Infinity))
+;; (defun atan2 (y x)
+;;   (switch
+;;    ((> x 0)               (atan (/ y x)))
+;;    ((and (= x 0)  (> y 0)) (/ pi 2))
+;;    ((and (< x 0)  (> y 0)) (+ pi (atan (/ y x))))
+;;    ((or
+;;      (and (<= x 0) (< y 0))
+;;      (and

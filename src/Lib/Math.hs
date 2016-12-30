@@ -27,7 +27,12 @@ module Lib.Math (builtinSum
                 , builtinTruncate
                 , builtinRound
                 , builtinCeiling
-                , builtinFloor) where
+                , builtinFloor
+                , builtinIsNan
+                , builtinIsInfinite
+                , builtinIsDenormalized
+                , builtinIsNegativeZero
+                , builtinIsIEEE) where
 
 import Numeric.Special.Trigonometric
 import SExpr
@@ -222,4 +227,34 @@ builtinFloor :: [SExpr] -> IO SExpr
 builtinFloor [num]
   | isNumber num = return . int . floor $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinFlooe _ = reportUndef "just one argument required"
+builtinFloor _ = reportUndef "just one argument required"
+
+builtinIsNan :: [SExpr] -> IO SExpr
+builtinIsNan [num]
+  | isFloat num = return . bool . isNaN $ fromFloat num
+  | otherwise   = report (point num) "float or int expected"
+builtinIsNan _ = reportUndef "just one argument required"
+
+builtinIsInfinite :: [SExpr] -> IO SExpr
+builtinIsInfinite [num]
+  | isFloat num = return . bool . isInfinite $ fromFloat num
+  | otherwise   = report (point num) "float expected"
+builtinIsInfinite _ = reportUndef "just one argument required"
+
+builtinIsDenormalized :: [SExpr] -> IO SExpr
+builtinIsDenormalized [num]
+  | isFloat num = return . bool . isDenormalized $ fromFloat num
+  | otherwise   = report (point num) "float expected"
+builtinIsDenormalized _ = reportUndef "just one argument required"
+
+builtinIsNegativeZero :: [SExpr] -> IO SExpr
+builtinIsNegativeZero [num]
+  | isFloat num = return . bool . isNegativeZero $ fromFloat num
+  | otherwise   = report (point num) "float expected"
+builtinIsNegativeZero _ = reportUndef "just one argument required"
+
+builtinIsIEEE :: [SExpr] -> IO SExpr
+builtinIsIEEE [num]
+  | isFloat num = return . bool . isIEEE $ fromFloat num
+  | otherwise   = report (point num) "float expected"
+builtinIsIEEE _ = reportUndef "just one argument required"
