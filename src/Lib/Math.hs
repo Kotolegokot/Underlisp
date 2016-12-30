@@ -5,21 +5,15 @@ module Lib.Math (builtinSum
                 , builtinFloat
                 , builtinExp
                 , builtinLn
-                , builtinSqrt
                 , builtinPower
-                , builtinLog
                 , builtinSin
                 , builtinCos
-                , builtinTan
-                , builtinCot
                 , builtinASin
                 , builtinACos
                 , builtinATan
                 , builtinACot
                 , builtinSinH
                 , builtinCosH
-                , builtinTanH
-                , builtinCotH
                 , builtinASinH
                 , builtinACosH
                 , builtinATanH
@@ -92,24 +86,11 @@ builtinLn [num]
   | otherwise    = report (point num) "float or int expected"
 builtinLn _ = reportUndef "just one argument required"
 
-builtinSqrt :: [SExpr] -> IO SExpr
-builtinSqrt [num]
-  | isNumber num = return . float . sqrt $ fromNumber num
-  | otherwise    = report (point num) "float or int expected"
-builtinSqrt _ = reportUndef "just one argument required"
-
 builtinPower :: [SExpr] -> IO SExpr
 builtinPower nums@[num1, num2] = case numArgs nums of
   NTInt   -> return . int $ fromInt num1 ^ fromInt num2
   NTFloat -> return . float $ fromNumber num1 ** fromNumber num2
 builtinPower _ = reportUndef "two arguments required"
-
-builtinLog :: [SExpr] -> IO SExpr
-builtinLog nums@[num1, num2]
-  | not $ isNumber num1 = report (point num1) "float or int expected"
-  | not $ isNumber num2 = report (point num2) "float or int expected"
-  | otherwise           = return . float $ logBase (fromNumber num1) (fromNumber num2)
-builtinLog _ = reportUndef "two arguments required"
 
 builtinSin :: [SExpr] -> IO SExpr
 builtinSin [num]
@@ -122,18 +103,6 @@ builtinCos [num]
   | isNumber num = return . float . cos $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
 builtinCos _ = reportUndef "just one argument required"
-
-builtinTan :: [SExpr] -> IO SExpr
-builtinTan [num]
-  | isNumber num = return . float . tan $ fromNumber num
-  | otherwise    = report (point num) "float or int expected"
-builtinTan _ = reportUndef "just one argument required"
-
-builtinCot :: [SExpr] -> IO SExpr
-builtinCot [num]
-  | isNumber num = return . float . cot $ fromNumber num
-  | otherwise    = report (point num) "float or int expected"
-builtinCot _ = reportUndef "just one argument requried"
 
 builtinASin :: [SExpr] -> IO SExpr
 builtinASin [num]
@@ -170,18 +139,6 @@ builtinCosH [num]
   | isNumber num = return . float . cosh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
 builtinCosH _ = reportUndef "just one argument required"
-
-builtinTanH :: [SExpr] -> IO SExpr
-builtinTanH [num]
-  | isNumber num = return . float . tanh $ fromNumber num
-  | otherwise    = report (point num) "float or int expected"
-builtinTanH _ = reportUndef "just one argument required"
-
-builtinCotH :: [SExpr] -> IO SExpr
-builtinCotH [num]
-  | isNumber num = return . float . coth $ fromNumber num
-  | otherwise    = report (point num) "float or int expected"
-builtinCotH _ = reportUndef "just one argument required"
 
 builtinASinH :: [SExpr] -> IO SExpr
 builtinASinH [num]

@@ -371,6 +371,24 @@
    ((and (zero? x) (zero? y)) y)
    (otherwise (+ x y))))
 
+(defun tan (x)
+  (/ (sin x) (cos x)))
+
+(defun cot (x)
+  (/ (cos x) (sin x)))
+
+(defun tanh (x)
+  (/ (sinh x) (cosh x)))
+
+(defun coth (x)
+  (/ (cosh x) (sinh x)))
+
+(defun sqrt (x)
+  (^ x 0.5))
+
+(defun log (x y)
+  (/ (ln x) (ln y)))
+
 (defun quot (x y)
   (head (quot-rem x y)))
 

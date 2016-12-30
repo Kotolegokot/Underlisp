@@ -15,9 +15,5 @@ standard library:
   basic numeric operations
   input-output operators (format in particular)
 
-implement in stdlib:
-  ^
-  log
-  sqrt
-  tan
-  tanh
+succ
+pred
