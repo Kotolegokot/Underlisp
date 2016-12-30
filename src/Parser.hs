@@ -43,10 +43,10 @@ parseSugar :: Point -> String -> [(Lexeme, Point)] -> (SExpr, [(Lexeme, Point)])
 parseSugar p s ((Closed  _,  p'):_)   = report p' $ "right paren after '" ++ s ++ "' is forbidden"
 parseSugar p s ((Open    b,  p'):xs)  = let (subl, rest) = parseList p' b xs
                                         in (SList p [SAtom p (ASymbol s), subl], rest)
-parse_sugar p s ((Atom    a,  p'):xs)  = (SList p' [symbol s, atom a], xs)
-parse_sugar p s ((Sugar   s', p'):xs)  = let (subl, rest) = parseSugar p' s' xs
+parseSugar p s ((Atom    a,  p'):xs)  = (SList p' [symbol s, atom a], xs)
+parseSugar p s ((Sugar   s', p'):xs)  = let (subl, rest) = parseSugar p' s' xs
                                          in (SList p [SAtom p (ASymbol s), subl], rest)
-parse_sugar p s ((LString l,  p'):xs)  = (SList p [SAtom p (ASymbol s), strToList p l], xs)
+parseSugar p s ((LString l,  p'):xs)  = (SList p [SAtom p (ASymbol s), strToList p l], xs)
 
 strToList :: Point -> String -> SExpr
 strToList p str = SList p (SAtom p (ASymbol "list") : chars)

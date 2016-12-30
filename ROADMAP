@@ -1,12 +1,16 @@
 pattern matching
-format function
-basic numeric operations
+FFI
+forbid '_' identifier
+call stack
 
-fractional
-long numbers
-maps
-vectors
-arrays
-  and so forth...
+data types:
+  fractional
+  long numbers
+  maps
+  vectors
+  arrays
+    and so forth...
 
-standard library
+standard library:
+  basic numeric operations
+  input-output operators (format in particular)
