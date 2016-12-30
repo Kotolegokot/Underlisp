@@ -46,35 +46,15 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (Env.pass e, nil)
 
 -- | evaluates an s-expression
 eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
-eval e (SList p (first:rest))  = do
+eval e (SList _ (first:args))  = do
   (_, first') <- eval e first
-  rethrow (\le -> if lePoint le == Undefined
-                  then le { lePoint = p }
-                  else le) $ case first' of
-    SAtom _ (ACallable (UserDefined localE prototype sexprs bound))      -> do
-      pairs <- mapM (eval e) rest
-      let argBindings = bindArgs prototype (bound ++ map snd pairs)
-      (_, expr) <- evalScope (Env.lappend localE argBindings) sexprs
-      return (e, replacePoint expr p)
-    SAtom _ (ACallable (Macro localE prototype sexprs bound))            -> do
-      let argBindings = bindArgs prototype (bound ++ rest)
-      (_, expr) <- evalScope (Env.lappend localE argBindings) sexprs
-      (e', expr') <- eval e expr
-      return (e', replacePoint expr' p)
-    SAtom _ (ACallable (BuiltIn name _ f bound))                          ->
-      rethrow (\le -> if null $ leCmd le
-                      then le { leCmd = name }
-                      else le) $ do
-        pairs <- mapM (eval e) rest
-        result <- f (bound ++ map snd pairs)
-        return (e, replacePoint result p)
-    SAtom _ (ACallable (SpecialOp name _ f bound))                        ->
-      rethrow (\le -> if null $ leCmd le
-                      then le { leCmd = name }
-                      else le) $ do
-        (e', expr) <- f eval evalScope e (bound ++ rest)
-        return (e', replacePoint expr p)
-    _-> report p $ "unable to execute s-expression: '" ++ lispShow first' ++ "'"
+  if isCallable first'
+    then eval' $ fromCallable first'
+    else report (point first) $ "unable to execute s-expression: '" ++ lispShow first' ++ "'"
+  where eval' c | isUserDefined c || isBuiltIn c = do
+                    pairs <- mapM (eval e) args
+                    call (point first) eval evalScope e c (map snd pairs)
+                | isMacro c || isSpecialOp c     = call (point first) eval evalScope e c args
 eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym)) = case Env.lookup sym e of
   Just value -> return (e, replacePoint value p)
@@ -101,6 +81,7 @@ startEnv = Env.fromList $
     ("macro",                        Nothing, spopMacro),
     ("macro-expand",                 Just 1,  spopMacroExpand),
     ("bind",                         Nothing, spopBind),
+    ("apply",                        Just 2,  spopApply),
     ("quote",                        Just 1,  spopQuote),
     ("backquote",                    Just 1,  spopBackquote),
     ("interprete",                   Just 1,  spopInterprete),

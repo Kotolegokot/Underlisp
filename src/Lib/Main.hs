@@ -6,6 +6,7 @@ module Lib.Main (spopLet
                 , spopDefined
                 , builtinType
                 , spopBind
+                , spopApply
                 , builtinError) where
 
 import Data.List (delete, elemIndices)
@@ -18,6 +19,8 @@ import SExpr
 import LexicalEnvironment
 import Callable
 import Exception
+import LispShow
+import Util
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
@@ -25,22 +28,6 @@ spopLambda :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -
 spopLambda _ _ e (lambdaList:body) = return (e, callable $ UserDefined e prototype body [])
   where prototype = parseLambdaList lambdaList
 spopLambda _    _ _ [] = reportUndef "at least one argument expected"
-
--- | takes an s-list of the form (arg1 arg2... [&rest argLast])
--- | and constructs a Prototype
-parseLambdaList :: SExpr -> Prototype
-parseLambdaList (SList p lambdaList)
-  | not $ all isSymbol lambdaList = report p "all items in a lambda list must be symbols"
-  | length ixs > 1                = report p "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2       = report p "&rest must be last but one"
-  | otherwise                     = if rest
-                                    then Prototype (delete "&rest" . map fromSymbol $ lambdaList) rest
-                                    else Prototype (map fromSymbol $ lambdaList) rest
-  where ixs   = elemIndices (symbol "&rest") lambdaList
-        ix    = head ixs
-        rest  = length ixs == 1
-        count = length lambdaList
-parseLambdaList _ = reportUndef "lambda list must be a list"
 
 -- special operator let
 spopLet :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
@@ -94,6 +81,17 @@ spopBind eval _ e (first:args) = do
              let args' = map snd pairs
              return (e, callable $ bind other args')
 spopBind _   _ _ []            = reportUndef "at least one argument required"
+
+-- special operator apply
+spopApply :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopApply eval evalScope e [first, args] = do
+  (_, first') <- eval e first
+  (_, args')  <- eval e args
+  lispPrint $ list (first':fromList args')
+  if not $ isList args'
+    then report (point args) "list expected"
+    else call (point first) eval evalScope e (fromCallable first') (fromList args')
+spopApply _    _ _ _             = reportUndef "two arguments required"
 
 -- built-in function error
 builtinError :: [SExpr] -> IO SExpr

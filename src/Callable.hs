@@ -4,6 +4,10 @@ module Callable (Callable (..)
                 , bind
                 , Eval
                 , EvalScope
+                , isUserDefined
+                , isMacro
+                , isBuiltIn
+                , isSpecialOp
                 , module Prototype) where
 import LispShow
 import Env
@@ -30,6 +34,19 @@ instance LispShow a => LispShow (Callable e a) where
   lispShow (BuiltIn   name _ _ bound)        = "built-in function '" ++ name ++ "' " ++ lispShow bound
   lispShow (SpecialOp name _ _ bound)        = "special operator '" ++ name ++ "' " ++ lispShow bound
 
+isUserDefined, isMacro, isBuiltIn, isSpecialOp :: Callable e a -> Bool
+
+isUserDefined (UserDefined _ _ _ _) = True
+isUserDefined _                     = False
+
+isMacro (Macro _ _ _ _) = True
+isMacro _               = False
+
+isBuiltIn (BuiltIn _ _ _ _) = True
+isBuiltIn _                 = False
+
+isSpecialOp (SpecialOp _ _ _ _) = True
+isSpecialOp _                   = False
 
 bind :: Callable e a -> [a] -> Callable e a
 

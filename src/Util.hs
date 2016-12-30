@@ -1,12 +1,17 @@
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Util where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.List (elemIndices, delete)
-import Expr
 import SExpr
 import Prototype
+import Point
 import Exception
+import Callable
+import qualified Env
+import LexicalEnvironment
 
 bindArgs :: Expr e a => Prototype -> [a] -> Map String a
 bindArgs (Prototype argNames False) args
@@ -18,9 +23,6 @@ bindArgs (Prototype argNames True) args
   | otherwise                         = let (left, right) = splitAt (length argNames - 1) args
                                             args'         = left ++ [list right]
                                         in Map.fromList (zip argNames args')
-
-(.:) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
-(.:) = (.) . (.)
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -37,3 +39,29 @@ parseLambdaList (SList p lambdaList)
         rest  = length ixs == 1
         count = length lambdaList
 parseLambdaList _ = reportUndef "lambda list must be a list"
+
+call :: Point -> Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> Callable LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+
+call p eval evalScope e c args = do
+  (e', expr) <- call' eval evalScope e c args
+  return (e', replacePoint expr p)
+    where call' eval evalScope e (UserDefined localE prototype sexprs bound) args = do
+            let argBindings = bindArgs prototype (bound ++ args)
+            (_, expr) <- evalScope (Env.lappend localE argBindings) sexprs
+            return (e, expr)
+
+          call' eval evalScope e (Macro localE prototype sexprs bound) args = do
+            let argBindings = bindArgs prototype (bound ++ args)
+            (_, expr) <- evalScope (Env.lappend localE argBindings) sexprs
+            (e', expr') <- eval e expr
+            return (e', expr')
+
+          call' eval evalScope e (BuiltIn name _ f bound) args = rethrow
+            (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
+              result <- f (bound ++ args)
+              return (e, result)
+
+          call' eval evalScope e (SpecialOp name _ f bound) args = rethrow
+            (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
+              (e', expr) <- f eval evalScope e (bound ++ args)
+              return (e', expr)
