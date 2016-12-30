@@ -3,6 +3,7 @@ FFI
 call stack
 adequate REPL
 partial exporting in modules
+ENV should contain LEnv, not Map String SExpr
 
 data types:
   fractional
@@ -14,3 +15,4 @@ data types:
 
 standard library:
   input-output operators (format in particular)
+  environment

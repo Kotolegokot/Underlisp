@@ -119,7 +119,7 @@ startEnv = Env.fromList $
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtinType),
     ("put-char",         Just 1,  builtinPutChar),
-    ("write",            Just 1,  builtinWrite),
+    ("to-string",        Just 1,  builtinToString),
     ("flush",            Just 0,  builtinFlush),
     ("get-line",         Just 0,  builtinGetLine),
     ("list",             Nothing, builtinList),

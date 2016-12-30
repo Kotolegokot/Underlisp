@@ -1,5 +1,5 @@
 module Lib.IO (builtinPutChar
-              , builtinWrite
+              , builtinToString
               , builtinFlush
               , builtinGetLine) where
 
@@ -16,9 +16,9 @@ builtinGetLine :: [SExpr] -> IO SExpr
 builtinGetLine [] = getLine >>= (return . list . map char)
 builtinGetLine _  = reportUndef "no arguments required"
 
-builtinWrite :: [SExpr] -> IO SExpr
-builtinWrite [arg] = putStr (lispShow arg) >> return nil
-builtinWrite []    = reportUndef "just one argument required"
+builtinToString :: [SExpr] -> IO SExpr
+builtinToString [arg] = return . list . map char $ lispShow arg
+builtinToString _     = reportUndef "just one argument required"
 
 builtinPutChar :: [SExpr] -> IO SExpr
 builtinPutChar [SAtom _ (AChar c)]    = putChar c >> return nil
