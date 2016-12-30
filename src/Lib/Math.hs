@@ -47,8 +47,8 @@ builtinProduct sexprs = case numArgs sexprs of
 
 builtinDivide :: [SExpr] -> IO SExpr
 builtinDivide sexprs@[num1, num2] = case numArgs sexprs of
-                                      NTInt   -> return . int $ fromInt num1 - fromInt num2
-                                      NTFloat -> return . float $ fromNumber num1 - fromNumber num2
+                                      NTInt   -> return . int $ fromInt num1 `div` fromInt num2
+                                      NTFloat -> return . float $ fromNumber num1 / fromNumber num2
 builtinDivide _                   = reportUndef "two arguments required"
 
 data NumType = NTInt | NTFloat
