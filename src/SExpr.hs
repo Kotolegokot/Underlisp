@@ -24,12 +24,16 @@ import Point
 
 -- s-expression --
 data SExpr = SList Point [SExpr] | SAtom Point (Atom LEnv SExpr)
-  deriving Ord
 
 instance Eq SExpr where
   SList _ s == SList _ s' = s == s'
   SAtom _ a == SAtom _ a' = a == a'
   _         == _          = False
+
+instance Ord SExpr where
+  compare (SList _ l) (SList _ l') = compare l l'
+  compare (SAtom _ a) (SAtom _ a') = compare a a'
+  compare _           _            = undefined
 
 instance Expr LEnv SExpr where
   isList (SList _ _)   = True

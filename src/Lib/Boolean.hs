@@ -28,7 +28,7 @@ spopOr eval evalScope context (x:xs) = do
   case fromBool expr of
     True  -> return (context, bool True)
     False -> spopOr eval evalScope context xs
-spop_or _    _          context []     = return (context, bool False)
+spopOr _    _          context []     = return (context, bool False)
 
 spopImpl :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spopImpl eval _ context [arg1, arg2] = do
@@ -36,4 +36,4 @@ spopImpl eval _ context [arg1, arg2] = do
   if not $ fromBool expr1
     then return (context, bool True)
     else eval context arg2
-spop_impl _    _  _      _            = reportUndef "two arguments requried"
+spopImpl _    _  _      _            = reportUndef "two arguments requried"
