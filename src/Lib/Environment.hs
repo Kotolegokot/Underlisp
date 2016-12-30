@@ -5,7 +5,8 @@ module Lib.Environment (spopEnv
                        , spopImportEnv
                        , spopCurrentEnv
                        , builtinFunctionEnv
-                       , spopGetArgs) where
+                       , spopGetArgs
+                       , spopWithArgs) where
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
@@ -15,6 +16,7 @@ import LexicalEnvironment
 import SExpr
 import LispShow
 import Exception
+import Util
 
 spopEnv :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spopEnv eval eval_scope e args = do
@@ -59,3 +61,14 @@ builtinFunctionEnv _                                           = reportUndef "ju
 spopGetArgs :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
 spopGetArgs _ _ e [] = return (e, list . map (list . map char) $ getArgs e)
 spopGetArgs _ _ _ _  = reportUndef "no arguments required"
+
+spopWithArgs :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopWithArgs eval evalScope e (args:sexprs) = do
+  (_, args') <- eval e args
+  let args'' = if isList args'
+               then assureStrings $ fromList args'
+               else report (point args) "list expected"
+      e'     = setArgs args'' e
+  (_, expr) <- evalScope e' sexprs
+  return (e, expr)
+spopWithArgs _    _         _ _             = reportUndef "at least one argument required"

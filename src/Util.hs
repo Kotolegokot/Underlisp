@@ -65,3 +65,9 @@ call p eval evalScope e c args = do
             (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
               (e', expr) <- f eval evalScope e (bound ++ args)
               return (e', expr)
+
+assureStrings :: [SExpr] -> [String]
+assureStrings = foldl (\acc s -> if isString s
+                                 then acc ++ [fromString s]
+                                 else report (point s) "string expected")
+                []

@@ -4,6 +4,7 @@ call stack
 adequate REPL
 partial exporting in modules
 ENV should contain LEnv, not Map String SExpr
+treat "..." differently inside quote
 
 data types:
   fractional

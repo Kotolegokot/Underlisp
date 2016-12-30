@@ -97,6 +97,7 @@ startEnv = Env.fromList $
     ("env-from-file-no-prelude",     Just 1,  spopEnvFromFileNoPrelude),
     ("defined?",                     Just 1,  spopDefined),
     ("get-args",                     Just 0,  spopGetArgs),
+    ("with-args",                    Nothing, spopWithArgs),
     ("seq",                          Nothing, spopSeq) ]) ++
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtinType),
