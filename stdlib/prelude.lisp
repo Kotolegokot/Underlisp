@@ -119,7 +119,7 @@
       (last (tail xs)))))
 
 (defun nth (n xs)
-  (cond ((null xs)       (error "nth: empty list"))
+  (cond ((null xs)          (error "nth: empty list"))
 	((>= n (length xs)) (error "nth: out of bounds"))
 	((< n 0)            (error "nth: negative index"))
 	(otherwise
@@ -217,8 +217,10 @@
 	()
       (let ((first (head pairs)))
 	(prepend
-	 `((= ~expr-var ~(head first))
-	   ~(head (tail first)))
+	 (if (null (tail first))
+	     `(True ~(head first))
+	   `((= ~expr-var ~(head first))
+	     ~(head (tail first))))
 	 (handle-pairs expr-var (tail pairs))))))
 
   (let ((expr-var (gensym)))
@@ -253,24 +255,23 @@
 			      (format' 'none (tail template) args)))))
 	  ('tilde (if (null template)
 		      (error "EOL after ~")
-		    (cond
-		     ((= (head template) #%)
-		      (prepend #newline
-			       (format' 'none (tail template) args)))
-		     ((= (head template) #~)
-		      (prepend #~
-			       (format' 'none (tail template) args)))
-		     ((= (head template) #a)
-		      (append (to-string (head args))
-			      (format' 'none (tail template) (tail args))))
-		     ((= (head template) #c)
-		      (if (not (char? (head args)))
-			  (error "char expected")
-			(prepend (head args)
-				(format' 'none (tail template) (tail args)))))
-		     (otherwise
-		      (prepend (head template)
-			       (format' 'none (tail template) args))))))))
+		    (case (head template)
+			  (#% (prepend #newline
+				       (format' 'none (tail template) args)))
+			  (#~ (prepend #~
+				       (format' 'none (tail template) args)))
+			  (#a (append (to-string (head args))
+				      (format' 'none (tail template) (tail args))))
+			  (#c (if (not (char? (head args)))
+				  (error "char expected")
+				(prepend (head args)
+					 (format' 'none (tail template) (tail args)))))
+			  (#s (if (not (list? (head args)))
+				  (error "list expected")
+				(append (head args)
+					(format' 'none (tail template) (tail args)))))
+			  ((prepend (head template)
+				    (format' 'none (tail template) args))))))))
   (format' 'none template args))
 
 ;;(defun print-format (template &rest args)
