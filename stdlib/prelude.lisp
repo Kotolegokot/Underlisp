@@ -274,8 +274,8 @@
                                     (format' 'none (tail template) args))))))))
   (format' 'none template args))
 
-;;(defun print-format (template &rest args)
-;;  (print-string (apply format (prepend template args))))
+(defun print-format (template &rest args)
+  (print-string (apply format (prepend template args))))
 
 ;; swap a function's args
 (defun flip (f)

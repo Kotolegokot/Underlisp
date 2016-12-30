@@ -87,7 +87,6 @@ spopApply :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] ->
 spopApply eval evalScope e [first, args] = do
   (_, first') <- eval e first
   (_, args')  <- eval e args
-  lispPrint $ list (first':fromList args')
   if not $ isList args'
     then report (point args) "list expected"
     else call (point first) eval evalScope e (fromCallable first') (fromList args')
