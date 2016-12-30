@@ -23,7 +23,11 @@ module Lib.Math (builtinSum
                 , builtinASinH
                 , builtinACosH
                 , builtinATanH
-                , builtinACotH) where
+                , builtinACotH
+                , builtinTruncate
+                , builtinRound
+                , builtinCeiling
+                , builtinFloor) where
 
 import Numeric.Special.Trigonometric
 import SExpr
@@ -195,3 +199,27 @@ builtinACotH [num]
   | isNumber num = return . float . acoth $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
 builtinACotH _ = reportUndef "just one argument required"
+
+builtinTruncate :: [SExpr] -> IO SExpr
+builtinTruncate [num]
+  | isNumber num = return . int . truncate $ fromNumber num
+  | otherwise    = report (point num) "float or int expected"
+builtinTruncate _ = reportUndef "just one argument required"
+
+builtinRound :: [SExpr] -> IO SExpr
+builtinRound [num]
+  | isNumber num = return . int . round $ fromNumber num
+  | otherwise    = report (point num) "float or int expected"
+builtinRound _ = reportUndef "just one argument required"
+
+builtinCeiling :: [SExpr] -> IO SExpr
+builtinCeiling [num]
+  | isNumber num = return . int . ceiling $ fromNumber num
+  | otherwise    = report (point num) "float or int expected"
+builtinCeiling _ = reportUndef "just one argument required"
+
+builtinFloor :: [SExpr] -> IO SExpr
+builtinFloor [num]
+  | isNumber num = return . int . floor $ fromNumber num
+  | otherwise    = report (point num) "float or int expected"
+builtinFlooe _ = reportUndef "just one argument required"
