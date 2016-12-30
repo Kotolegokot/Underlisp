@@ -2,9 +2,9 @@
 ;; only binds value to name
 ;; when name hasn't been used before
 (set define (macro (name value)
-		   (if (defined? name)
-		       ()
-		     `(set ~name ~value))))
+                   (if (defined? name)
+                       ()
+                     `(set ~name ~value))))
 
 ;; (defmacro name lambda-list body)
 (define defmacro
@@ -120,12 +120,12 @@
 
 (defun nth (n xs)
   (cond ((null xs)          (error "nth: empty list"))
-	((>= n (length xs)) (error "nth: out of bounds"))
-	((< n 0)            (error "nth: negative index"))
-	(otherwise
-	 (if (= n 0)
-	     (head xs)
-	   (nth (- n 1) (tail xs))))))
+        ((>= n (length xs)) (error "nth: out of bounds"))
+        ((< n 0)            (error "nth: negative index"))
+        (otherwise
+         (if (= n 0)
+             (head xs)
+           (nth (- n 1) (tail xs))))))
 
 (defun map (f xs)
   (if (null xs)
@@ -186,19 +186,19 @@
 
 (defun take (n xs)
   (cond ((> n (length xs)) (error "take: out of bounds"))
-	((< n 0)           (error "take: negative number"))
-	(otherwise
-	 (if (= n 0)
-	     '()
-	   (prepend (head xs) (take (- n 1) (tail xs)))))))
+        ((< n 0)           (error "take: negative number"))
+        (otherwise
+         (if (= n 0)
+             '()
+           (prepend (head xs) (take (- n 1) (tail xs)))))))
 
 (defun drop (n xs)
   (cond ((> n (length xs)) (error "drop: out of bounds"))
-	((< n 0)           (error "drop: negative number"))
-	(otherwise
-	 (if (= n 0)
-	     xs
-	   (drop (- n 1) (tail xs))))))
+        ((< n 0)           (error "drop: negative number"))
+        (otherwise
+         (if (= n 0)
+             xs
+           (drop (- n 1) (tail xs))))))
 
 (defun cons (a b)
   (if (list? b)
@@ -214,14 +214,14 @@
 (defmacro case (expr &rest pairs)
   (defun handle-pairs (expr-var pairs)
     (if (null pairs)
-	()
+        ()
       (let ((first (head pairs)))
-	(prepend
-	 (if (null (tail first))
-	     `(True ~(head first))
-	   `((= ~expr-var ~(head first))
-	     ~(head (tail first))))
-	 (handle-pairs expr-var (tail pairs))))))
+        (prepend
+         (if (null (tail first))
+             `(True ~(head first))
+           `((= ~expr-var ~(head first))
+             ~(head (tail first))))
+         (handle-pairs expr-var (tail pairs))))))
 
   (let ((expr-var (gensym)))
     `(let ((~expr-var ~expr))
@@ -247,31 +247,31 @@
   ;; state := none | tilde
   (defun format' (state template args)
     (case state
-	  ('none (if (null template)
-		     ()
-		   (if (= (head template) #~)
-		       (format' 'tilde (tail template) args)
-		     (prepend (head template)
-			      (format' 'none (tail template) args)))))
-	  ('tilde (if (null template)
-		      (error "EOL after ~")
-		    (case (head template)
-			  (#% (prepend #newline
-				       (format' 'none (tail template) args)))
-			  (#~ (prepend #~
-				       (format' 'none (tail template) args)))
-			  (#a (append (to-string (head args))
-				      (format' 'none (tail template) (tail args))))
-			  (#c (if (not (char? (head args)))
-				  (error "char expected")
-				(prepend (head args)
-					 (format' 'none (tail template) (tail args)))))
-			  (#s (if (not (list? (head args)))
-				  (error "list expected")
-				(append (head args)
-					(format' 'none (tail template) (tail args)))))
-			  ((prepend (head template)
-				    (format' 'none (tail template) args))))))))
+          ('none (if (null template)
+                     ()
+                   (if (= (head template) #~)
+                       (format' 'tilde (tail template) args)
+                     (prepend (head template)
+                              (format' 'none (tail template) args)))))
+          ('tilde (if (null template)
+                      (error "EOL after ~")
+                    (case (head template)
+                          (#% (prepend #newline
+                                       (format' 'none (tail template) args)))
+                          (#~ (prepend #~
+                                       (format' 'none (tail template) args)))
+                          (#a (append (to-string (head args))
+                                      (format' 'none (tail template) (tail args))))
+                          (#c (if (not (char? (head args)))
+                                  (error "char expected")
+                                (prepend (head args)
+                                         (format' 'none (tail template) (tail args)))))
+                          (#s (if (not (list? (head args)))
+                                  (error "list expected")
+                                (append (head args)
+                                        (format' 'none (tail template) (tail args)))))
+                          ((prepend (head template)
+                                    (format' 'none (tail template) args))))))))
   (format' 'none template args))
 
 ;;(defun print-format (template &rest args)
