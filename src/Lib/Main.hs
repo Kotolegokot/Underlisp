@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Lib.Main (spopLet
-                , spopDefine
+                , spopSet
                 , spopLambda
                 , spopDefined
                 , builtinType
@@ -67,14 +67,14 @@ spopDefined eval _ e [arg] = do
 spopDefined _    _ _ _     = reportUndef "just one argument required"
 
 -- special operator define
-spopDefine :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spopDefine eval _ e [var, sValue]
+spopSet :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopSet eval _ e [var, sValue]
   | not $ isSymbol var = report (point var) "first argument must be a symbol"
   | otherwise           = do
       let key = fromSymbol var
       (_, value) <- eval e sValue
       return (Env.linsert key value e, nil)
-spopDefine _    _           _       _ = reportUndef "two arguments required"
+spopSet _    _           _       _ = reportUndef "two arguments required"
 
 -- built-in function type
 builtinType :: [SExpr] -> IO SExpr

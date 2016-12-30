@@ -96,7 +96,7 @@ startEnv = Env.fromList $
     ("gensym",                       Just 0,  spopGensym),
     ("let",                          Nothing, spopLet),
     ("if",                           Just 3,  spopIf),
-    ("define",                       Just 2,  spopDefine),
+    ("set",                          Just 2,  spopSet),
     ("lambda",                       Nothing, spopLambda),
     ("macro",                        Nothing, spopMacro),
     ("macro-expand",                 Just 1,  spopMacroExpand),
