@@ -99,7 +99,7 @@ builtinSqrt _ = reportUndef "just one argument required"
 builtinPower :: [SExpr] -> IO SExpr
 builtinPower nums@[num1, num2] = case numArgs nums of
   NTInt   -> return . int $ fromInt num1 ^ fromInt num2
-  NTFloat -> return . float $ fromFloat num1 ** fromFloat num2
+  NTFloat -> return . float $ fromNumber num1 ** fromNumber num2
 builtinPower _ = reportUndef "two arguments required"
 
 builtinLog :: [SExpr] -> IO SExpr
