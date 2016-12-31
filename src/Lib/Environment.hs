@@ -7,9 +7,11 @@ module Lib.Environment (spopEnv
                        , builtinFunctionEnv
                        , spopGetArgs
                        , spopWithArgs
-                       , builtinGetEnv) where
+                       , builtinGetEnv
+                       , builtinSetEnv
+                       , builtinUnsetEnv) where
 
-import System.Posix.Env (setEnv, getEnv)
+import System.Posix.Env (setEnv, getEnv, unsetEnv)
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
@@ -85,3 +87,17 @@ builtinGetEnv [name]
         Just value -> toString value
         Nothing    -> nil
 builtinGetEnv _ = reportUndef "just one argument required"
+
+builtinSetEnv :: [SExpr] -> IO SExpr
+builtinSetEnv [name, value, rewrite]
+  | not $ isString name    = report (point name)    "string expected"
+  | not $ isString value   = report (point value)   "string expected"
+  | not $ isBool   rewrite = report (point rewrite) "bool expected"
+  | otherwise              = setEnv (fromString name) (fromString value) (fromBool rewrite) >> return nil
+builtinSetEnv _ = reportUndef "three arguments required"
+
+builtinUnsetEnv :: [SExpr] -> IO SExpr
+builtinUnsetEnv [name]
+  | not $ isString name = report (point name) "string expected"
+  | otherwise           = unsetEnv (fromString name) >> return nil
+builtinUnsetEnv _ = reportUndef "just one argument required"

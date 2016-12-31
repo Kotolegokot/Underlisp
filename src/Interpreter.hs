@@ -6,6 +6,7 @@ module Interpreter (interpreteProgram
                    , repl) where
 
 import Control.Exception
+import Control.Conditional (cond)
 import System.IO
 import System.IO.Error (isEOFError)
 import Data.Map (Map)
@@ -47,7 +48,7 @@ repl = do
             (e', expr) <- catch (Evaluator.evalScope e $ Reader.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
-            putStrLn $ "=> " ++ if isString expr
-                                then fromString expr
-                                else lispShow expr
+            putStrLn $ "=> " ++ cond [(isNil    expr, "nil")
+                                     ,(isString expr, fromString expr)
+                                     ,(otherwise,     lispShow expr)]
             handleLines (forwardRow p) e'

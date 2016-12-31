@@ -5,6 +5,7 @@ adequate REPL
 partial exporting in modules
 ENV should contain LEnv, not Map String SExpr
 treat "..." differently inside quote
+make strings back a distinct class
 
 data types:
   fractional

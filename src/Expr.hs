@@ -115,3 +115,6 @@ fromString = map Expr.fromChar . Expr.fromList
 
 toString :: Expr e a => String -> a
 toString = list . map char
+
+isNil :: Expr e a => a -> Bool
+isNil = Expr.isList .&& (null . Expr.fromList)
