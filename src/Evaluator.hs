@@ -149,7 +149,9 @@ startEnv = Env.fromList $
     ("function-env",     Just 1,  builtinFunctionEnv),
     ("get-env",          Just 1,  builtinGetEnv),
     ("set-env",          Just 3,  builtinSetEnv),
-    ("unset-env",        Just 1,  builtinUnsetEnv) ])
+    ("unset-env",        Just 1,  builtinUnsetEnv),
+    ("get-environment",  Just 0,  builtinGetEnvironment),
+    ("set-environment",  Just 1,  builtinSetEnvironment) ])
 
 -- | loads environment from a file
 spopEnvFromFile :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)

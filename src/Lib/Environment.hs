@@ -1,17 +1,19 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Lib.Environment (spopEnv
-                       , spopLoadEnv
-                       , spopImportEnv
-                       , spopCurrentEnv
-                       , builtinFunctionEnv
-                       , spopGetArgs
-                       , spopWithArgs
-                       , builtinGetEnv
-                       , builtinSetEnv
-                       , builtinUnsetEnv) where
+                       ,spopLoadEnv
+                       ,spopImportEnv
+                       ,spopCurrentEnv
+                       ,builtinFunctionEnv
+                       ,spopGetArgs
+                       ,spopWithArgs
+                       ,builtinGetEnv
+                       ,builtinSetEnv
+                       ,builtinUnsetEnv
+                       ,builtinGetEnvironment
+                       ,builtinSetEnvironment) where
 
-import System.Posix.Env (setEnv, getEnv, unsetEnv)
+import System.Posix.Env
 import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Env
@@ -101,3 +103,25 @@ builtinUnsetEnv [name]
   | not $ isString name = report (point name) "string expected"
   | otherwise           = unsetEnv (fromString name) >> return nil
 builtinUnsetEnv _ = reportUndef "just one argument required"
+
+builtinGetEnvironment :: [SExpr] -> IO SExpr
+builtinGetEnvironment [] = do
+  environment <- getEnvironment
+  return . list $ map (\(name, value) -> list [toString name, toString value]) environment
+builtinGetEnvironment _  = reportUndef "no arguments required"
+
+builtinSetEnvironment :: [SExpr] -> IO SExpr
+builtinSetEnvironment [l] = do
+  let pList = if isList l
+              then assurePairList $ fromList l
+              else report (point l) "list expected"
+  setEnvironment pList
+  return nil
+  where assurePairList []            = []
+        assurePairList (SList _ [str1, str2]:xs)
+          | not $ isString str1 = report (point str1) "string expected"
+          | not $ isString str2 = report (point str2) "string expected"
+          | otherwise           = (fromString str1, fromString str2) : assurePairList xs
+        assurePairList (SList p _:_) = report p "pair expected"
+        assurePairList (x:_)         = report (point x) "list expected"
+builtinSetEnvironment _      = reportUndef "just one argument required"
