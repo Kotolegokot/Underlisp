@@ -31,7 +31,7 @@ module Lib.Math (builtinSum
                 , builtinDivMod) where
 
 import Numeric.Special.Trigonometric
-import SExpr
+import Base
 import Exception
 
 builtinSum :: [SExpr] -> IO SExpr

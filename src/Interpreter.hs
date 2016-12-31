@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module Interpreter (interpreteProgram
                    , interpreteModule
                    , interpreteModuleNoPrelude
@@ -12,11 +11,9 @@ import System.IO.Error (isEOFError)
 import Data.Map (Map)
 import qualified Reader
 import qualified Evaluator
-import LexicalEnvironment
-import SExpr
+import Base
 import Util
 import Point
-import LispShow
 import Exception
 
 -- | a lisp interpretator is just a reader and evaluator joined together
@@ -37,7 +34,7 @@ repl :: IO ()
 repl = do
   prelude <- Evaluator.loadPrelude
   handleLines (startPoint "<interactive>") prelude
-  where handleLines :: Point -> LEnv SExpr -> IO ()
+  where handleLines :: Point -> Env -> IO ()
         handleLines p e = do
           putStr $ "[" ++ show (pRow p) ++ "]> "
           hFlush stdout
@@ -48,7 +45,5 @@ repl = do
             (e', expr) <- catch (Evaluator.evalScope e $ Reader.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
-            putStrLn $ "=> " ++ cond [(isNil    expr, "nil")
-                                     ,(isString expr, fromString expr)
-                                     ,(otherwise,     lispShow expr)]
+            putStrLn $ "=> " ++ show expr
             handleLines (forwardRow p) e'

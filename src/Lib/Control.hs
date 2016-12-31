@@ -3,13 +3,10 @@
 module Lib.Control (spopIf,
                     spopSeq) where
 
-import SExpr
-import qualified Env
-import LexicalEnvironment
-import Callable
+import Base
 import Exception
 
-spopIf :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopIf :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopIf eval evalScope e [condSexpr]                        = spopIf eval evalScope e [condSexpr, nil,       nil]
 spopIf eval evalScope e [condSexpr, trueSexpr]             = spopIf eval evalScope e [condSexpr, trueSexpr, nil]
 spopIf eval evalScope e [condSexpr, trueSexpr, falseSexpr] = do
@@ -23,7 +20,7 @@ spopIf eval evalScope e [condSexpr, trueSexpr, falseSexpr] = do
         return (e, expr)
 spopIf _    _          _        _                                    = reportUndef "1 to 3 arguments requried"
 
-spopSeq :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopSeq :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopSeq _ evalScope e args = do
   (_, expr) <- evalScope e args
   return (e, expr)

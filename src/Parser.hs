@@ -2,8 +2,7 @@ module Parser (parse) where
 
 import Debug.Trace
 
-import SExpr
-import Expr
+import Base
 import Lexer
 import Point
 import Exception
@@ -13,9 +12,9 @@ parse :: [(Lexeme, Point)] -> [SExpr]
 parse [] = []
 parse ((x,p):xs) = case x of
   Open    b -> let (sexpr, rest) = parseList p b xs
-               in  (replacePoint sexpr p) : parse rest
+               in  (setPoint sexpr p) : parse rest
   Closed  _ -> report p "redundant right bracket"
-  Atom    a -> (SAtom p a)  : parse xs
+  LAtom   a -> (SAtom p a)  : parse xs
   LString l -> strToList p l : parse xs
   Sugar   s -> let (sexpr, rest) = parseSugar p s xs
                in  sexpr : parse rest
@@ -32,7 +31,7 @@ parseList p b pairs = case b of
           Closed  b -> if b == bracket
                        then (SList p $ reverse acc, xs)
                        else report p' $ "unmatching brackets: unclosed '" ++ [bracket] ++ "'"
-          Atom    a -> parseList' p bracket (SAtom p' a : acc) xs
+          LAtom   a -> parseList' p bracket (SAtom p' a : acc) xs
           LString l -> parseList' p bracket (strToList p' l : acc) xs
           Sugar   s -> let (expr, rest) = parseSugar p' s xs
                        in  parseList' p bracket (expr : acc) rest
@@ -43,7 +42,7 @@ parseSugar :: Point -> String -> [(Lexeme, Point)] -> (SExpr, [(Lexeme, Point)])
 parseSugar p s ((Closed  _,  p'):_)   = report p' $ "right paren after '" ++ s ++ "' is forbidden"
 parseSugar p s ((Open    b,  p'):xs)  = let (subl, rest) = parseList p' b xs
                                         in (SList p [SAtom p (ASymbol s), subl], rest)
-parseSugar p s ((Atom    a,  p'):xs)  = (SList p' [symbol s, atom a], xs)
+parseSugar p s ((LAtom   a,  p'):xs)  = (SList p' [symbol s, atom a], xs)
 parseSugar p s ((Sugar   s', p'):xs)  = let (subl, rest) = parseSugar p' s' xs
                                          in (SList p [SAtom p (ASymbol s), subl], rest)
 parseSugar p s ((LString l,  p'):xs)  = (SList p [SAtom p (ASymbol s), strToList p l], xs)

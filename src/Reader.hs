@@ -1,7 +1,7 @@
 module Reader (read) where
 
 import Prelude hiding (read)
-import SExpr
+import Base
 import Lexer
 import Parser
 import Point

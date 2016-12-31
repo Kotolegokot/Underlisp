@@ -1,23 +1,16 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Evaluator where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
-import qualified Env
-import LexicalEnvironment
 import qualified Reader
 import Control.Arrow
-import Control.Monad (void, foldM)
-import Control.Monad (when)
-import SExpr
-import Util
-import Callable
-import LispShow
+import Control.Monad (void, foldM, when)
+import Base
 import Lib.Everything
 import Point
 import Exception
+import Util
 
 preludePath = "stdlib/prelude.lisp" :: String
 
@@ -25,44 +18,44 @@ preludePath = "stdlib/prelude.lisp" :: String
 evaluateProgram :: [SExpr] -> [String] -> IO ()
 evaluateProgram body args = do
   prelude <- loadPrelude
-  void $ evalScope (setArgs args prelude) body
+  void $ evalScope (setArgs prelude args) body
 
 -- | evaluates a module
 evaluateModule :: [SExpr] -> IO (Map String SExpr)
 evaluateModule body = do
   prelude <- loadPrelude
   (e, _) <- evalScope prelude body
-  return $ Env.merge e
+  return $ envMerge e
 
 -- | evaluates a module without prelude loaded
 evaluateModuleNoPrelude :: [SExpr] -> IO (Map String SExpr)
 evaluateModuleNoPrelude body = do
   (e, _) <- evalScope startEnv body
-  return $ Env.merge e
+  return $ envMerge e
 
 -- | evaluates a lexical scope
-evalScope :: LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (Env.pass e, nil)
+evalScope :: Env -> [SExpr] -> IO (Env, SExpr)
+evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (pass e, nil)
 
 -- | evaluates an s-expression
-eval :: LEnv SExpr -> SExpr -> IO (LEnv SExpr, SExpr)
+eval :: Env -> SExpr -> IO (Env, SExpr)
 eval e (SList _ (first:args))  = do
   (_, first') <- eval e first
   if isCallable first'
     then eval' $ fromCallable first'
-    else report (point first) $ "unable to execute s-expression: '" ++ lispShow first' ++ "'"
+    else report (point first) $ "unable to execute s-expression: '" ++ show first' ++ "'"
   where eval' c | isUserDefined c || isBuiltIn c = do
                     pairs <- mapM (eval e) args
                     call (point first) eval evalScope e c (map snd pairs)
                 | isMacro c || isSpecialOp c     = call (point first) eval evalScope e c args
 eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
-eval e (SAtom p (ASymbol sym)) = case Env.lookup sym e of
-  Just value -> return (e, replacePoint value p)
+eval e (SAtom p (ASymbol sym)) = case envLookup sym e of
+  Just value -> return (e, setPoint value p)
   Nothing    -> report p $ "undefined identificator '" ++ sym ++ "'"
 eval e sexpr                   = return (e, sexpr)
 
 -- | loads prelude and start environment
-loadPrelude :: IO (LEnv SExpr)
+loadPrelude :: IO Env
 loadPrelude = do
   text <- readFile preludePath
   (e, _) <- evalScope startEnv $ Reader.read (startPoint preludePath) text
@@ -70,8 +63,8 @@ loadPrelude = do
 
 -- | start environment
 -- | contains built-in functions and special operators
-startEnv :: LEnv SExpr
-startEnv = Env.fromList $
+startEnv :: Env
+startEnv = envFromList $
     (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) [
     ("gensym",                       Just 0,  spopGensym),
     ("let",                          Nothing, spopLet),
@@ -154,7 +147,7 @@ startEnv = Env.fromList $
     ("set-environment",  Just 1,  builtinSetEnvironment) ])
 
 -- | loads environment from a file
-spopEnvFromFile :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopEnvFromFile :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopEnvFromFile eval eval_scope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
@@ -167,7 +160,7 @@ spopEnvFromFile eval eval_scope e [arg] = do
 spopEnvFromFile _    _          _        _    = reportUndef "just one argument required"
 
 -- | loads environment from a file without prelude loaded
-spopEnvFromFileNoPrelude :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopEnvFromFileNoPrelude :: Eval -> EvalScope  -> Env -> [SExpr] -> IO (Env, SExpr)
 spopEnvFromFileNoPrelude eval evalScope e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
@@ -183,5 +176,5 @@ spopEnvFromFileNoPrelude _    _          _       _      = reportUndef "just one 
 builtinInitialEnv :: [SExpr] -> IO SExpr
 builtinInitialEnv [] = do
   prelude <- loadPrelude
-  return . env $ Env.merge prelude
+  return . env $ envMerge prelude
 builtinInitialEnv _  = reportUndef "no arguments requried"

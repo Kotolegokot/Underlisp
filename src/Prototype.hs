@@ -1,14 +1,10 @@
 module Prototype where
 
-import LispShow
-
 data Prototype = Prototype [String] Bool
-  deriving (Eq, Show)
+  deriving Eq
 
-instance LispShow Prototype where
-  lispShow (Prototype args rest)
-    | rest      = "(" ++ showList args ++ ")"
-    | otherwise = "(" ++ showList args ++ ")"
-    where showList [x]    = if rest then x else "&rest " ++ x
+instance Show Prototype where
+  show (Prototype args rest) = "(" ++ showList args ++ ")"
+    where showList [x]    = if rest then "&rest " ++ x else x
           showList (x:xs) = x ++ " " ++ showList xs
           showList []     = []

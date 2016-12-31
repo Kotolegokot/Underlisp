@@ -1,7 +1,7 @@
 module Lib.Ord (builtinEQ,
                 builtinLT) where
 
-import SExpr
+import Base
 import Exception
 
 builtinEQ :: [SExpr] -> IO SExpr

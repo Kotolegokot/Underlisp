@@ -4,7 +4,7 @@ module Lib.List (builtinList,
                  builtinNull,
                  builtinAppend) where
 
-import SExpr
+import Base
 import Exception
 
 builtinList :: [SExpr] -> IO SExpr

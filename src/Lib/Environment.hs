@@ -16,16 +16,13 @@ module Lib.Environment (spopEnv
 import System.Posix.Env
 import qualified Data.Map as Map
 import Data.Map (Map)
-import qualified Env
 import qualified Reader
-import Callable
-import LexicalEnvironment
-import SExpr
-import LispShow
+import Base
 import Exception
+import Point
 import Util
 
-spopEnv :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopEnv eval eval_scope e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
@@ -33,49 +30,49 @@ spopEnv eval eval_scope e args = do
            then reportUndef "symbol expected"
            else (e, env $ extractEnv e $ map (\s -> (fromSymbol s, point s)) symbols)
 
-extractEnv :: LEnv SExpr -> [(String, Point)] -> Map String SExpr
-extractEnv e keys = foldl (\acc (key, p) -> case Env.lookup key e of
+extractEnv :: Env -> [(String, Point)] -> Map String SExpr
+extractEnv e keys = foldl (\acc (key, p) -> case envLookup key e of
                               Just value -> Map.insert key value acc
                               Nothing    -> report p $ "undefined symbol '" ++ key ++ "'")
                     Map.empty
                     keys
 
-spopImportEnv :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopImportEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopImportEnv eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom _ (AEnv add) -> (Env.xappend e add, nil)
+    SAtom _ (AEnv add) -> (xappend e add, nil)
     _                  -> report (point sexpr) "context expected"
 spopImportEnv _   _ _ []     = reportUndef "just one argument required"
 
-spopLoadEnv :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopLoadEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopLoadEnv eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
-    SAtom _ (AEnv add) -> (Env.lappend e add, nil)
+    SAtom _ (AEnv add) -> (lappend e add, nil)
     _                  -> report (point sexpr) "context expected"
 spopLoadEnv _   _ _ []     = reportUndef "just one argument required"
 
-spopCurrentEnv :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
-spopCurrentEnv _ _ e [] = return (e, env $ Env.merge e)
+spopCurrentEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+spopCurrentEnv _ _ e [] = return (e, env $ envMerge e)
 spopCurrentEnv _ _ _ _  = reportUndef "no arguments required"
 
 builtinFunctionEnv :: [SExpr] -> IO SExpr
-builtinFunctionEnv [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ Env.merge e
+builtinFunctionEnv [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ envMerge e
 builtinFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
 builtinFunctionEnv _                                           = reportUndef "just one argument required"
 
-spopGetArgs :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopGetArgs :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopGetArgs _ _ e [] = return (e, list . map (list . map char) $ getArgs e)
 spopGetArgs _ _ _ _  = reportUndef "no arguments required"
 
-spopWithArgs :: Eval LEnv SExpr -> EvalScope LEnv SExpr -> LEnv SExpr -> [SExpr] -> IO (LEnv SExpr, SExpr)
+spopWithArgs :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopWithArgs eval evalScope e (args:sexprs) = do
   (_, args') <- eval e args
   let args'' = if isList args'
                then assureStrings $ fromList args'
                else report (point args) "list expected"
-      e'     = setArgs args'' e
+      e'     = setArgs e args''
   (_, expr) <- evalScope e' sexprs
   return (e, expr)
 spopWithArgs _    _         _ _             = reportUndef "at least one argument required"

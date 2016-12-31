@@ -53,7 +53,7 @@
     (env-from-file-no-prelude ~filename)))
 
 ;; otherwise is used with `cond` macro
-(define otherwise True)
+(define otherwise true)
 
 ;; not equal
 (defun /= (x y)
@@ -83,7 +83,7 @@
 
 ;; tells whether x is an empty list
 (defun nil? (x)
-  (and (list? x) (null x)))
+  (= x nil))
 
 ;; prints error if ex is false
 (defmacro assert (cond)
@@ -129,7 +129,7 @@
 
 (defun map (f xs)
   (if (null xs)
-      nil
+      ()
     (prepend (f (head xs))
              (map f (tail xs)))))
 
@@ -162,7 +162,7 @@
              (zip-with f (tail xs) (tail ys)))))
 
 (defun elem (y xs)
-  (foldl (lambda (acc x) (or (= x y) acc)) False xs))
+  (foldl (lambda (acc x) (or (= x y) acc)) false xs))
 
 (defun filter (p xs)
   (if (null xs)
@@ -172,10 +172,10 @@
       (filter p (tail xs)))))
 
 (defun all (p xs)
-  (foldl (lambda (acc x) (if (p x) acc False)) True xs))
+  (foldl (lambda (acc x) (if (p x) acc false)) true xs))
 
 (defun any (p xs)
-  (foldl (lambda (acc x) (if (p x) True acc)) False xs))
+  (foldl (lambda (acc x) (if (p x) true acc)) false xs))
 
 (defun find (p xs)
   (if (null xs)
@@ -212,7 +212,7 @@
       (let ((first (head pairs)))
         (prepend
          (if (null (tail first))
-             `(True ~(head first))
+             `(true ~(head first))
            `((= ~expr-var ~(head first))
              ~(head (tail first))))
          (handle-pairs expr-var (tail pairs))))))
@@ -325,7 +325,6 @@
           (e2 (nth 1 list)))
       (cons e1 (f e2)))))
 
-(define nil ())
 (define pi  3.14159265359)
 (define e   2.71828182845)
 
