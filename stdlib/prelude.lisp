@@ -452,3 +452,11 @@
 
 (define succ [+ 1])
 (define pred [(flip -) 1])
+
+(defun abs (x)
+  (if (= (sign x) -1)
+      (neg x)
+    x))
+
+(defun in-range (a b x)
+  (and (<= a x) (<= x b)))
