@@ -4,7 +4,6 @@ call stack
 adequate REPL
 partial exporting in modules
 ENV should contain LEnv, not Map String SExpr
-make strings back a distinct class
 
 data types:
   fractional

@@ -95,6 +95,8 @@ startEnv = envFromList $
   (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) [
     ("type",             Just 1,  builtinType),
     ("put-char",         Just 1,  builtinPutChar),
+    ("char->int",        Just 1,  builtinCharToInt),
+    ("int->char",        Just 1,  builtinIntToChar),
     ("to-string",        Just 1,  builtinToString),
     ("flush",            Just 0,  builtinFlush),
     ("get-line",         Just 0,  builtinGetLine),
