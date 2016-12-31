@@ -28,7 +28,7 @@ spopLambda _    _ _ [] = reportUndef "at least one argument expected"
 -- special operator let
 spopLet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 spopLet eval evalScope e ((SList p pairs):body) = do
-  e' <- handlePairs pairs e
+  e' <- handlePairs pairs (pass e)
   (_, expr) <- evalScope e' body
   return (e, expr)
     where handlePairs (x:xs) acc = case x of
