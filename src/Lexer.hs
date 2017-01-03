@@ -35,23 +35,23 @@ tokenize point sequence = tokenize' point [] None sequence
             '\n' -> tokenize' (forward x point) lexemes None    xs
             _    -> tokenize' (forward x point) lexemes Comment xs
 
-          tokenize' point lexemes Char sequence = parse_char point [] sequence
+          tokenize' origPoint lexemes Char sequence = parse_char origPoint [] sequence
             where parse_char point name xs@(x:rest)
-                    | isSeparator x = tokenize' point ((translateChar point name, point) : lexemes) None xs
+                    | isSeparator x = tokenize' point ((translateChar origPoint name, origPoint) : lexemes) None xs
                     | otherwise      = parse_char (forward x point) (name ++ [x]) rest
-                  parse_char point name [] = tokenize' point ((translateChar point name, point) : lexemes) None []
+                  parse_char point name [] = tokenize' point ((translateChar origPoint name, origPoint) : lexemes) None []
 
-          tokenize' point lexemes String sequence = parse_string point [] sequence
+          tokenize' origPoint lexemes String sequence = parse_string origPoint [] sequence
               where parse_string point string xs@(x:rest)
-                      | x == '"'  = tokenize' (forward x point) ((LString (reverse string), point) : lexemes) None rest
+                      | x == '"'  = tokenize' (forward x point) ((LString (reverse string), origPoint) : lexemes) None rest
                       | otherwise = parse_string (forward x point) (x : string) rest
                     parse_string point string [] = report point "unexpected EOF in the middle of a string"
 
-          tokenize' point lexemes OtherAtom sequence = parse_atom point [] sequence
+          tokenize' origPoint lexemes OtherAtom sequence = parse_atom origPoint [] sequence
               where parse_atom point atom xs@(x:rest)
-                      | isSeparator x = tokenize' point ((LAtom (strToAtom atom), point) : lexemes) None xs
+                      | isSeparator x = tokenize' point ((LAtom (strToAtom atom), origPoint) : lexemes) None xs
                       | otherwise      = parse_atom (forwardColumn point) (atom ++ [x]) rest
-                    parse_atom point atom [] = tokenize' point ((LAtom (strToAtom atom), point) : lexemes) None []
+                    parse_atom point atom [] = tokenize' point ((LAtom (strToAtom atom), origPoint) : lexemes) None []
 
           tokenize' _     lexemes _         []       = reverse lexemes
 
