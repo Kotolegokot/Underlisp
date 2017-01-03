@@ -1,6 +1,7 @@
 (import-module "stdlib/char.lisp")
 
 (defun string->dec (str)
+  (contract str string?)
   (setfun string->dec' (str)
     (if (empty? str)
 	0
@@ -15,6 +16,7 @@
     	  ((string->dec' (reverse str))))))
 
 (defun string->hex (str)
+  (contract str string?)
   (setfun string->hex' (str)
      (if (empty? str)
 	 0
@@ -30,11 +32,11 @@
 	  ((string->hex' (reverse str))))))
 
 (defun dec->string (i)
-  (if (int? i)
-      (->string i)
-    (error "int expected")))
+  (contract i int?)
+  (->string i))
 
 (defun hex->string (i)
+  (contract i int?)
   (defun hex->string' (i)
     (if (zero? i)
 	""
@@ -44,10 +46,8 @@
 	(prepend (hex->digit mod')
 		 (hex->string' div')))))
 
-  (if (not (int? i))
-      (error "int expected")
-    (let ((result (reverse (hex->string' (abs i)))))
-      (cond
-       ((empty? result) "0")
-       ((neg? i) (prepend #- result))
-       result))))
+  (let ((result (reverse (hex->string' (abs i)))))
+    (cond
+     ((empty? result) "0")
+     ((neg? i) (prepend #- result))
+     (otherwise result))))

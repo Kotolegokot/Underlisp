@@ -6,6 +6,7 @@ partial exporting in modules
 fix error rows and columns
 exceptions
 add undef (unset) function
+case takes pairs of the form (expr body...)
 
 data types:
   fractional

@@ -77,6 +77,11 @@
 (defun env? (x)
   (= 'ENV (type x)))
 
+;; tells if x is an int or float
+(defun number? (x)
+  (or (int? x)
+      (float? x)))
+
 ;; tells whether x is a string
 (defun string? (x)
   (and (list? x)
@@ -100,23 +105,27 @@
 ;; prints error if (predicate var) is false
 (defmacro contract (var predicate)
   `(unless (~predicate ~var)
-     (print-format
-      "contract violation~%expected: ~a~%~given: ~a~%"
-      '~predicate ~var)))
+     (error (format
+	     "contract violation~%expected: ~a~%~given: ~a"
+	     '~predicate ~var))))
 
 (defun reverse (xs)
+  (contract xs list?)
   (if (empty? xs)
       '()
     (append (reverse (tail xs))
             (list (head xs)))))
 
 (defun length (xs)
+  (contract xs list?)
   (foldl (lambda (acc _) (+ acc 1)) 0 xs))
 
 (defun prepend (x xs)
+  (contract xs list?)
   (append (list x) xs))
 
 (defun init (xs)
+  (contract xs list?)
   (if (empty? xs)
       (error "init: empty list")
     (if (= 1 (length xs))
@@ -124,6 +133,7 @@
       (prepend (head xs) (init (tail xs))))))
 
 (defun last (xs)
+  (contract xs list?)
   (if (empty? xs)
       (error "last: empty list")
     (if (= 1 (length xs))
@@ -131,52 +141,70 @@
       (last (tail xs)))))
 
 (defun nth (n xs)
-  (cond ((empty? xs)          (error "nth: empty list"))
+  (contract n int?)
+  (contract xs list?)
+  (cond ((empty? xs)        (error "nth: empty list"))
         ((>= n (length xs)) (error "nth: out of bounds"))
         ((< n 0)            (error "nth: negative index"))
         (otherwise
-         (if (= n 0)
+         (if (zero? n)
              (head xs)
            (nth (- n 1) (tail xs))))))
 
 (defun map (f xs)
+  (contract f callable?)
+  (contract xs list?)
   (if (empty? xs)
       ()
     (prepend (f (head xs))
              (map f (tail xs)))))
 
 (defun map-nil (f xs)
+  (contract f callable?)
+  (contract xs list?)
   (map f xs)
   nil)
 
 (defun foldl (f acc xs)
+  (contract f callable?)
+  (contract xs list?)
   (if (empty? xs)
       acc
     (foldl f (f acc (head xs))
            (tail xs))))
 
 (defun foldr (f acc xs)
+  (contract f callable?)
+  (contract xs list?)
   (if (empty? xs)
       acc
     (foldr f (f (last xs) acc)
            (init xs))))
 
 (defun zip (xs ys)
+  (contract xs list?)
+  (contract ys list?)
   (if (or (empty? xs) (empty? ys))
       '()
     (prepend (list (head xs) (head ys))
              (zip (tail xs) (tail ys)))))
 
 (defun zip-with (f xs ys)
+  (contract f callable?)
+  (contract xs list?)
+  (contract ys list?)
   (if (or (empty? xs) (empty? ys))
       '()
     (prepend (f (head xs) (head ys))
              (zip-with f (tail xs) (tail ys)))))
 
 (defun elem (y xs)
+  (contract xs list?)
   (foldl (lambda (acc x) (or (= x y) acc)) false xs))
 
 (defun filter (p xs)
+  (contract p callable?)
+  (contract xs list?)
   (if (empty? xs)
       '()
     (if (p (head xs))
@@ -184,12 +212,18 @@
       (filter p (tail xs)))))
 
 (defun all (p xs)
+  (contract p callable?)
+  (contract xs list?)
   (foldl (lambda (acc x) (if (p x) acc false)) true xs))
 
 (defun any (p xs)
+  (contract p callable?)
+  (contract xs list?)
   (foldl (lambda (acc x) (if (p x) true acc)) false xs))
 
 (defun find (p xs)
+  (contract p callable?)
+  (contactt xs list?)
   (if (empty? xs)
       ()
     (if (p (head xs))
@@ -197,6 +231,8 @@
       (find (p (tail xs))))))
 
 (defun take (n xs)
+  (contract n int?)
+  (contraxt xs list?)
   (cond ((> n (length xs)) (error "take: out of bounds"))
         ((< n 0)           (error "take: negative number"))
         (otherwise
@@ -205,6 +241,8 @@
            (prepend (head xs) (take (- n 1) (tail xs)))))))
 
 (defun drop (n xs)
+  (contract n int?)
+  (contract xs list?)
   (cond ((> n (length xs)) (error "drop: out of bounds"))
         ((< n 0)           (error "drop: negative number"))
         (otherwise
@@ -237,9 +275,11 @@
   (put-char #newline))
 
 (defun print-string (str)
+  (contract str string?)
   (map-nil put-char str))
 
 (defun print-string-ln (str)
+  (contract str string?)
   (print-string str)
   (newline))
 
@@ -250,6 +290,7 @@
   (print-string-ln (->string s-expr)))
 
 (defun format (template &rest args)
+  (contract template string?)
   ;; state := none | tilde
   (defun format' (state template args)
     (case state
@@ -281,14 +322,18 @@
   (format' 'none template args))
 
 (defun print-format (template &rest args)
+  (contract template string?)
   (print-string (apply format (prepend template args))))
 
 ;; swap a function's args
 (defun flip (f)
+  (contract f callable?)
   (lambda (x y) (f y x)))
 
 ;; compose two functions
 (defun compose (f g)
+  (contract f callable?)
+  (contract g callable?)
   (lambda (x) (f (g x))))
 
 ;; the identity
@@ -313,17 +358,20 @@
 ;; makes a function that takes a list take any
 ;; number of arguments
 (defun curry (f)
+  (contract f callable?)
   (lambda (&rest rest)
     (f rest)))
 
 ;; make a function that takes any number of
 ;; arguments take a list
 (defun uncurry (f)
+  (contract f callable?)
   [apply f])
 
 ;; make a one parameter function take a list
 ;; and modify its head
 (defun first (f)
+  (contract f callable?)
   (lambda (list)
     (let ((e1 (nth 0 list))
           (e2 (nth 1 list)))
@@ -332,6 +380,7 @@
 ;; make a one parameter function take a list
 ;; and modify its second element
 (defun second (f)
+  (contract f callable?)
   (lambda (list)
     (let ((e1 (nth 0 list))
           (e2 (nth 1 list)))
@@ -342,38 +391,47 @@
 
 ;; cosecant
 (defun csc (x)
+  (contract x number?)
   (recip  (sin x)))
 
 ;; secant
 (defun sec (x)
+  (contract x number?)
   (recip (cos x)))
 
 ;; arccosecant
 (defun acsc (x)
+  (contract x number?)
   (asin (recip x)))
 
 ;; arcsecant
 (defun asec (x)
+  (contract x number?)
   (acos (recip x)))
 
 ;; hyperbolic cosecant
 (defun csch (x)
+  (contract x number?)
   (recip (sinh x)))
 
 ;; hyperbolic secant
 (defun sech (x)
+  (contract x number?)
   (recip (cosh x)))
 
 ;; hyperbolic arccosecant
 (defun acsch (x)
+  (contract x number?)
   (asinh (recip x)))
 
 ;; hyperbolic arcsecant
 (defun asech (x)
+  (contract x number?)
   (acosh (recip x)))
 
 ;; reciprocal fraction
 (defun recip (x)
+  (contract x number?)
   (/ 1 (float x)))
 
 ;; less or equal
@@ -398,18 +456,24 @@
       'GT)))
 
 (defun neg (x)
+  (contract x number?)
   (* -1 x))
 
 (defun zero? (x)
+  (contract x number?)
   (= x 0))
 
 (defun neg? (x)
+  (contract x number?)
   (< x 0))
 
 (defun pos? (x)
+  (contract x number?)
   (> x 0))
 
 (defun atan2 (y x)
+  (contract x number?)
+  (contract y number?)
   (cond
    ((pos? x)                 (atan (/ y x)))
    ((and (zero? x) (pos? y)) (/ pi 2))
@@ -427,36 +491,49 @@
    (otherwise (+ x y))))
 
 (defun tan (x)
+  (contract x number?)
   (/ (sin x) (cos x)))
 
 (defun cot (x)
+  (contract x number?)
   (/ (cos x) (sin x)))
 
 (defun tanh (x)
+  (contract x number?)
   (/ (sinh x) (cosh x)))
 
 (defun coth (x)
+  (contract x number?)
   (/ (cosh x) (sinh x)))
 
 (defun sqrt (x)
+  (contract x number?)
   (^ x 0.5))
 
 (defun log (x y)
+  (contract x number?)
   (/ (ln x) (ln y)))
 
 (defun quot (x y)
+  (contract x int?)
   (head (quot-rem x y)))
 
 (defun rem (x y)
+  (contract x int?)
   (head (tail (quot-rem x y))))
 
 (defun div (x y)
+  (contract x int?)
+  (contract y int?)
   (head (div-mod x y)))
 
 (defun mod (x y)
+  (contract x int?)
+  (contract y int?)
   (head (tail (div-mod x y))))
 
 (defun sign (x)
+  (contract x number?)
   (case (compare x 0)
 	('EQ 0)
 	('LT -1)
@@ -466,9 +543,11 @@
 (define pred [(flip -) 1])
 
 (defun abs (x)
+  (contract x number?)
   (if (= (sign x) -1)
       (neg x)
     x))
 
 (defun in-range (a b x)
+  (contract x number?)
   (and (<= a x) (<= x b)))
