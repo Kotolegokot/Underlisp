@@ -25,13 +25,13 @@ evaluateModule :: [SExpr] -> IO (Map String SExpr)
 evaluateModule body = do
   prelude <- loadPrelude
   (e, _) <- evalScope prelude body
-  return $ envMerge e
+  return $ lexical e
 
 -- | evaluates a module without prelude loaded
 evaluateModuleNoPrelude :: [SExpr] -> IO (Map String SExpr)
 evaluateModuleNoPrelude body = do
   (e, _) <- evalScope startEnv body
-  return $ envMerge e
+  return $ lexical e
 
 -- | evaluates a lexical scope
 evalScope :: Env -> [SExpr] -> IO (Env, SExpr)

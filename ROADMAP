@@ -2,9 +2,7 @@ pattern matching
 FFI
 call stack
 adequate REPL
-set previous value as it in REPL
 partial exporting in modules
-ENV should contain Env, not Map String SExpr
 fix error rows and columns
 exceptions
 add undef (unset) function
