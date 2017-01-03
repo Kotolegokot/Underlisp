@@ -6,7 +6,7 @@ set previous value as it in REPL
 partial exporting in modules
 ENV should contain Env, not Map String SExpr
 fix error rows and columns
-quotation mark after a symbol should be part of that symbol
+exceptions
 
 data types:
   fractional

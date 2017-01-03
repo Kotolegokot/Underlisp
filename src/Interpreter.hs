@@ -46,4 +46,4 @@ repl = do
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
             putStrLn $ "=> " ++ show expr
-            handleLines (forwardRow p) e'
+            handleLines (forwardRow p) (linsert "it" expr e')
