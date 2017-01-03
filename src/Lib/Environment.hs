@@ -14,14 +14,15 @@ soEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soEnv eval eval_scope e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
-  return $ if not $ all isSymbol symbols
-           then reportUndef "symbol expected"
-           else (e, env $ extractEnv e $ map (\s -> (fromSymbol s, point s)) symbols)
+  return (e, env $ extractEnv e symbols)
 
-extractEnv :: Env -> [(String, Point)] -> Map String SExpr
-extractEnv e keys = foldl (\acc (key, p) -> case envLookup key e of
-                              Just value -> Map.insert key value acc
-                              Nothing    -> report p $ "undefined symbol '" ++ key ++ "'")
+extractEnv :: Env -> [SExpr] -> Map String SExpr
+extractEnv e keys = foldl (\acc sexpr -> if not $ isSymbol sexpr
+                                         then report (point sexpr) "symbol expected"
+                                         else let key = fromSymbol sexpr
+                                              in  case envLookup key e of
+                                                    Just value -> Map.insert key value acc
+                                                    Nothing    -> report (point sexpr) $ "undefined symbol '" ++ key ++ "'")
                     Map.empty
                     keys
 
@@ -38,7 +39,7 @@ soLoadEnv eval _ e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
     SAtom _ (AEnv add) -> (lappend e add, nil)
-    _                  -> report (point sexpr) "context expected"
+    _                  -> report (point arg) "context expected"
 soLoadEnv _   _ _ []     = reportUndef "just one argument required"
 
 soCurrentEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
