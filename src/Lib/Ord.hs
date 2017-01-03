@@ -1,13 +1,18 @@
-module Lib.Ord (builtinEQ,
-                builtinLT) where
+module Lib.Ord (builtinFunctions
+               ,specialOperators) where
 
 import Base
 import Exception
 
-builtinEQ :: [SExpr] -> IO SExpr
-builtinEQ [arg1, arg2] = return . bool $ arg1 == arg2
-builtinEQ _            = reportUndef "two arguments required"
+biEQ :: [SExpr] -> IO SExpr
+biEQ [arg1, arg2] = return . bool $ arg1 == arg2
+biEQ _            = reportUndef "two arguments required"
 
-builtinLT :: [SExpr] -> IO SExpr
-builtinLT [arg1, arg2] = return . bool $ arg1 < arg2
-builtinLT _            = reportUndef "two arguments required"
+biLT :: [SExpr] -> IO SExpr
+biLT [arg1, arg2] = return . bool $ arg1 < arg2
+biLT _            = reportUndef "two arguments required"
+
+builtinFunctions = [("=", Just (2 :: Int), biEQ)
+                   ,("<", Just 2,          biLT)]
+
+specialOperators = []

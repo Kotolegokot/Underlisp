@@ -1,18 +1,23 @@
-module Lib.Char (builtinCharToInt
-                ,builtinIntToChar) where
+module Lib.Char (builtinFunctions
+                ,specialOperators) where
 
 import Data.Char (ord, chr)
 import Base
 import Exception
 
-builtinCharToInt :: [SExpr] -> IO SExpr
-builtinCharToInt [c]
+biCharToInt :: [SExpr] -> IO SExpr
+biCharToInt [c]
   | not $ isChar c = report (point c) "char expected"
   | otherwise      = return . int . ord $ fromChar c
-builtinCharToInt _ = reportUndef "just one argument required"
+biCharToInt _ = reportUndef "just one argument required"
 
-builtinIntToChar :: [SExpr] -> IO SExpr
-builtinIntToChar [i]
+biIntToChar :: [SExpr] -> IO SExpr
+biIntToChar [i]
   | not $ isInt i = report (point i) "int expected"
   | otherwise     = return . char . chr $ fromInt i
-builtinIntToChar _ = reportUndef "just one argument required"
+biIntToChar _ = reportUndef "just one argument required"
+
+builtinFunctions = [("char->int", Just (1 :: Int), biCharToInt)
+                   ,("int->char", Just 1,          biIntToChar)]
+
+specialOperators = []

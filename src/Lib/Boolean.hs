@@ -1,37 +1,40 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Lib.Boolean (builtinNot,
-                    spopAnd,
-                    spopOr,
-                    spopImpl) where
+module Lib.Boolean (builtinFunctions
+                   ,specialOperators) where
 
 import Base
 import Exception
 
-builtinNot :: [SExpr] -> IO SExpr
-builtinNot [sexpr] = return . bool . not . fromBool $ sexpr
-builtinNot _       = reportUndef "just one argument required"
+biNot :: [SExpr] -> IO SExpr
+biNot [sexpr] = return . bool . not . fromBool $ sexpr
+biNot _       = reportUndef "just one argument required"
 
-spopAnd :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopAnd eval evalScope context (x:xs) = do
+soAnd :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soAnd eval evalScope context (x:xs) = do
   (_, expr) <- eval context x
   case fromBool expr of
-    True  -> spopAnd eval evalScope context xs
+    True  -> soAnd eval evalScope context xs
     False -> return (context, bool False)
-spopAnd _    _          context []     = return (context, bool True)
+soAnd _    _          context []     = return (context, bool True)
 
-spopOr :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopOr eval evalScope context (x:xs) = do
+soOr :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soOr eval evalScope context (x:xs) = do
   (_, expr) <- eval context x
   case fromBool expr of
     True  -> return (context, bool True)
-    False -> spopOr eval evalScope context xs
-spopOr _    _          context []     = return (context, bool False)
+    False -> soOr eval evalScope context xs
+soOr _    _          context []     = return (context, bool False)
 
-spopImpl :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopImpl eval _ context [arg1, arg2] = do
+soImpl :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soImpl eval _ context [arg1, arg2] = do
   (_, expr1) <- eval context arg1
   if not $ fromBool expr1
     then return (context, bool True)
     else eval context arg2
-spopImpl _    _  _      _            = reportUndef "two arguments requried"
+soImpl _    _  _      _            = reportUndef "two arguments requried"
+
+builtinFunctions = [("not", Just (1 :: Int),  biNot)]
+specialOperators = [("and", Nothing,          soAnd)
+                   ,("or",  Nothing,          soOr)
+                   ,("->",  Just (2 :: Int),  soImpl)]

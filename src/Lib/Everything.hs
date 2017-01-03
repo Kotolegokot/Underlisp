@@ -1,21 +1,38 @@
-module Lib.Everything (module Lib.Boolean
-                      ,module Lib.Char
-                      ,module Lib.Environment
-                      ,module Lib.Control
-                      ,module Lib.IO
-                      ,module Lib.List
-                      ,module Lib.Main
-                      ,module Lib.Math
-                      ,module Lib.Meta
-                      ,module Lib.Ord) where
+module Lib.Everything where
 
-import Lib.Boolean
-import Lib.Char
-import Lib.Environment
-import Lib.Control
-import Lib.IO
-import Lib.List
-import Lib.Main
-import Lib.Math
-import Lib.Meta
-import Lib.Ord
+import Lib.Boolean as Bool
+import Lib.Char as Char
+import Lib.Control as Ctrl
+import Lib.Environment as Env
+import Lib.IO as IO
+import Lib.List as List
+import Lib.Main as Main
+import Lib.Math as Math
+import Lib.Meta as Meta
+import Lib.Ord as Ord
+
+import Base
+
+specialOperators :: [(String, Maybe Int, Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr))]
+specialOperators = concat [Bool.specialOperators
+                          ,Char.specialOperators
+                          ,Ctrl.specialOperators
+                          ,Env.specialOperators
+                          ,IO.specialOperators
+                          ,List.specialOperators
+                          ,Main.specialOperators
+                          ,Math.specialOperators
+                          ,Meta.specialOperators
+                          ,Ord.specialOperators]
+
+builtinFunctions :: [(String, Maybe Int, [SExpr] -> IO SExpr)]
+builtinFunctions = concat [Bool.builtinFunctions
+                          ,Char.builtinFunctions
+                          ,Ctrl.builtinFunctions
+                          ,Env.builtinFunctions
+                          ,IO.builtinFunctions
+                          ,List.builtinFunctions
+                          ,Main.builtinFunctions
+                          ,Math.builtinFunctions
+                          ,Meta.builtinFunctions
+                          ,Ord.builtinFunctions]

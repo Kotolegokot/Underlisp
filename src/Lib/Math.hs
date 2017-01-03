@@ -1,60 +1,31 @@
-module Lib.Math (builtinSum
-                , builtinSubstract
-                , builtinProduct
-                , builtinDivide
-                , builtinFloat
-                , builtinExp
-                , builtinLn
-                , builtinPower
-                , builtinSin
-                , builtinCos
-                , builtinASin
-                , builtinACos
-                , builtinATan
-                , builtinACot
-                , builtinSinH
-                , builtinCosH
-                , builtinASinH
-                , builtinACosH
-                , builtinATanH
-                , builtinACotH
-                , builtinTruncate
-                , builtinRound
-                , builtinCeiling
-                , builtinFloor
-                , builtinIsNan
-                , builtinIsInfinite
-                , builtinIsDenormalized
-                , builtinIsNegativeZero
-                , builtinIsIEEE
-                , builtinQuotRem
-                , builtinDivMod) where
+module Lib.Math (builtinFunctions
+                ,specialOperators) where
 
 import Numeric.Special.Trigonometric
 import Base
 import Exception
 
-builtinSum :: [SExpr] -> IO SExpr
-builtinSum sexprs = case numArgs sexprs of
+biSum :: [SExpr] -> IO SExpr
+biSum sexprs = case numArgs sexprs of
                       NTInt   -> return . int . sum . fmap fromInt $ sexprs
                       NTFloat -> return . float . sum . fmap fromNumber $ sexprs
 
-builtinSubstract :: [SExpr] -> IO SExpr
-builtinSubstract sexprs@[num1, num2] = case numArgs sexprs of
+biSubstract :: [SExpr] -> IO SExpr
+biSubstract sexprs@[num1, num2] = case numArgs sexprs of
                                          NTInt   -> return . int $ fromInt num1 - fromInt num2
                                          NTFloat -> return . float $ fromNumber num1 - fromNumber num2
-builtinSubstract _                   = reportUndef "two arguments required"
+biSubstract _                   = reportUndef "two arguments required"
 
-builtinProduct :: [SExpr] -> IO SExpr
-builtinProduct sexprs = case numArgs sexprs of
+biProduct :: [SExpr] -> IO SExpr
+biProduct sexprs = case numArgs sexprs of
                                NTInt   -> return . int . product . fmap fromInt $ sexprs
                                NTFloat -> return . float . product . fmap fromNumber $ sexprs
 
-builtinDivide :: [SExpr] -> IO SExpr
-builtinDivide sexprs@[num1, num2] = case numArgs sexprs of
+biDivide :: [SExpr] -> IO SExpr
+biDivide sexprs@[num1, num2] = case numArgs sexprs of
                                       NTInt   -> return . int $ fromInt num1 `div` fromInt num2
                                       NTFloat -> return . float $ fromNumber num1 / fromNumber num2
-builtinDivide _                   = reportUndef "two arguments required"
+biDivide _                   = reportUndef "two arguments required"
 
 data NumType = NTInt | NTFloat
 numArgs :: [SExpr] -> NumType
@@ -68,168 +39,199 @@ numArgs sexprs = numArgs' sexprs NTInt
           | otherwise   = report (point x) "float or int expected"
         numArgs' [] return_type = return_type
 
-builtinFloat :: [SExpr] -> IO SExpr
-builtinFloat [SAtom _ (AInt i)]         = return . float . fromIntegral $ i
-builtinFloat [f@(SAtom _ (AFloat _))]   = return f
-builtinFloat [sexpr]                    = report (point sexpr) "float or int expected"
-builtinFloat _                          = reportUndef "just one argument requried"
+biFloat :: [SExpr] -> IO SExpr
+biFloat [SAtom _ (AInt i)]         = return . float . fromIntegral $ i
+biFloat [f@(SAtom _ (AFloat _))]   = return f
+biFloat [sexpr]                    = report (point sexpr) "float or int expected"
+biFloat _                          = reportUndef "just one argument requried"
 
-builtinExp :: [SExpr] -> IO SExpr
-builtinExp [num]
+biExp :: [SExpr] -> IO SExpr
+biExp [num]
   | isNumber num = return . float . exp $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinExp _ = reportUndef "just one argument required"
+biExp _ = reportUndef "just one argument required"
 
-builtinLn :: [SExpr] -> IO SExpr
-builtinLn [num]
+biLn :: [SExpr] -> IO SExpr
+biLn [num]
   | isNumber num = return . float . log $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinLn _ = reportUndef "just one argument required"
+biLn _ = reportUndef "just one argument required"
 
-builtinPower :: [SExpr] -> IO SExpr
-builtinPower nums@[num1, num2] = case numArgs nums of
+biPower :: [SExpr] -> IO SExpr
+biPower nums@[num1, num2] = case numArgs nums of
   NTInt   -> return . int $ fromInt num1 ^ fromInt num2
   NTFloat -> return . float $ fromNumber num1 ** fromNumber num2
-builtinPower _ = reportUndef "two arguments required"
+biPower _ = reportUndef "two arguments required"
 
-builtinSin :: [SExpr] -> IO SExpr
-builtinSin [num]
+biSin :: [SExpr] -> IO SExpr
+biSin [num]
   | isNumber num = return . float . sin $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinSin _ = reportUndef "just one argument required"
+biSin _ = reportUndef "just one argument required"
 
-builtinCos :: [SExpr] -> IO SExpr
-builtinCos [num]
+biCos :: [SExpr] -> IO SExpr
+biCos [num]
   | isNumber num = return . float . cos $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinCos _ = reportUndef "just one argument required"
+biCos _ = reportUndef "just one argument required"
 
-builtinASin :: [SExpr] -> IO SExpr
-builtinASin [num]
+biASin :: [SExpr] -> IO SExpr
+biASin [num]
   | isNumber num = return . float . asin $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinASin _ = reportUndef "just one argument required"
+biASin _ = reportUndef "just one argument required"
 
-builtinACos :: [SExpr] -> IO SExpr
-builtinACos [num]
+biACos :: [SExpr] -> IO SExpr
+biACos [num]
   | isNumber num = return . float . acos $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinACos _ = reportUndef "just one argument required"
+biACos _ = reportUndef "just one argument required"
 
-builtinATan :: [SExpr] -> IO SExpr
-builtinATan [num]
+biATan :: [SExpr] -> IO SExpr
+biATan [num]
   | isNumber num = return . float . atan $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinATan _ = reportUndef "just one argument required"
+biATan _ = reportUndef "just one argument required"
 
-builtinACot :: [SExpr] -> IO SExpr
-builtinACot [num]
+biACot :: [SExpr] -> IO SExpr
+biACot [num]
   | isNumber num = return . float . acot $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinACot _ = reportUndef "just one argument required"
+biACot _ = reportUndef "just one argument required"
 
-builtinSinH :: [SExpr] -> IO SExpr
-builtinSinH [num]
+biSinH :: [SExpr] -> IO SExpr
+biSinH [num]
   | isNumber num = return . float . sinh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinSinH _ = reportUndef "just one argument required"
+biSinH _ = reportUndef "just one argument required"
 
-builtinCosH :: [SExpr] -> IO SExpr
-builtinCosH [num]
+biCosH :: [SExpr] -> IO SExpr
+biCosH [num]
   | isNumber num = return . float . cosh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinCosH _ = reportUndef "just one argument required"
+biCosH _ = reportUndef "just one argument required"
 
-builtinASinH :: [SExpr] -> IO SExpr
-builtinASinH [num]
+biASinH :: [SExpr] -> IO SExpr
+biASinH [num]
   | isNumber num = return . float . asinh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinASinH _ = reportUndef "just one argument required"
+biASinH _ = reportUndef "just one argument required"
 
-builtinACosH :: [SExpr] -> IO SExpr
-builtinACosH [num]
+biACosH :: [SExpr] -> IO SExpr
+biACosH [num]
   | isNumber num = return . float . acosh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinACosH _ = reportUndef "just one argument required"
+biACosH _ = reportUndef "just one argument required"
 
-builtinATanH :: [SExpr] -> IO SExpr
-builtinATanH [num]
+biATanH :: [SExpr] -> IO SExpr
+biATanH [num]
   | isNumber num = return . float . atanh $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinATanH _ = reportUndef "just one argument required"
+biATanH _ = reportUndef "just one argument required"
 
-builtinACotH :: [SExpr] -> IO SExpr
-builtinACotH [num]
+biACotH :: [SExpr] -> IO SExpr
+biACotH [num]
   | isNumber num = return . float . acoth $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinACotH _ = reportUndef "just one argument required"
+biACotH _ = reportUndef "just one argument required"
 
-builtinTruncate :: [SExpr] -> IO SExpr
-builtinTruncate [num]
+biTruncate :: [SExpr] -> IO SExpr
+biTruncate [num]
   | isNumber num = return . int . truncate $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinTruncate _ = reportUndef "just one argument required"
+biTruncate _ = reportUndef "just one argument required"
 
-builtinRound :: [SExpr] -> IO SExpr
-builtinRound [num]
+biRound :: [SExpr] -> IO SExpr
+biRound [num]
   | isNumber num = return . int . round $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinRound _ = reportUndef "just one argument required"
+biRound _ = reportUndef "just one argument required"
 
-builtinCeiling :: [SExpr] -> IO SExpr
-builtinCeiling [num]
+biCeiling :: [SExpr] -> IO SExpr
+biCeiling [num]
   | isNumber num = return . int . ceiling $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinCeiling _ = reportUndef "just one argument required"
+biCeiling _ = reportUndef "just one argument required"
 
-builtinFloor :: [SExpr] -> IO SExpr
-builtinFloor [num]
+biFloor :: [SExpr] -> IO SExpr
+biFloor [num]
   | isNumber num = return . int . floor $ fromNumber num
   | otherwise    = report (point num) "float or int expected"
-builtinFloor _ = reportUndef "just one argument required"
+biFloor _ = reportUndef "just one argument required"
 
-builtinIsNan :: [SExpr] -> IO SExpr
-builtinIsNan [num]
+biIsNan :: [SExpr] -> IO SExpr
+biIsNan [num]
   | isFloat num = return . bool . isNaN $ fromFloat num
   | otherwise   = report (point num) "float or int expected"
-builtinIsNan _ = reportUndef "just one argument required"
+biIsNan _ = reportUndef "just one argument required"
 
-builtinIsInfinite :: [SExpr] -> IO SExpr
-builtinIsInfinite [num]
+biIsInfinite :: [SExpr] -> IO SExpr
+biIsInfinite [num]
   | isFloat num = return . bool . isInfinite $ fromFloat num
   | otherwise   = report (point num) "float expected"
-builtinIsInfinite _ = reportUndef "just one argument required"
+biIsInfinite _ = reportUndef "just one argument required"
 
-builtinIsDenormalized :: [SExpr] -> IO SExpr
-builtinIsDenormalized [num]
+biIsDenormalized :: [SExpr] -> IO SExpr
+biIsDenormalized [num]
   | isFloat num = return . bool . isDenormalized $ fromFloat num
   | otherwise   = report (point num) "float expected"
-builtinIsDenormalized _ = reportUndef "just one argument required"
+biIsDenormalized _ = reportUndef "just one argument required"
 
-builtinIsNegativeZero :: [SExpr] -> IO SExpr
-builtinIsNegativeZero [num]
+biIsNegativeZero :: [SExpr] -> IO SExpr
+biIsNegativeZero [num]
   | isFloat num = return . bool . isNegativeZero $ fromFloat num
   | otherwise   = report (point num) "float expected"
-builtinIsNegativeZero _ = reportUndef "just one argument required"
+biIsNegativeZero _ = reportUndef "just one argument required"
 
-builtinIsIEEE :: [SExpr] -> IO SExpr
-builtinIsIEEE [num]
+biIsIEEE :: [SExpr] -> IO SExpr
+biIsIEEE [num]
   | isFloat num = return . bool . isIEEE $ fromFloat num
   | otherwise   = report (point num) "float expected"
-builtinIsIEEE _ = reportUndef "just one argument required"
+biIsIEEE _ = reportUndef "just one argument required"
 
-builtinQuotRem :: [SExpr] -> IO SExpr
-builtinQuotRem [num1, num2]
+biQuotRem :: [SExpr] -> IO SExpr
+biQuotRem [num1, num2]
   | not $ isInt num1 = report (point num1) "int expected"
   | not $ isInt num2 = report (point num2) "int expected"
   | otherwise        = return $ list [int quot, int rem]
     where (quot, rem) = quotRem (fromInt num1) (fromInt num2)
-builtinQuotRem _ = reportUndef "two arguments required"
+biQuotRem _ = reportUndef "two arguments required"
 
-builtinDivMod :: [SExpr] -> IO SExpr
-builtinDivMod [num1, num2]
+biDivMod :: [SExpr] -> IO SExpr
+biDivMod [num1, num2]
   | not $ isInt num1 = report (point num1) "int expected"
   | not $ isInt num2 = report (point num2) "int expected"
   | otherwise        = return $ list [int div, int mod]
     where (div, mod) = divMod (fromInt num1) (fromInt num2)
-builtinDivMod _ = reportUndef "two arguments required"
+biDivMod _ = reportUndef "two arguments required"
+
+builtinFunctions = [("+",              Nothing,          biSum)
+                   ,("-",              Just (2 :: Int),  biSubstract)
+                   ,("*",              Nothing,          biProduct)
+                   ,("/",              Just 2,           biDivide)
+                   ,("float",          Just 1,           biFloat)
+                   ,("exp",            Just 1,           biExp)
+                   ,("ln",             Just 1,           biLn)
+                   ,("^",              Just 2,           biPower)
+                   ,("sin",            Just 1,           biSin)
+                   ,("cos",            Just 1,           biCos)
+                   ,("asin",           Just 1,           biASin)
+                   ,("acos",           Just 1,           biACos)
+                   ,("atan",           Just 1,           biATan)
+                   ,("acot",           Just 1,           biACot)
+                   ,("sinh",           Just 1,           biSinH)
+                   ,("cosh",           Just 1,           biCosH)
+                   ,("truncate",       Just 1,           biTruncate)
+                   ,("round",          Just 1,           biRound)
+                   ,("ceiling",        Just 1,           biCeiling)
+                   ,("floor",          Just 1,           biFloor)
+                   ,("nan?",           Just 1,           biIsNan)
+                   ,("infinite?",      Just 1,           biIsInfinite)
+                   ,("denormalized?",  Just 1,           biIsDenormalized)
+                   ,("negative-zero?", Just 1,           biIsNegativeZero)
+                   ,("IEEE?",          Just 1,           biIsIEEE)
+                   ,("quot-rem",       Just 1,           biQuotRem)
+                   ,("div-mod",        Just 1,           biDivMod)]
+
+specialOperators = []
+

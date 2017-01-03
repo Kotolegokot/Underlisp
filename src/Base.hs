@@ -247,8 +247,8 @@ data Callable = UserDefined Env Prototype [SExpr] [SExpr]
               | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
               | SpecialOp   String (Maybe Int) (Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
 
-type Eval      = Env -> SExpr   -> IO (Env, SExpr)
-type EvalScope = Env -> [SExpr] -> IO (Env, SExpr)
+type Eval             = Env -> SExpr   -> IO (Env, SExpr)
+type EvalScope        = Env -> [SExpr] -> IO (Env, SExpr)
 
 isUserDefined, isMacro, isBuiltIn, isSpecialOp :: Callable -> Bool
 

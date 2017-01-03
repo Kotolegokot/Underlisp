@@ -1,13 +1,5 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE FlexibleContexts #-}
-module Lib.Main (spopLet
-                , spopSet
-                , spopLambda
-                , spopDefined
-                , builtinType
-                , spopBind
-                , spopApply
-                , builtinError) where
+module Lib.Main (builtinFunctions
+                ,specialOperators) where
 
 import Data.List (delete, elemIndices)
 import Data.Maybe (isJust)
@@ -20,14 +12,14 @@ import Type
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
-spopLambda :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopLambda _ _ e (lambdaList:body) = return (e, callable $ UserDefined e prototype body [])
+soLambda :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soLambda _ _ e (lambdaList:body) = return (e, callable $ UserDefined e prototype body [])
   where prototype = parseLambdaList lambdaList
-spopLambda _    _ _ [] = reportUndef "at least one argument expected"
+soLambda _    _ _ [] = reportUndef "at least one argument expected"
 
 -- special operator let
-spopLet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopLet eval evalScope e ((SList p pairs):body) = do
+soLet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soLet eval evalScope e ((SList p pairs):body) = do
   e' <- handlePairs pairs (pass e)
   (_, expr) <- evalScope e' body
   return (e, expr)
@@ -38,34 +30,34 @@ spopLet eval evalScope e ((SList p pairs):body) = do
             (SList _ [expr1, _]) -> report (point expr1) "first item in a binding pair must be a keyword"
             _                    -> report (point x) "(var value) pair expected"
           handlePairs []     acc = return acc
-spopLet _    _          _       [expr]               = report (point expr) "list expected"
-spopLet _    _          _       _                    = reportUndef "at least one argument expected"
+soLet _    _          _       [expr]               = report (point expr) "list expected"
+soLet _    _          _       _                    = reportUndef "at least one argument expected"
 
-spopDefined :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopDefined eval _ e [arg] = do
+soIsDefined :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soIsDefined eval _ e [arg] = do
   (_, expr) <- eval e arg
   return $ case expr of
     SAtom _ (ASymbol s) -> (e, bool $ s `envMember` e)
     _                   -> report (point expr) "symbol expected"
-spopDefined _    _ _ _     = reportUndef "just one argument required"
+soIsDefined _    _ _ _     = reportUndef "just one argument required"
 
 -- special operator define
-spopSet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopSet eval _ e [var, sValue]
+soSet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soSet eval _ e [var, sValue]
   | not $ isSymbol var = report (point var) "first argument must be a symbol"
   | otherwise           = do
       let key = fromSymbol var
       (_, value) <- eval e sValue
       return (linsert key value e, nil)
-spopSet _    _           _       _ = reportUndef "two arguments required"
+soSet _    _           _       _ = reportUndef "two arguments required"
 
 -- built-in function type
-builtinType :: [SExpr] -> IO SExpr
-builtinType [sexpr] = return . symbol . map toUpper . showType $ sexpr
-builtinType _       = reportUndef "just one argument required"
+biType :: [SExpr] -> IO SExpr
+biType [sexpr] = return . symbol . map toUpper . showType $ sexpr
+biType _       = reportUndef "just one argument required"
 
-spopBind :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopBind eval _ e (first:args) = do
+soBind :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soBind eval _ e (first:args) = do
   (_, first') <- eval e first
   if not $ isCallable first'
     then report (point first) "callable expected"
@@ -76,20 +68,31 @@ spopBind eval _ e (first:args) = do
              pairs <- mapM (eval e) args
              let args' = map snd pairs
              return (e, callable $ bind other args')
-spopBind _   _ _ []            = reportUndef "at least one argument required"
+soBind _   _ _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
-spopApply :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopApply eval evalScope e [first, args] = do
+soApply :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soApply eval evalScope e [first, args] = do
   (_, first') <- eval e first
   (_, args')  <- eval e args
   if not $ isList args'
     then report (point args) "list expected"
     else call (point first) eval evalScope e (fromCallable first') (fromList args')
-spopApply _    _ _ _             = reportUndef "two arguments required"
+soApply _    _ _ _             = reportUndef "two arguments required"
 
 -- built-in function error
-builtinError :: [SExpr] -> IO SExpr
-builtinError [SList p err] = report p (map fromChar err)
-builtinError [sexpr]       = report (point sexpr) "string expected"
-builtinError _             = reportUndef "just one argument required"
+biError :: [SExpr] -> IO SExpr
+biError [sexpr]
+  | not $ isString sexpr = report (point sexpr) "string expected"
+  | otherwise            = reportUndef $ fromString sexpr
+biError _             = reportUndef "just one argument required"
+
+builtinFunctions = [("type",  Just (1 :: Int), biType)
+                   ,("error", Just 1,           biError)]
+
+specialOperators = [("let",      Nothing,         soLet)
+                   ,("set",      Just (2 :: Int), soSet)
+                   ,("lambda",   Nothing,         soLambda)
+                   ,("defined?", Just 1,          soIsDefined)
+                   ,("bind",     Nothing,         soBind)
+                   ,("apply",    Just 2,          soApply)]

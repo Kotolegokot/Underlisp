@@ -1,25 +1,30 @@
-module Lib.IO (builtinPutChar
-              , builtinToString
-              , builtinFlush
-              , builtinGetLine) where
+module Lib.IO (builtinFunctions
+              ,specialOperators) where
 
 import System.IO (stdout, hFlush)
 import Base
 import Exception
 
-builtinFlush :: [SExpr] -> IO SExpr
-builtinFlush [] = hFlush stdout >> return nil
-builtinFlush _  = reportUndef "no arguments required"
+biFlush :: [SExpr] -> IO SExpr
+biFlush [] = hFlush stdout >> return nil
+biFlush _  = reportUndef "no arguments required"
 
-builtinGetLine :: [SExpr] -> IO SExpr
-builtinGetLine [] = getLine >>= (return . list . map char)
-builtinGetLine _  = reportUndef "no arguments required"
+biGetLine :: [SExpr] -> IO SExpr
+biGetLine [] = getLine >>= (return . list . map char)
+biGetLine _  = reportUndef "no arguments required"
 
-builtinToString :: [SExpr] -> IO SExpr
-builtinToString [arg] = return . list . map char $ show arg
-builtinToString _     = reportUndef "just one argument required"
+biToString :: [SExpr] -> IO SExpr
+biToString [arg] = return . list . map char $ show arg
+biToString _     = reportUndef "just one argument required"
 
-builtinPutChar :: [SExpr] -> IO SExpr
-builtinPutChar [SAtom _ (AChar c)]    = putChar c >> return nil
-builtinPutChar [expr]                 = report (point expr) "char expected"
-builtinPutChar _                      = reportUndef "just one argument required"
+biPutChar :: [SExpr] -> IO SExpr
+biPutChar [SAtom _ (AChar c)]    = putChar c >> return nil
+biPutChar [expr]                 = report (point expr) "char expected"
+biPutChar _                      = reportUndef "just one argument required"
+
+builtinFunctions = [("flush",    Just (0 :: Int), biFlush)
+                   ,("get-line", Just 0,          biGetLine)
+                   ,("->string", Just 1,          biToString)
+                   ,("put-char", Just 1,          biPutChar)]
+
+specialOperators = []

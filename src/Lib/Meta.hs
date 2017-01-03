@@ -1,12 +1,5 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE FlexibleContexts #-}
-module Lib.Meta (spopMacro,
-                 spopMacroExpand,
-                 spopQuote,
-                 spopBackquote,
-                 spopInterprete,
-                 spopGensym,
-                 spopEval) where
+module Lib.Meta (builtinFunctions
+                ,specialOperators) where
 
 import qualified Data.Set as Set
 import qualified Data.Map as Map
@@ -19,13 +12,13 @@ import Exception
 
 -- | special operator macro
 -- | (macro lambda-list [body])
-spopMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopMacro _ _ e (lambdaList:body) = return (e, callable $ Macro e prototype body [])
+soMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soMacro _ _ e (lambdaList:body) = return (e, callable $ Macro e prototype body [])
   where prototype = parseLambdaList lambdaList
-spopMacro _ _ _ []                 = reportUndef "at least one argument requried"
+soMacro _ _ _ []                 = reportUndef "at least one argument requried"
 
-spopMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopMacroExpand eval evalScope e [SList p (first:args)] = do
+soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soMacroExpand eval evalScope e [SList p (first:args)] = do
   (_, first') <- eval e first
   case first' of
     SAtom _ (ACallable (Macro localE prototype sexprs bound)) -> do
@@ -33,23 +26,23 @@ spopMacroExpand eval evalScope e [SList p (first:args)] = do
       (_, expr) <- evalScope (lappend localE argBindings) sexprs
       return (e, expr)
     _                                                         -> report p "macro invocation expected"
-spopMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
-spopMacroExpand _    _          _ _                    = reportUndef "just one argument required"
+soMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
+soMacroExpand _    _          _ _                    = reportUndef "just one argument required"
 
 -- | special operator quote
-spopQuote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopQuote eval _ e [arg] = return (e, arg)
-spopQuote _    _ _ _     = reportUndef "just one argument requried"
+soQuote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soQuote eval _ e [arg] = return (e, arg)
+soQuote _    _ _ _     = reportUndef "just one argument requried"
 
 -- | special operator backquote
-spopBackquote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopBackquote eval evalScope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
+soBackquote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soBackquote eval evalScope e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = report p "just one argument required"
   | otherwise        = do
       (_, expr) <- eval e $ head rest
       return (e, expr)
-spopBackquote eval evalScope e [SList _ l] = do
-  pairs <- mapM' (spopBackquote eval evalScope e . return) l
+soBackquote eval evalScope e [SList _ l] = do
+  pairs <- mapM' (soBackquote eval evalScope e . return) l
   return (e, list $ map snd pairs)
     where mapM' :: (SExpr -> IO (Env, SExpr)) -> [SExpr] -> IO [(Env, SExpr)]
           mapM' f []     = return []
@@ -67,31 +60,41 @@ spopBackquote eval evalScope e [SList _ l] = do
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
-spopBackquote _    _          e [arg]        = return (e, arg)
-spopBackquote _    _          _ _            = reportUndef "just one argument required"
+soBackquote _    _          e [arg]        = return (e, arg)
+soBackquote _    _          _ _            = reportUndef "just one argument required"
 
 -- | special operator interprete
-spopInterprete :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopInterprete eval evalScope e [arg] = do
+soInterprete :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soInterprete eval evalScope e [arg] = do
   (_, expr) <- eval e arg
   case expr of
     SList p str -> evalScope e . Reader.read p  $ map fromChar str
     _           -> report (point arg) "string expected"
-spopInterprete _    _         _ _     = reportUndef "just one argument required"
+soInterprete _    _         _ _     = reportUndef "just one argument required"
 
-spopGensym :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopGensym _ _ e [] = do
+soGensym :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soGensym _ _ e [] = do
   let (g, sym) = gensym (getG e) e
   return (setG e g, sym)
   where gensym :: Int -> Env -> (Int, SExpr)
         gensym n e = case envLookup ("G-" ++ show n) e of
           Just _  -> gensym (n + 1) e
           Nothing -> (n + 1, symbol $ "G-" ++ show n)
-spopGensym _ _ _ _  = reportUndef "no arguments required"
+soGensym _ _ _ _  = reportUndef "no arguments required"
 
 -- | special operator eval
-spopEval :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-spopEval eval _ e [arg] = do
+soEval :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soEval eval _ e [arg] = do
   (_, expr) <- eval e arg
   eval e expr
-spopEval _    _ _ _     = reportUndef "just one argument required"
+soEval _    _ _ _     = reportUndef "just one argument required"
+
+builtinFunctions = []
+
+specialOperators = [("macro",        Nothing,         soMacro)
+                   ,("macro-expand", Just (1 :: Int), soMacroExpand)
+                   ,("quote",        Just 1,          soQuote)
+                   ,("backquote",    Just 1,          soBackquote)
+                   ,("interprete",   Just 1,          soInterprete)
+                   ,("gensym",       Just 0,          soGensym)
+                   ,("eval",         Just 1,          soEval)]
