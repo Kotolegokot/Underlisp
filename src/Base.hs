@@ -215,8 +215,8 @@ instance Show Atom where
     _    -> ['#', c]
   show (ABool b)     = C.bool "false" "true" b
   show (ASymbol s)   = s
-  show (ACallable c) = "{ " ++ show c ++ " }"
-  show (AEnv e)      = "{ " ++ show e ++ " }"
+  show (ACallable c) = show c
+  show (AEnv e)      = show e
 
 instance Type Atom where
   showType a = case a of
@@ -265,10 +265,10 @@ isSpecialOp (SpecialOp _ _ _ _) = True
 isSpecialOp _                   = False
 
 instance Show Callable where
-  show (UserDefined _ prototype _ bound) = "user-defined " ++ show prototype ++ " " ++ show bound
-  show (Macro       _ prototype _ bound) = "macro" ++ show prototype ++ " " ++ show bound
-  show (BuiltIn   name _ _ bound)        = "built-in '" ++ name ++ "' " ++ show bound
-  show (SpecialOp name _ _ bound)        = "special operator '" ++ name ++ "' " ++ show bound
+  show (UserDefined _ _ _ _)  = "#<procedure>"
+  show (Macro _ _ _ _)        = "#<procedure>"
+  show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
+  show (SpecialOp name _ _ _) = "#<procedure:" ++ name ++ ">"
 
 bind :: Callable -> [SExpr] -> Callable
 bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args
