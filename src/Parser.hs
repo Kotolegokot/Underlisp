@@ -22,6 +22,7 @@ parse ((x,p):xs) = case x of
 parseList :: Point -> Char -> [(Lexeme, Point)] -> (SExpr, [(Lexeme, Point)])
 parseList p b pairs = case b of
   '(' -> parseList' p '(' [] pairs
+  '{' -> parseList' p '{' [] pairs
   '[' -> let (SList p' l, rest) = parseList' p '[' [] pairs
          in  (SList p' (SAtom p' (ASymbol "bind") : l), rest)
   where parseList' :: Point -> Char -> [SExpr] -> [(Lexeme, Point)] -> (SExpr, [(Lexeme, Point)])
