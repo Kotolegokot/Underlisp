@@ -92,6 +92,13 @@
      (put-char #newline)
      (error "assert failed")))
 
+;; prints error if (predicate var) is false
+(defmacro contract (var predicate)
+  `(unless (~predicate ~var)
+     (print-format
+      "contract violation~%expected: ~a~%~given: ~a~%"
+      '~predicate ~var)))
+
 (defun reverse (xs)
   (if (empty? xs)
       '()
