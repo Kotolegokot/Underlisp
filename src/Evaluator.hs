@@ -41,7 +41,10 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (pass e, nil)
 eval :: Env -> SExpr -> IO (Env, SExpr)
 eval e (SList _ (first:args))  = do
   (_, first') <- eval e first
-  if isCallable first'
+  rethrow (\le -> if lePoint le == Undefined
+                  then le { lePoint = point first }
+                  else le) $
+    if isCallable first'
     then eval' $ fromCallable first'
     else report (point first) $ "unable to execute s-expression: '" ++ show first' ++ "'"
   where eval' c | isUserDefined c || isBuiltIn c = do
