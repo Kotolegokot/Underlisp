@@ -77,11 +77,16 @@
 (defun env? (x)
   (= 'ENV (type x)))
 
+;; tells whether x is a string
+(defun string? (x)
+  (and (list? x)
+       (all char? x)))
+
 ;; tells whether x is an atom
 (defun atom? (x)
   (/= 'LIST (type x)))
 
-;; tells whether x is an empty list
+;; tells whether x is nil
 (defun nil? (x)
   (= x nil))
 
