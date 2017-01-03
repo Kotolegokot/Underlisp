@@ -33,7 +33,7 @@
 
 ;; (cond (condition1 exp1) (condition2 exp2) ...)
 (defmacro cond (&rest pairs)
-  (if (null pairs)
+  (if (empty? pairs)
       ()
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
@@ -93,7 +93,7 @@
      (error "assert failed")))
 
 (defun reverse (xs)
-  (if (null xs)
+  (if (empty? xs)
       '()
     (append (reverse (tail xs))
             (list (head xs)))))
@@ -105,21 +105,21 @@
   (append (list x) xs))
 
 (defun init (xs)
-  (if (null xs)
+  (if (empty? xs)
       (error "init: empty list")
     (if (= 1 (length xs))
             '()
       (prepend (head xs) (init (tail xs))))))
 
 (defun last (xs)
-  (if (null xs)
+  (if (empty? xs)
       (error "last: empty list")
     (if (= 1 (length xs))
         xs
       (last (tail xs)))))
 
 (defun nth (n xs)
-  (cond ((null xs)          (error "nth: empty list"))
+  (cond ((empty? xs)          (error "nth: empty list"))
         ((>= n (length xs)) (error "nth: out of bounds"))
         ((< n 0)            (error "nth: negative index"))
         (otherwise
@@ -128,7 +128,7 @@
            (nth (- n 1) (tail xs))))))
 
 (defun map (f xs)
-  (if (null xs)
+  (if (empty? xs)
       ()
     (prepend (f (head xs))
              (map f (tail xs)))))
@@ -138,25 +138,25 @@
   nil)
 
 (defun foldl (f acc xs)
-  (if (null xs)
+  (if (empty? xs)
       acc
     (foldl f (f acc (head xs))
            (tail xs))))
 
 (defun foldr (f acc xs)
-  (if (null xs)
+  (if (empty? xs)
       acc
     (foldr f (f (last xs) acc)
            (init xs))))
 
 (defun zip (xs ys)
-  (if (or (null xs) (null ys))
+  (if (or (empty? xs) (empty? ys))
       '()
     (prepend (list (head xs) (head ys))
              (zip (tail xs) (tail ys)))))
 
 (defun zip-with (f xs ys)
-  (if (or (null xs) (null ys))
+  (if (or (empty? xs) (empty? ys))
       '()
     (prepend (f (head xs) (head ys))
              (zip-with f (tail xs) (tail ys)))))
@@ -165,7 +165,7 @@
   (foldl (lambda (acc x) (or (= x y) acc)) false xs))
 
 (defun filter (p xs)
-  (if (null xs)
+  (if (empty? xs)
       '()
     (if (p (head xs))
         (prepend (head xs) (filter p (tail xs)))
@@ -178,7 +178,7 @@
   (foldl (lambda (acc x) (if (p x) true acc)) false xs))
 
 (defun find (p xs)
-  (if (null xs)
+  (if (empty? xs)
       ()
     (if (p (head xs))
         (head xs)
@@ -207,11 +207,11 @@
 
 (defmacro case (expr &rest pairs)
   (defun handle-pairs (expr-var pairs)
-    (if (null pairs)
+    (if (empty? pairs)
         ()
       (let ((first (head pairs)))
         (prepend
-         (if (null (tail first))
+         (if (empty? (tail first))
              `(true ~(head first))
            `((= ~expr-var ~(head first))
              ~(head (tail first))))
@@ -232,29 +232,29 @@
   (newline))
 
 (defun write (s-expr)
-  (print-string (to-string s-expr)))
+  (print-string (->string s-expr)))
 
 (defun write-ln (s-expr)
-  (print-string-ln (to-string s-expr)))
+  (print-string-ln (->string s-expr)))
 
 (defun format (template &rest args)
   ;; state := none | tilde
   (defun format' (state template args)
     (case state
-          ('none (if (null template)
+          ('none (if (empty? template)
                      ()
                    (if (= (head template) #~)
                        (format' 'tilde (tail template) args)
                      (prepend (head template)
                               (format' 'none (tail template) args)))))
-          ('tilde (if (null template)
+          ('tilde (if (empty? template)
                       (error "EOL after ~")
                     (case (head template)
                           (#% (prepend #newline
                                        (format' 'none (tail template) args)))
                           (#~ (prepend #~
                                        (format' 'none (tail template) args)))
-                          (#a (append (to-string (head args))
+                          (#a (append (->string (head args))
                                       (format' 'none (tail template) (tail args))))
                           (#c (if (not (char? (head args)))
                                   (error "char expected")
@@ -288,13 +288,13 @@
 
 ;; same as (compose x1 (compose x2 (... xn)))
 (defun <<< (&rest fs)
-  (if (null fs)
+  (if (empty? fs)
       id
     (compose (head fs) (apply <<< (tail fs)))))
 
 ;; same as (compose xn (compose x{n - 1} (... x1)))
 (defun >>> (&rest fs)
-  (if (null fs)
+  (if (empty? fs)
       id
     (compose (apply >>> (tail fs)) (head fs))))
 
