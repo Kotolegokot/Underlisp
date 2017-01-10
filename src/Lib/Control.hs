@@ -1,6 +1,7 @@
 module Lib.Control (builtinFunctions
                    ,specialOperators) where
 
+import Control.Monad (foldM)
 import Base
 import Exception
 
@@ -18,12 +19,16 @@ soIf eval evalScope e [condSexpr, trueSexpr, falseSexpr] = do
       return (e, expr)
 soIf _    _          _        _                          = reportUndef "1 to 3 arguments requried"
 
-soSeq :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soSeq _ evalScope e args = do
+soScope :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soScope _ evalScope e args = do
   (_, expr) <- evalScope e args
   return (e, expr)
 
+soSeq :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soSeq eval _ e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+
 builtinFunctions = []
 
-specialOperators = [("if",  Just (3 :: Int), soIf)
-                   ,("seq", Nothing,         soSeq)]
+specialOperators = [("if",    Just (3 :: Int), soIf)
+                   ,("scope", Nothing,         soScope)
+                   ,("seq",   Nothing,         soSeq)]
