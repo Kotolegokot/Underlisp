@@ -42,7 +42,7 @@ repl = do
                                            then putStrLn "\nBye"
                                            else ioError err) $ do
             line <- getLine
-            (e', expr) <- catch (Evaluator.evalScope e $ Reader.read p line)
+            (e', expr) <- catch (Evaluator.evalScopeInterpolated e $ Reader.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
             putStrLn $ "=> " ++ show expr

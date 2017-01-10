@@ -37,6 +37,11 @@ evaluateModuleNoPrelude body = do
 evalScope :: Env -> [SExpr] -> IO (Env, SExpr)
 evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (pass e, nil)
 
+-- | evaluates a lexical scope as if it is the same
+-- | lexical level
+evalScopeInterpolated :: Env -> [SExpr] -> IO (Env, SExpr)
+evalScopeInterpolated e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+
 -- | evaluates an s-expression
 eval :: Env -> SExpr -> IO (Env, SExpr)
 eval e (SList _ (first:args))  = do

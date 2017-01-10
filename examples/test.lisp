@@ -11,7 +11,7 @@
 				  (#1 1)))))))
 
 (setfun show-usage ()
-  (print-string-ln "Usage: prog <sequence>"))
+	(print-string-ln "Usage: prog <sequence>"))
 
 (with-args (list "101")
   (set args (get-args))
@@ -22,3 +22,12 @@
      (if (dfa.test dfa-1 sequence)
 	 (print-string-ln "SUCCESS")
        (print-string-ln "PIZDETZ")))))
+
+(let ({a (lambda (n) (if (<= n 1)
+			 "A"
+		       (b (pred n))))}
+      {b (lambda (n) (if (<= n 1)
+			 "B"
+		       (a (pred n))))})
+  
+  (print-format "~s~%" (b 5)))
