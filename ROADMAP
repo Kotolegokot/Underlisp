@@ -8,6 +8,9 @@ exceptions
 add undef (unset) function
 case takes pairs of the form (expr body...)
 
+1. expand macros before execution
+2. macros and special operators aren't functions and so aren't first-class objects and objects at all
+
 data types:
   fractional
   long numbers
@@ -17,5 +20,5 @@ data types:
     and so forth...
 
 standard library:
-  input-output operators (format in particular)
+  input-output operators (format in particular, or rust's fmt)
   sort
