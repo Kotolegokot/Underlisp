@@ -3,7 +3,7 @@
 
 (assert (= (f 3) 9))
 
-(seq
+(scope
  (defun f (x) (* x x x))
  (assert (= (f 3) 27))
 
@@ -17,11 +17,11 @@
  ;; it must change f
  ;; because now both f's
  ;; are external
- (seq
+ (scope
   (import-env outer-env)
   (assert (= (f 3) 9))))
 
-(seq
+(scope
  (defun f (x) (* x x x))
  (assert (= (f 3) 27))
 

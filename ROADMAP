@@ -11,6 +11,9 @@ case takes pairs of the form (expr body...)
 1. expand macros before execution
 2. macros and special operators aren't functions and so aren't first-class objects and objects at all
 
+3. read function
+4. reader-macros
+
 data types:
   fractional
   long numbers
