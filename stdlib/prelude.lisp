@@ -72,8 +72,8 @@
   (= 'BOOL (type x)))
 (defun symbol? (x)
   (= 'SYMBOL (type x)))
-(defun callable? (x)
-  (= 'CALLABLE (type x)))
+(defun procedure? (x)
+  (= 'PROCEDURE (type x)))
 (defun env? (x)
   (= 'ENV (type x)))
 
@@ -152,7 +152,7 @@
            (nth (- n 1) (tail xs))))))
 
 (defun map (f xs)
-  (contract f callable?)
+  (contract f procedure?)
   (contract xs list?)
   (if (empty? xs)
       ()
@@ -160,13 +160,13 @@
              (map f (tail xs)))))
 
 (defun map-nil (f xs)
-  (contract f callable?)
+  (contract f procedure?)
   (contract xs list?)
   (map f xs)
   nil)
 
 (defun foldl (f acc xs)
-  (contract f callable?)
+  (contract f procedure?)
   (contract xs list?)
   (if (empty? xs)
       acc
@@ -174,7 +174,7 @@
            (tail xs))))
 
 (defun foldr (f acc xs)
-  (contract f callable?)
+  (contract f procedure?)
   (contract xs list?)
   (if (empty? xs)
       acc
@@ -190,7 +190,7 @@
              (zip (tail xs) (tail ys)))))
 
 (defun zip-with (f xs ys)
-  (contract f callable?)
+  (contract f procedure?)
   (contract xs list?)
   (contract ys list?)
   (if (or (empty? xs) (empty? ys))
@@ -203,7 +203,7 @@
   (foldl (lambda (acc x) (or (= x y) acc)) false xs))
 
 (defun filter (p xs)
-  (contract p callable?)
+  (contract p procedure?)
   (contract xs list?)
   (if (empty? xs)
       '()
@@ -212,17 +212,17 @@
       (filter p (tail xs)))))
 
 (defun all (p xs)
-  (contract p callable?)
+  (contract p procedure?)
   (contract xs list?)
   (foldl (lambda (acc x) (if (p x) acc false)) true xs))
 
 (defun any (p xs)
-  (contract p callable?)
+  (contract p procedure?)
   (contract xs list?)
   (foldl (lambda (acc x) (if (p x) true acc)) false xs))
 
 (defun find (p xs)
-  (contract p callable?)
+  (contract p procedure?)
   (contactt xs list?)
   (if (empty? xs)
       ()
@@ -327,13 +327,13 @@
 
 ;; swap a function's args
 (defun flip (f)
-  (contract f callable?)
+  (contract f procedure?)
   (lambda (x y) (f y x)))
 
 ;; compose two functions
 (defun compose (f g)
-  (contract f callable?)
-  (contract g callable?)
+  (contract f procedure?)
+  (contract g procedure?)
   (lambda (x) (f (g x))))
 
 ;; the identity
@@ -358,20 +358,20 @@
 ;; makes a function that takes a list take any
 ;; number of arguments
 (defun curry (f)
-  (contract f callable?)
+  (contract f procedure?)
   (lambda (&rest rest)
     (f rest)))
 
 ;; make a function that takes any number of
 ;; arguments take a list
 (defun uncurry (f)
-  (contract f callable?)
+  (contract f procedure?)
   [apply f])
 
 ;; make a one parameter function take a list
 ;; and modify its head
 (defun first (f)
-  (contract f callable?)
+  (contract f procedure?)
   (lambda (list)
     (let ((e1 (nth 0 list))
           (e2 (nth 1 list)))
@@ -380,7 +380,7 @@
 ;; make a one parameter function take a list
 ;; and modify its second element
 (defun second (f)
-  (contract f callable?)
+  (contract f procedure?)
   (lambda (list)
     (let ((e1 (nth 0 list))
           (e2 (nth 1 list)))

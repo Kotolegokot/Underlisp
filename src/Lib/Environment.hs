@@ -47,7 +47,7 @@ soCurrentEnv _ _ e [] = return (e, env $ envMerge e)
 soCurrentEnv _ _ _ _  = reportUndef "no arguments required"
 
 biFunctionEnv :: [SExpr] -> IO SExpr
-biFunctionEnv [SAtom _ (ACallable (UserDefined e _ _ _))] = return . env $ envMerge e
+biFunctionEnv [SAtom _ (AProcedure (UserDefined e _ _ _))] = return . env $ envMerge e
 biFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
 biFunctionEnv _                                           = reportUndef "just one argument required"
 

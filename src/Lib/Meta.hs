@@ -13,7 +13,7 @@ import Exception
 -- | special operator macro
 -- | (macro lambda-list [body])
 soMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soMacro _ _ e (lambdaList:body) = return (e, callable $ Macro e prototype body [])
+soMacro _ _ e (lambdaList:body) = return (e, procedure $ Macro e prototype body [])
   where prototype = parseLambdaList lambdaList
 soMacro _ _ _ []                 = reportUndef "at least one argument requried"
 
@@ -21,7 +21,7 @@ soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soMacroExpand eval evalScope e [SList p (first:args)] = do
   (_, first') <- eval e first
   case first' of
-    SAtom _ (ACallable (Macro localE prototype sexprs bound)) -> do
+    SAtom _ (AProcedure (Macro localE prototype sexprs bound)) -> do
       let argBindings = bindArgs prototype (bound ++ args)
       (_, expr) <- evalScope (lappend localE argBindings) sexprs
       return (e, expr)

@@ -76,7 +76,7 @@ instance Type SExpr where
     | isList sexpr = "List"
     | isAtom sexpr = showType $ fromAtom sexpr
 
-isNil, isInt, isFloat, isChar, isBool, isSymbol, isCallable, isEnv, isNumber, isString :: SExpr -> Bool
+isNil, isInt, isFloat, isChar, isBool, isSymbol, isProcedure, isEnv, isNumber, isString :: SExpr -> Bool
 
 isNil (SAtom _ ANil) = True
 isNil _              = False
@@ -96,8 +96,8 @@ isBool _                   = False
 isSymbol (SAtom _ (ASymbol _)) = True
 isSymbol _                     = False
 
-isCallable (SAtom _ (ACallable _)) = True
-isCallable _                       = False
+isProcedure (SAtom _ (AProcedure _)) = True
+isProcedure _                       = False
 
 isEnv (SAtom _ (AEnv _)) = True
 isEnv _                  = False
@@ -126,9 +126,9 @@ fromSymbol :: SExpr -> String
 fromSymbol (SAtom _ (ASymbol s)) = s
 fromSymbol _                     = undefined
 
-fromCallable :: SExpr -> Callable
-fromCallable (SAtom _ (ACallable c)) = c
-fromCallable _                       = undefined
+fromProcedure :: SExpr -> Procedure
+fromProcedure (SAtom _ (AProcedure c)) = c
+fromProcedure _                       = undefined
 
 fromEnv :: SExpr -> Map String SExpr
 fromEnv (SAtom _ (AEnv e)) = e
@@ -161,8 +161,8 @@ bool = atom . ABool
 symbol :: String -> SExpr
 symbol = atom . ASymbol
 
-callable :: Callable -> SExpr
-callable = atom . ACallable
+procedure :: Procedure -> SExpr
+procedure = atom . AProcedure
 
 env :: Map String SExpr -> SExpr
 env = atom . AEnv
@@ -175,7 +175,7 @@ data Atom = ANil
           | AChar     Char
           | ABool     Bool
           | ASymbol   String
-          | ACallable Callable
+          | AProcedure Procedure
           | AEnv      (Map String SExpr)
 
 instance Eq Atom where
@@ -187,7 +187,7 @@ instance Eq Atom where
   (AChar c)     == (AChar c')    = c == c'
   (ABool b)     == (ABool b')    = b == b'
   (ASymbol s)   == (ASymbol s')  = s == s'
-  (ACallable _) == (ACallable _) = undefined
+  (AProcedure _) == (AProcedure _) = undefined
   (AEnv e)      == (AEnv e')     = e == e'
   _             == _             = False
 
@@ -200,7 +200,7 @@ instance Ord Atom where
   compare (AChar c)     (AChar c')     = compare c c'
   compare (ABool b)     (ABool b')     = compare b b'
   compare (ASymbol s)   (ASymbol s')   = compare s s'
-  compare (ACallable _) (ACallable _') = undefined
+  compare (AProcedure _) (AProcedure _') = undefined
   compare (AEnv e)      (AEnv e')      = undefined
   compare _             _              = undefined
 
@@ -215,7 +215,7 @@ instance Show Atom where
     _    -> ['#', c]
   show (ABool b)     = C.bool "false" "true" b
   show (ASymbol s)   = s
-  show (ACallable c) = show c
+  show (AProcedure c) = show c
   show (AEnv e)      = show e
 
 instance Type Atom where
@@ -226,7 +226,7 @@ instance Type Atom where
     AChar     _ -> "Char"
     ABool     _ -> "Bool"
     ASymbol   _ -> "Symbol"
-    ACallable _ -> "Callable"
+    AProcedure _ -> "Procedure"
     AEnv      _ -> "Env"
 
 strToAtom :: String -> Atom
@@ -241,8 +241,8 @@ strToAtom atom
         tryFloat  = readMaybe atom :: Maybe Float
 ---- atom ----
 
----- callable ----
-data Callable = UserDefined Env Prototype [SExpr] [SExpr]
+---- procedure ----
+data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
               | Macro       Env Prototype [SExpr] [SExpr]
               | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
               | SpecialOp   String (Maybe Int) (Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
@@ -250,7 +250,7 @@ data Callable = UserDefined Env Prototype [SExpr] [SExpr]
 type Eval             = Env -> SExpr   -> IO (Env, SExpr)
 type EvalScope        = Env -> [SExpr] -> IO (Env, SExpr)
 
-isUserDefined, isMacro, isBuiltIn, isSpecialOp :: Callable -> Bool
+isUserDefined, isMacro, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
 isUserDefined (UserDefined _ _ _ _) = True
 isUserDefined _                     = False
@@ -264,13 +264,13 @@ isBuiltIn _                 = False
 isSpecialOp (SpecialOp _ _ _ _) = True
 isSpecialOp _                   = False
 
-instance Show Callable where
+instance Show Procedure where
   show (UserDefined _ _ _ _)  = "#<procedure>"
   show (Macro _ _ _ _)        = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<procedure:" ++ name ++ ">"
 
-bind :: Callable -> [SExpr] -> Callable
+bind :: Procedure -> [SExpr] -> Procedure
 bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args
   | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
   | otherwise                                              = UserDefined scope prototype sexprs (bound ++ args)
@@ -285,7 +285,7 @@ bind (SpecialOp name (Just argsCount) f bound) args
   | argsCount < (length bound + length args) = reportUndef "too many arguments"
   | otherwise                                 = SpecialOp name (Just argsCount) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
----- callable ----
+---- procedure ----
 
 ---- environment ----
 data Env = Env Int [String] [Map String SExpr]
@@ -329,8 +329,8 @@ envMerge :: Env -> Map String SExpr
 envMerge (Env _ _ xs) = Map.unions xs
 
 linsert key value (Env g args (x:xs)) = Env g args (x' : xs)
-  where x' = fmap (\sexpr -> if isCallable sexpr
-                             then SAtom Undefined (ACallable $ case fromCallable sexpr of
+  where x' = fmap (\sexpr -> if isProcedure sexpr
+                             then SAtom Undefined (AProcedure $ case fromProcedure sexpr of
                                                                  UserDefined e prototype sexprs bound
                                                                    -> UserDefined (linsert key value e) prototype sexprs bound
                                                                  other -> other)
@@ -340,8 +340,8 @@ linsert _  _      _                   = undefined
 
 xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
   where ext = Map.fromList [(key, value)]
-        x' = fmap (\sexpr -> if isCallable sexpr
-                             then callable $ case fromCallable sexpr of
+        x' = fmap (\sexpr -> if isProcedure sexpr
+                             then procedure $ case fromProcedure sexpr of
                                     UserDefined e prototype sexprs bound
                                           -> UserDefined (xinsert key value e) prototype sexprs bound
                                     other -> other
@@ -350,8 +350,8 @@ xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
 xinsert _   _     _                   = undefined
 
 lappend (Env g args (x:xs)) add = Env g args (x' : xs)
-  where x' = fmap (\sexpr -> if isCallable sexpr
-                             then callable $ case fromCallable sexpr of
+  where x' = fmap (\sexpr -> if isProcedure sexpr
+                             then procedure $ case fromProcedure sexpr of
                                     UserDefined e prototype sexprs bound
                                           -> UserDefined (lappend e add) prototype sexprs bound
                                     other -> other
@@ -360,8 +360,8 @@ lappend (Env g args (x:xs)) add = Env g args (x' : xs)
 lappend _                   _   = undefined
 
 xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
-  where x' = fmap (\sexpr -> if isCallable sexpr
-                             then callable $ case fromCallable sexpr of
+  where x' = fmap (\sexpr -> if isProcedure sexpr
+                             then procedure $ case fromProcedure sexpr of
                                     UserDefined e prototype sexprs bound
                                           -> UserDefined (xappend e add) prototype sexprs bound
                                     other -> other

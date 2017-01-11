@@ -49,8 +49,8 @@ eval e (SList _ (first:args))  = do
   rethrow (\le -> if lePoint le == Undefined
                   then le { lePoint = point first }
                   else le) $
-    if isCallable first'
-    then eval' $ fromCallable first'
+    if isProcedure first'
+    then eval' $ fromProcedure first'
     else report (point first) $ "unable to execute s-expression: '" ++ show first' ++ "'"
   where eval' c | isUserDefined c || isBuiltIn c = do
                     pairs <- mapM (eval e) args
@@ -73,11 +73,11 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Env
 startEnv = envFromList $
-  (fmap (\(name, args, f) -> (name, callable $ SpecialOp name args f [])) $
+  (fmap (\(name, args, f) -> (name, procedure $ SpecialOp name args f [])) $
     specialOperators ++
     [("env-from-file", Just 1, soEnvFromFile)
     ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)]) ++
-  (fmap (\(name, args, f) -> (name, callable $ BuiltIn name args f [])) $
+  (fmap (\(name, args, f) -> (name, procedure $ BuiltIn name args f [])) $
     builtinFunctions ++
     [("initial-env", Just 0, biInitialEnv)])
 

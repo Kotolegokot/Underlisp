@@ -13,7 +13,7 @@ import Type
 -- | special operator lambda
 -- (lambda lambda-list [body])
 soLambda :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soLambda _ _ e (lambdaList:body) = return (e, callable $ UserDefined e prototype body [])
+soLambda _ _ e (lambdaList:body) = return (e, procedure $ UserDefined e prototype body [])
   where prototype = parseLambdaList lambdaList
 soLambda _    _ _ [] = reportUndef "at least one argument expected"
 
@@ -59,15 +59,15 @@ biType _       = reportUndef "just one argument required"
 soBind :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soBind eval _ e (first:args) = do
   (_, first') <- eval e first
-  if not $ isCallable first'
-    then report (point first) "callable expected"
-    else case fromCallable first' of
-           m@(Macro _ _ _ _)      -> return (e, callable $ bind m args)
-           so@(SpecialOp _ _ _ _) -> return (e, callable $ bind so args)
+  if not $ isProcedure first'
+    then report (point first) "procedure expected"
+    else case fromProcedure first' of
+           m@(Macro _ _ _ _)      -> return (e, procedure $ bind m args)
+           so@(SpecialOp _ _ _ _) -> return (e, procedure $ bind so args)
            other                  -> do
              pairs <- mapM (eval e) args
              let args' = map snd pairs
-             return (e, callable $ bind other args')
+             return (e, procedure $ bind other args')
 soBind _   _ _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
@@ -77,7 +77,7 @@ soApply eval evalScope e [first, args] = do
   (_, args')  <- eval e args
   if not $ isList args'
     then report (point args) "list expected"
-    else call (point first) eval evalScope e (fromCallable first') (fromList args')
+    else call (point first) eval evalScope e (fromProcedure first') (fromList args')
 soApply _    _ _ _             = reportUndef "two arguments required"
 
 -- built-in function error

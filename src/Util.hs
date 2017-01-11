@@ -37,7 +37,7 @@ parseLambdaList (SList p lambdaList)
         count = length lambdaList
 parseLambdaList _ = reportUndef "lambda list must be a list"
 
-call :: Point -> Eval -> EvalScope -> Env -> Callable -> [SExpr] -> IO (Env, SExpr)
+call :: Point -> Eval -> EvalScope -> Env -> Procedure -> [SExpr] -> IO (Env, SExpr)
 call p eval evalScope e c args = do
   (e', expr) <- call' eval evalScope e c args
   return (e', setPoint expr p)
