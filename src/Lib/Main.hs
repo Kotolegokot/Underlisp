@@ -62,7 +62,6 @@ soBind eval _ e (first:args) = do
   if not $ isProcedure first'
     then report (point first) "procedure expected"
     else case fromProcedure first' of
-           m@(Macro _ _ _ _)      -> return (e, procedure $ bind m args)
            so@(SpecialOp _ _ _ _) -> return (e, procedure $ bind so args)
            other                  -> do
              pairs <- mapM (eval e) args

@@ -12,22 +12,22 @@ import Exception
 
 -- | special operator macro
 -- | (macro lambda-list [body])
-soMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soMacro _ _ e (lambdaList:body) = return (e, procedure $ Macro e prototype body [])
-  where prototype = parseLambdaList lambdaList
-soMacro _ _ _ []                 = reportUndef "at least one argument requried"
+-- soMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+-- soMacro _ _ e (lambdaList:body) = return (e, procedure $ Macro e prototype body [])
+--   where prototype = parseLambdaList lambdaList
+-- soMacro _ _ _ []                 = reportUndef "at least one argument requried"
 
-soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soMacroExpand eval evalScope e [SList p (first:args)] = do
-  (_, first') <- eval e first
-  case first' of
-    SAtom _ (AProcedure (Macro localE prototype sexprs bound)) -> do
-      let argBindings = bindArgs prototype (bound ++ args)
-      (_, expr) <- evalScope (lappend localE argBindings) sexprs
-      return (e, expr)
-    _                                                         -> report p "macro invocation expected"
-soMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
-soMacroExpand _    _          _ _                    = reportUndef "just one argument required"
+-- soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+-- soMacroExpand eval evalScope e [SList p (first:args)] = do
+--   (_, first') <- eval e first
+--   case first' of
+--     SAtom _ (AProcedure (Macro localE prototype sexprs bound)) -> do
+--       let argBindings = bindArgs prototype (bound ++ args)
+--       (_, expr) <- evalScope (lappend localE argBindings) sexprs
+--       return (e, expr)
+--     _                                                         -> report p "macro invocation expected"
+-- soMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
+-- soMacroExpand _    _          _ _                    = reportUndef "just one argument required"
 
 -- | special operator quote
 soQuote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
@@ -91,9 +91,9 @@ soEval _    _ _ _     = reportUndef "just one argument required"
 
 builtinFunctions = []
 
-specialOperators = [("macro",        Nothing,         soMacro)
-                   ,("macro-expand", Just (1 :: Int), soMacroExpand)
-                   ,("quote",        Just 1,          soQuote)
+specialOperators = [--("macro",        Nothing,         soMacro)
+                   --,("macro-expand", Just (1 :: Int), soMacroExpand)
+                    ("quote",        Just (1 :: Int), soQuote)
                    ,("backquote",    Just 1,          soBackquote)
                    ,("interprete",   Just 1,          soInterprete)
                    ,("gensym",       Just 0,          soGensym)

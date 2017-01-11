@@ -37,30 +37,55 @@ parseLambdaList (SList p lambdaList)
         count = length lambdaList
 parseLambdaList _ = reportUndef "lambda list must be a list"
 
-call :: Point -> Eval -> EvalScope -> Env -> Procedure -> [SExpr] -> IO (Env, SExpr)
-call p eval evalScope e c args = do
-  (e', expr) <- call' eval evalScope e c args
-  return (e', setPoint expr p)
-    where call' eval evalScope e (UserDefined localE prototype sexprs bound) args = do
-            let argBindings = bindArgs prototype (bound ++ args)
-            (_, expr) <- evalScope (lappend localE argBindings) sexprs
-            return (e, expr)
+---- applicable
+class Applicable a where
+  bind :: a -> [SExpr] -> a
+  call :: Point -> Eval -> EvalScope -> Env -> a -> [SExpr] -> IO (Env, SExpr)
+---- applicable
 
-          call' eval evalScope e (Macro localE prototype sexprs bound) args = do
-            let argBindings = bindArgs prototype (bound ++ args)
-            (_, expr) <- evalScope (lappend localE argBindings) sexprs
-            (e', expr') <- eval e expr
-            return (e', expr')
+instance Applicable Macro where
+  bind (Macro scope prototype@(Prototype argNames rest) sexprs bound) args
+    | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
+    | otherwise                                              = Macro scope prototype sexprs (bound ++ args)
+  call p eval evalScope e c args = do
+    (e', expr) <- call' eval evalScope e c args
+    return (e', setPoint expr p)
+      where call' eval evalScope e (Macro localE prototype sexprs bound) args = do
+              let argBindings = bindArgs prototype (bound ++ args)
+              (_, expr) <- evalScope (lappend localE argBindings) sexprs
+              (e', expr') <- eval e expr
+              return (e', expr')
 
-          call' eval evalScope e (BuiltIn name _ f bound) args = rethrow
-            (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
-              result <- f (bound ++ args)
-              return (e, result)
+instance Applicable Procedure where
+  bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args
+    | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
+    | otherwise                                              = UserDefined scope prototype sexprs (bound ++ args)
+  bind (BuiltIn name (Just argsCount) f bound) args
+    | argsCount < (length bound + length args) = reportUndef "too many arguments"
+    | otherwise                                 = BuiltIn name (Just argsCount) f (bound ++ args)
+  bind (BuiltIn name Nothing f bound) args = BuiltIn name Nothing f (bound ++ args)
+  bind (SpecialOp name (Just argsCount) f bound) args
+    | argsCount < (length bound + length args) = reportUndef "too many arguments"
+    | otherwise                                 = SpecialOp name (Just argsCount) f (bound ++ args)
+  bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
 
-          call' eval evalScope e (SpecialOp name _ f bound) args = rethrow
-            (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
-              (e', expr) <- f eval evalScope e (bound ++ args)
-              return (e', expr)
+  call p eval evalScope e c args = do
+    (e', expr) <- call' eval evalScope e c args
+    return (e', setPoint expr p)
+      where call' eval evalScope e (UserDefined localE prototype sexprs bound) args = do
+              let argBindings = bindArgs prototype (bound ++ args)
+              (_, expr) <- evalScope (lappend localE argBindings) sexprs
+              return (e, expr)
+
+            call' eval evalScope e (BuiltIn name _ f bound) args = rethrow
+              (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
+                result <- f (bound ++ args)
+                return (e, result)
+
+            call' eval evalScope e (SpecialOp name _ f bound) args = rethrow
+              (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
+                (e', expr) <- f eval evalScope e (bound ++ args)
+                return (e', expr)
 
 assureStrings :: [SExpr] -> [String]
 assureStrings = foldl (\acc s -> if isString s

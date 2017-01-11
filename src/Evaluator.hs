@@ -55,7 +55,7 @@ eval e (SList _ (first:args))  = do
   where eval' c | isUserDefined c || isBuiltIn c = do
                     pairs <- mapM (eval e) args
                     call (point first) eval evalScope e c (map snd pairs)
-                | isMacro c || isSpecialOp c     = call (point first) eval evalScope e c args
+                | {-isMacro c ||-} isSpecialOp c     = call (point first) eval evalScope e c args
 eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym)) = case envLookup sym e of
   Just value -> return (e, setPoint value p)

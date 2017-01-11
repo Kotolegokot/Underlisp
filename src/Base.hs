@@ -241,22 +241,22 @@ strToAtom atom
         tryFloat  = readMaybe atom :: Maybe Float
 ---- atom ----
 
+---- macro ----
+data Macro = Macro Env Prototype [SExpr] [SExpr]
+---- macro ----
+
 ---- procedure ----
 data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
-              | Macro       Env Prototype [SExpr] [SExpr]
-              | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
-              | SpecialOp   String (Maybe Int) (Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
+               | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
+               | SpecialOp   String (Maybe Int) (Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
 
 type Eval             = Env -> SExpr   -> IO (Env, SExpr)
 type EvalScope        = Env -> [SExpr] -> IO (Env, SExpr)
 
-isUserDefined, isMacro, isBuiltIn, isSpecialOp :: Procedure -> Bool
+isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
 isUserDefined (UserDefined _ _ _ _) = True
 isUserDefined _                     = False
-
-isMacro (Macro _ _ _ _) = True
-isMacro _               = False
 
 isBuiltIn (BuiltIn _ _ _ _) = True
 isBuiltIn _                 = False
@@ -266,25 +266,8 @@ isSpecialOp _                   = False
 
 instance Show Procedure where
   show (UserDefined _ _ _ _)  = "#<procedure>"
-  show (Macro _ _ _ _)        = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<procedure:" ++ name ++ ">"
-
-bind :: Procedure -> [SExpr] -> Procedure
-bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args
-  | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
-  | otherwise                                              = UserDefined scope prototype sexprs (bound ++ args)
-bind (Macro scope prototype@(Prototype argNames rest) sexprs bound) args
-  | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
-  | otherwise                                              = Macro scope prototype sexprs (bound ++ args)
-bind (BuiltIn name (Just argsCount) f bound) args
-  | argsCount < (length bound + length args) = reportUndef "too many arguments"
-  | otherwise                                 = BuiltIn name (Just argsCount) f (bound ++ args)
-bind (BuiltIn name Nothing f bound) args = BuiltIn name Nothing f (bound ++ args)
-bind (SpecialOp name (Just argsCount) f bound) args
-  | argsCount < (length bound + length args) = reportUndef "too many arguments"
-  | otherwise                                 = SpecialOp name (Just argsCount) f (bound ++ args)
-bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
 ---- procedure ----
 
 ---- environment ----
