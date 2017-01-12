@@ -26,7 +26,7 @@ soLet eval evalScope e ((SList p pairs):body) = do
     where handlePairs (x:xs) acc = case x of
             (SList _ [SAtom _ (ASymbol var), value]) -> do
               (_, expr) <- eval acc value
-              handlePairs xs (linsert var expr acc)
+              handlePairs xs (linsert var (EnvSExpr expr) acc)
             (SList _ [expr1, _]) -> report (point expr1) "first item in a binding pair must be a keyword"
             _                    -> report (point x) "(var value) pair expected"
           handlePairs []     acc = return acc
@@ -37,7 +37,7 @@ soIsDefined :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soIsDefined eval _ e [arg] = do
   (_, expr) <- eval e arg
   return $ case expr of
-    SAtom _ (ASymbol s) -> (e, bool $ s `envMember` e)
+    SAtom _ (ASymbol s) -> (e, bool $ s `memberSExpr` e)
     _                   -> report (point expr) "symbol expected"
 soIsDefined _    _ _ _     = reportUndef "just one argument required"
 
@@ -48,7 +48,7 @@ soSet eval _ e [var, sValue]
   | otherwise           = do
       let key = fromSymbol var
       (_, value) <- eval e sValue
-      return (linsert key value e, nil)
+      return (linsert key (EnvSExpr value) e, nil)
 soSet _    _           _       _ = reportUndef "two arguments required"
 
 -- built-in function type

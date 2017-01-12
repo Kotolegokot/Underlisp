@@ -21,14 +21,14 @@ evaluateProgram body args = do
   void $ evalScope (setArgs prelude args) body
 
 -- | evaluates a module
-evaluateModule :: [SExpr] -> IO (Map String SExpr)
+evaluateModule :: [SExpr] -> IO (Map String EnvItem)
 evaluateModule body = do
   prelude <- loadPrelude
   (e, _) <- evalScope prelude body
   return $ lexical e
 
 -- | evaluates a module without prelude loaded
-evaluateModuleNoPrelude :: [SExpr] -> IO (Map String SExpr)
+evaluateModuleNoPrelude :: [SExpr] -> IO (Map String EnvItem)
 evaluateModuleNoPrelude body = do
   (e, _) <- evalScope startEnv body
   return $ lexical e
@@ -58,8 +58,8 @@ eval e (SList _ (first:args))  = do
                 | {-isMacro c ||-} isSpecialOp c     = call (point first) eval evalScope e c args
 eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym)) = case envLookup sym e of
-  Just value -> return (e, setPoint value p)
-  Nothing    -> report p $ "undefined identificator '" ++ sym ++ "'"
+  Just (EnvSExpr s) -> return (e, setPoint s p)
+  _                 -> report p $ "undefined identificator '" ++ sym ++ "'"
 eval e sexpr                   = return (e, sexpr)
 
 -- | loads prelude and start environment
@@ -73,11 +73,11 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Env
 startEnv = envFromList $
-  (fmap (\(name, args, f) -> (name, procedure $ SpecialOp name args f [])) $
+  (fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ SpecialOp name args f [])) $
     specialOperators ++
     [("env-from-file", Just 1, soEnvFromFile)
     ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)]) ++
-  (fmap (\(name, args, f) -> (name, procedure $ BuiltIn name args f [])) $
+  (fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ BuiltIn name args f [])) $
     builtinFunctions ++
     [("initial-env", Just 0, biInitialEnv)])
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Base where
 
 import Data.Map (Map)
@@ -130,7 +131,7 @@ fromProcedure :: SExpr -> Procedure
 fromProcedure (SAtom _ (AProcedure c)) = c
 fromProcedure _                       = undefined
 
-fromEnv :: SExpr -> Map String SExpr
+fromEnv :: SExpr -> Map String EnvItem
 fromEnv (SAtom _ (AEnv e)) = e
 fromEnv _                  = undefined
 
@@ -164,7 +165,7 @@ symbol = atom . ASymbol
 procedure :: Procedure -> SExpr
 procedure = atom . AProcedure
 
-env :: Map String SExpr -> SExpr
+env :: Map String EnvItem -> SExpr
 env = atom . AEnv
 ---- s-expression ----
 
@@ -176,7 +177,7 @@ data Atom = ANil
           | ABool     Bool
           | ASymbol   String
           | AProcedure Procedure
-          | AEnv      (Map String SExpr)
+          | AEnv      (Map String EnvItem)
 
 instance Eq Atom where
   ANil          == ANil          = True
@@ -192,17 +193,17 @@ instance Eq Atom where
   _             == _             = False
 
 instance Ord Atom where
-  compare ANil          ANil           = EQ
-  compare (AInt i)      (AInt i')      = compare i i'
-  compare (AFloat f)    (AFloat f')    = compare f f'
-  compare (AInt i)      (AFloat f)     = compare (fromIntegral i) f
-  compare (AFloat f)    (AInt i)       = compare f (fromIntegral i)
-  compare (AChar c)     (AChar c')     = compare c c'
-  compare (ABool b)     (ABool b')     = compare b b'
-  compare (ASymbol s)   (ASymbol s')   = compare s s'
+  compare ANil          ANil             = EQ
+  compare (AInt i)      (AInt i')        = compare i i'
+  compare (AFloat f)    (AFloat f')      = compare f f'
+  compare (AInt i)      (AFloat f)       = compare (fromIntegral i) f
+  compare (AFloat f)    (AInt i)         = compare f (fromIntegral i)
+  compare (AChar c)     (AChar c')       = compare c c'
+  compare (ABool b)     (ABool b')       = compare b b'
+  compare (ASymbol s)   (ASymbol s')     = compare s s'
   compare (AProcedure _) (AProcedure _') = undefined
-  compare (AEnv e)      (AEnv e')      = undefined
-  compare _             _              = undefined
+  compare (AEnv e)      (AEnv e')        = undefined
+  compare _             _                = undefined
 
 instance Show Atom where
   show ANil          = "nil"
@@ -242,7 +243,13 @@ strToAtom atom
 ---- atom ----
 
 ---- macro ----
-data Macro = Macro Env Prototype [SExpr] [SExpr]
+data Macro = Macro Point Env Prototype [SExpr] [SExpr]
+
+instance Eq Macro where
+  (==) = undefined
+
+instance Show Macro where
+  show = const "#<macro>"
 ---- macro ----
 
 ---- procedure ----
@@ -271,7 +278,14 @@ instance Show Procedure where
 ---- procedure ----
 
 ---- environment ----
-data Env = Env Int [String] [Map String SExpr]
+data Env = Env Int [String] [Map String EnvItem]
+
+data EnvItem = EnvSExpr SExpr | EnvMacro Macro
+  deriving Eq
+
+instance Show EnvItem where
+  show (EnvSExpr sexpr) = show sexpr
+  show (EnvMacro macro) = show macro
 
 getG :: Env -> Int
 getG (Env g _ _) = g
@@ -293,62 +307,88 @@ instance Show Env where
 empty :: Env
 empty = Env 0 [] [Map.empty]
 
-envFromList :: [(String, SExpr)] -> Env
+envFromList :: [(String, EnvItem)] -> Env
 envFromList l = Env 0 [] [Map.fromList l]
 
 pass :: Env -> Env
 pass (Env g args xs) = Env g args (Map.empty : xs)
 
-envLookup :: String -> Env -> Maybe SExpr
+envLookup :: String -> Env -> Maybe EnvItem
 envLookup key (Env g args (x:xs)) = case Map.lookup key x of
   Just value -> Just value
-  Nothing    -> envLookup key (Env g args xs)
+  _          -> envLookup key (Env g args xs)
 envLookup _   (Env _ _    [])     = Nothing
+
+lookupMacro :: String -> Env -> Maybe Macro
+lookupMacro key (Env g args (x:xs)) = case Map.lookup key x of
+  Just (EnvMacro m) -> Just m
+  _                 -> lookupMacro key (Env g args xs)
+lookupMacro _   (Env _ _    [])     = Nothing
+
+lookupSExpr :: String -> Env -> Maybe SExpr
+lookupSExpr key (Env g args (x:xs)) = case Map.lookup key x of
+  Just (EnvSExpr s) -> Just s
+  _                 -> lookupSExpr key (Env g args xs)
+lookupSExpr _   (Env _ _    [])     = Nothing
+
+memberMacro :: String -> Env -> Bool
+memberMacro key e = isJust $ lookupMacro key e
+
+memberSExpr :: String -> Env -> Bool
+memberSExpr key e = isJust $ lookupSExpr key e
 
 envMember :: String -> Env -> Bool
 envMember key (Env _ _ xs) = key `Map.member` Map.unions xs
 
-envMerge :: Env -> Map String SExpr
+envMerge :: Env -> Map String EnvItem
 envMerge (Env _ _ xs) = Map.unions xs
 
+linsert :: String -> EnvItem -> Env -> Env
 linsert key value (Env g args (x:xs)) = Env g args (x' : xs)
-  where x' = fmap (\sexpr -> if isProcedure sexpr
-                             then SAtom Undefined (AProcedure $ case fromProcedure sexpr of
-                                                                 UserDefined e prototype sexprs bound
-                                                                   -> UserDefined (linsert key value e) prototype sexprs bound
-                                                                 other -> other)
-                             else sexpr)
+  where x' = fmap (\case
+                      EnvMacro (Macro p e prototype sexprs bound)
+                        -> EnvMacro $ Macro p (linsert key value e) prototype sexprs bound
+                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (linsert key value e) prototype sexprs bound
+                      EnvSExpr other
+                        -> EnvSExpr other)
              (Map.insert key value x)
 linsert _  _      _                   = undefined
 
+xinsert :: String -> EnvItem -> Env -> Env
 xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
   where ext = Map.fromList [(key, value)]
-        x' = fmap (\sexpr -> if isProcedure sexpr
-                             then procedure $ case fromProcedure sexpr of
-                                    UserDefined e prototype sexprs bound
-                                          -> UserDefined (xinsert key value e) prototype sexprs bound
-                                    other -> other
-                             else sexpr)
+        x' = fmap (\case
+                      EnvMacro (Macro p e prototype sexprs bound)
+                        -> EnvMacro $ Macro p (xinsert key value e) prototype sexprs bound
+                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xinsert key value e) prototype sexprs bound
+                      EnvSExpr other
+                        -> EnvSExpr other)
              x
 xinsert _   _     _                   = undefined
 
+lappend :: Env -> Map String EnvItem -> Env
 lappend (Env g args (x:xs)) add = Env g args (x' : xs)
-  where x' = fmap (\sexpr -> if isProcedure sexpr
-                             then procedure $ case fromProcedure sexpr of
-                                    UserDefined e prototype sexprs bound
-                                          -> UserDefined (lappend e add) prototype sexprs bound
-                                    other -> other
-                             else sexpr)
+  where x' = fmap (\case
+                      EnvMacro (Macro p e prototype sexprs bound)
+                        -> EnvMacro $ Macro p (lappend e add) prototype sexprs bound
+                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (lappend e add) prototype sexprs bound
+                      EnvSExpr other
+                        -> EnvSExpr other)
              (add `Map.union` x)
 lappend _                   _   = undefined
 
+xappend :: Env -> Map String EnvItem -> Env
 xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
-  where x' = fmap (\sexpr -> if isProcedure sexpr
-                             then procedure $ case fromProcedure sexpr of
-                                    UserDefined e prototype sexprs bound
-                                          -> UserDefined (xappend e add) prototype sexprs bound
-                                    other -> other
-                             else sexpr)
+  where x' = fmap (\case
+                      EnvMacro (Macro p e prototype sexprs bound)
+                        -> EnvMacro $ Macro p (xappend e add) prototype sexprs bound
+                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xappend e add) prototype sexprs bound
+                      EnvSExpr other
+                        -> EnvSExpr other)
              x
 xappend _                   _   = undefined
 

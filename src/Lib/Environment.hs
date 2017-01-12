@@ -16,7 +16,7 @@ soEnv eval eval_scope e args = do
   let symbols = map snd pairs
   return (e, env $ extractEnv e symbols)
 
-extractEnv :: Env -> [SExpr] -> Map String SExpr
+extractEnv :: Env -> [SExpr] -> Map String EnvItem
 extractEnv e keys = foldl (\acc sexpr -> if not $ isSymbol sexpr
                                          then report (point sexpr) "symbol expected"
                                          else let key = fromSymbol sexpr

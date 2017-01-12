@@ -23,10 +23,10 @@ interpreteProgram filename args = do
   let sexprs = Reader.read (startPoint filename) text
   Evaluator.evaluateProgram sexprs args
 
-interpreteModule :: String -> IO (Map String SExpr)
+interpreteModule :: String -> IO (Map String EnvItem)
 interpreteModule filename = readFile filename >>= (Evaluator.evaluateModule . Reader.read (startPoint filename))
 
-interpreteModuleNoPrelude :: String -> IO (Map String SExpr)
+interpreteModuleNoPrelude :: String -> IO (Map String EnvItem)
 interpreteModuleNoPrelude filename = readFile filename >>=
   (Evaluator.evaluateModuleNoPrelude . Reader.read (startPoint filename))
 
@@ -46,4 +46,4 @@ repl = do
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
             putStrLn $ "=> " ++ show expr
-            handleLines (forwardRow p) (linsert "it" expr e')
+            handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')

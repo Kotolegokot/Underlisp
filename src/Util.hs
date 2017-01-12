@@ -10,16 +10,16 @@ import Point
 import Exception
 import Base
 
-bindArgs :: Prototype -> [SExpr] -> Map String SExpr
+bindArgs :: Prototype -> [SExpr] -> Map String EnvItem
 bindArgs (Prototype argNames False) args
   | length argNames > length args = reportUndef "too little arguments"
   | length argNames < length args = reportUndef "too many arguments"
-  | otherwise                     = Map.fromList (zip argNames args)
+  | otherwise                     = Map.fromList (zip argNames $ map EnvSExpr args)
 bindArgs (Prototype argNames True) args
   | length argNames - 1 > length args = reportUndef "too little arguments"
   | otherwise                         = let (left, right) = splitAt (length argNames - 1) args
                                             args'         = left ++ [list right]
-                                        in Map.fromList (zip argNames args')
+                                        in Map.fromList (zip argNames $ map EnvSExpr args')
 
 -- | takes an s-list of the form (arg1 arg2... [&rst argLast])
 -- | and constructs a Prototype
@@ -44,13 +44,13 @@ class Applicable a where
 ---- applicable
 
 instance Applicable Macro where
-  bind (Macro scope prototype@(Prototype argNames rest) sexprs bound) args
+  bind (Macro p scope prototype@(Prototype argNames rest) sexprs bound) args
     | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
-    | otherwise                                              = Macro scope prototype sexprs (bound ++ args)
+    | otherwise                                              = Macro p scope prototype sexprs (bound ++ args)
   call p eval evalScope e c args = do
     (e', expr) <- call' eval evalScope e c args
     return (e', setPoint expr p)
-      where call' eval evalScope e (Macro localE prototype sexprs bound) args = do
+      where call' eval evalScope e (Macro _ localE prototype sexprs bound) args = do
               let argBindings = bindArgs prototype (bound ++ args)
               (_, expr) <- evalScope (lappend localE argBindings) sexprs
               (e', expr') <- eval e expr
