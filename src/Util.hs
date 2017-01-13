@@ -68,14 +68,11 @@ class Applicable a where
   call :: Point -> Eval -> EvalScope -> Env -> a -> [SExpr] -> IO (Env, SExpr)
 ---- applicable
 
-callMacro :: Point -> EvalScope -> Env -> Macro -> [SExpr] -> IO SExpr
-callMacro p expandAndEvalScope e c args = do
-  expr <- callMacro' expandAndEvalScope e c args
-  return $ setPoint expr p
-    where callMacro' expandAndEvalScope e (Macro _ localE prototype sexprs bound) args = do
-            let argBindings = bindArgs prototype (bound ++ args)
-            (_, expr) <- expandAndEvalScope (lappend localE argBindings) sexprs
-            return expr
+callMacro :: EvalScope -> Env -> Macro -> [SExpr] -> IO SExpr
+callMacro expandAndEvalScope e (Macro p localE prototype sexprs bound) args = do
+  let argBindings = bindArgs prototype (bound ++ args)
+  (_, evaluated) <- expandAndEvalScope (lappend localE argBindings) sexprs
+  return $ setPoint evaluated p
 
 -- | expands macros and evaluates a scope
 expandAndEvalScope :: Env -> [SExpr] -> IO (Env, SExpr)
@@ -116,10 +113,10 @@ expandMacro' Default e l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
       return $ SList p (first:rest')
   | sym == "interpolate" = reportCmd p "interpolate" "calling out of backquote"
   | otherwise = case lookupMacro (fromSymbol first) e of
-      Just m@(Macro _ _ _ _ _) -> do
-        expr <- callMacro p expandAndEvalScope e m rest
+      Just m  -> do
+        expr <- callMacro expandAndEvalScope e m rest
         expandMacro' Default e expr
-      Nothing                  -> do
+      Nothing -> do
         list' <- mapM (expandMacro' Default e) (first:rest)
         return $ SList p list'
 expandMacro' Default e l@(SList p (first:rest)) = do

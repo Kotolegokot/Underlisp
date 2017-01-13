@@ -14,22 +14,19 @@ soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soMacroExpand eval evalScope e [sexpr] = do
   (_, sexpr') <- eval e sexpr
   expanded <- expandMacros e [sexpr']
-  return (e, (head $ expanded))
+  return (e, head expanded)
 
 soMacroExpand1 :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soMacroExpand1 eval evalScope e [sexpr] = do
-  (_, sexpr') <- eval e sexpr
-  if not $ isList sexpr'
-    then return (e, sexpr')
-    else let list = fromList sexpr'
-         in  if not $ isSymbol (head list)
-             then return (e, sexpr')
-             else case lookupMacro (fromSymbol $ head list) e of
-                    Just m@(Macro p localE prototype sexprs bound) -> do
-                      result <- callMacro p expandAndEvalScope e m $ tail list
-                      return (e, result)
-                    Nothing                                        -> return (e, sexpr')
-soMacroExpand1 _    _          _ _                    = reportUndef "just one argument required"
+  (_, evaluated) <- eval e sexpr
+  soMacroExpand1' evaluated
+    where soMacroExpand1' l@(SList _ (SAtom _ (ASymbol sym):args)) = case lookupMacro sym e of
+            Just m   -> do
+              result <- callMacro expandAndEvalScope e m args
+              return (e, result)
+            Nothing  -> return (e, l)
+          soMacroExpand1' other                               = return (e, other)
+soMacroExpand1 _    _         _ _       = reportUndef "just one argument required"
 
 -- | special operator quote
 soQuote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
