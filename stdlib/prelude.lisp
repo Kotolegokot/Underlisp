@@ -1,14 +1,14 @@
-;; (define name value)
-;; only binds value to name
-;; when name hasn't been used before
-(defmacro define (name value)
-  (if (defined? name)
-      ()
-      `(set ~name ~value)))
+;; (setq name value)
+(defmacro setq (name value)
+  `(set '~name ~value))
 
-;; (define name lambda-list body)
+;; (mutateq name value)
+(defmacro mutateq (name value)
+  `(mutate '~name ~value))
+
+;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &rest body)
-  `(define ~name (lambda ~lambda-list @body)))
+  `(setq ~name (lambda ~lambda-list @body)))
 
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
@@ -40,7 +40,7 @@
     (env-from-file-no-prelude ~filename)))
 
 ;; otherwise is used with `cond` macro
-(define otherwise true)
+(setq otherwise true)
 
 ;; not equal
 (defun /= (x y)
@@ -373,8 +373,8 @@
           (e2 (nth 1 list)))
       (cons e1 (f e2)))))
 
-(define pi  3.14159265359)
-(define e   2.71828182845)
+(setq pi  3.14159265359)
+(setq e   2.71828182845)
 
 ;; cosecant
 (defun csc (x)
@@ -526,8 +526,8 @@
 	('LT -1)
 	('GT 1)))
 
-(define succ [+ 1])
-(define pred [(flip -) 1])
+(setq succ [+ 1])
+(setq pred [(flip -) 1])
 
 (defun abs (x)
   (contract x number?)

@@ -43,13 +43,29 @@ soIsDefined _    _ _ _     = reportUndef "just one argument required"
 
 -- special operator define
 soSet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soSet eval _ e [var, sValue]
-  | not $ isSymbol var = report (point var) "first argument must be a symbol"
-  | otherwise           = do
+soSet eval _ e [sVar, sValue] = do
+  (_, var) <- eval e sVar
+  if not $ isSymbol var
+    then report (point sVar) "first argument must be a symbol"
+    else do
       let key = fromSymbol var
       (_, value) <- eval e sValue
       return (linsert key (EnvSExpr value) e, nil)
-soSet _    _           _       _ = reportUndef "two arguments required"
+soSet _    _ _ _              = reportUndef "two arguments required"
+
+-- special operator mutate
+soMutate :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soMutate eval _ e [sVar, sValue] = do
+  (_, var) <- eval e sVar
+  let key = fromSymbol var
+  if not $ isSymbol var
+    then report (point sVar) "first argument must be a symbol"
+    else case lookupSExpr key e of
+           Just _  -> do
+             (_, value) <- eval e sValue
+             return (linsert key (EnvSExpr value) e, nil)
+           Nothing -> reportUndef $ "undefined identificator '" ++ key ++ "'"
+soMutate _   _ _ _               = reportUndef "two arguments required"
 
 -- built-in function type
 biType :: [SExpr] -> IO SExpr
@@ -91,6 +107,7 @@ builtinFunctions = [("type",  Just (1 :: Int), biType)
 
 specialOperators = [("let",      Nothing,         soLet)
                    ,("set",      Just (2 :: Int), soSet)
+                   ,("mutate",   Just 2,          soMutate)
                    ,("lambda",   Nothing,         soLambda)
                    ,("defined?", Just 1,          soIsDefined)
                    ,("bind",     Nothing,         soBind)

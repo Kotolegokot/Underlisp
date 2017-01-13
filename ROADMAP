@@ -9,6 +9,7 @@ add undef (unset) function
 case takes pairs of the form (expr body...)
 --no-prelude argument
 &body
+&optional
 
 1. special operators aren't functions and so aren't first-class objects and objects at all
 
