@@ -10,17 +10,20 @@ import Util
 import Point
 import Exception
 
--- soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
--- soMacroExpand eval evalScope e [SList p (first:args)] = do
---   (_, first') <- eval e first
---   case first' of
---     SAtom _ (AProcedure (Macro localE prototype sexprs bound)) -> do
---       let argBindings = bindArgs prototype (bound ++ args)
---       (_, expr) <- evalScope (lappend localE argBindings) sexprs
---       return (e, expr)
---     _                                                         -> report p "macro invocation expected"
--- soMacroExpand _    _          _ [sexpr]              = report (point sexpr) "list expected"
--- soMacroExpand _    _          _ _                    = reportUndef "just one argument required"
+soMacroExpand1 :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soMacroExpand1 eval evalScope e [sexpr] = do
+  (_, sexpr') <- eval e sexpr
+  if not $ isList sexpr'
+    then report (point sexpr) "list expected"
+    else let list = fromList sexpr'
+         in if not $ isSymbol (head list)
+            then report (point $ head list) "symbol expected"
+            else case lookupMacro (fromSymbol $ head list) e of
+                   Just m@(Macro p localE prototype sexprs bound) -> do
+                     result <- callMacro p expandAndEvalScope e m $ tail list
+                     return (e, result)
+                   Nothing                                        -> report (point sexpr') "macro invocation expected"
+soMacroExpand1 _    _          _ _                    = reportUndef "just one argument required"
 
 -- | special operator quote
 soQuote :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
@@ -84,9 +87,9 @@ soEval _    _ _ _     = reportUndef "just one argument required"
 
 builtinFunctions = []
 
-specialOperators = [--,("macro-expand", Just (1 :: Int), soMacroExpand)
-                    ("quote",        Just (1 :: Int), soQuote)
-                   ,("backquote",    Just 1,          soBackquote)
-                   ,("interprete",   Just 1,          soInterprete)
-                   ,("gensym",       Just 0,          soGensym)
-                   ,("eval",         Just 1,          soEval)]
+specialOperators = [("macroexpand-1", Just (1 :: Int), soMacroExpand1)
+                   ,("quote",         Just 1,          soQuote)
+                   ,("backquote",     Just 1,          soBackquote)
+                   ,("interprete",    Just 1,          soInterprete)
+                   ,("gensym",        Just 0,          soGensym)
+                   ,("eval",          Just 1,          soEval)]
