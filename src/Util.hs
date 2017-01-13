@@ -43,18 +43,14 @@ class Applicable a where
   call :: Point -> Eval -> EvalScope -> Env -> a -> [SExpr] -> IO (Env, SExpr)
 ---- applicable
 
-instance Applicable Macro where
-  bind (Macro p scope prototype@(Prototype argNames rest) sexprs bound) args
-    | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
-    | otherwise                                              = Macro p scope prototype sexprs (bound ++ args)
-  call p eval evalScope e c args = do
-    (e', expr) <- call' eval evalScope e c args
-    return (e', setPoint expr p)
-      where call' eval evalScope e (Macro _ localE prototype sexprs bound) args = do
-              let argBindings = bindArgs prototype (bound ++ args)
-              (_, expr) <- evalScope (lappend localE argBindings) sexprs
-              (e', expr') <- eval e expr
-              return (e', expr')
+callMacro :: Point -> EvalScope -> Env -> Macro -> [SExpr] -> IO SExpr
+callMacro p expandAndEvalScope e c args = do
+  expr <- callMacro' expandAndEvalScope e c args
+  return $ setPoint expr p
+    where callMacro' expandAndEvalScope e (Macro _ localE prototype sexprs bound) args = do
+            let argBindings = bindArgs prototype (bound ++ args)
+            (_, expr) <- expandAndEvalScope (lappend localE argBindings) sexprs
+            return expr
 
 instance Applicable Procedure where
   bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args

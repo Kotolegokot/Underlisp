@@ -7,9 +7,12 @@ fix error rows and columns
 exceptions
 add undef (unset) function
 case takes pairs of the form (expr body...)
+--no-prelude argument
+&body
 
-1. expand macros before execution
-2. macros and special operators aren't functions and so aren't first-class objects and objects at all
+2. macroexpand
+3. macroexpand-1
+2. special operators aren't functions and so aren't first-class objects and objects at all
 
 3. read function
 4. reader-macros

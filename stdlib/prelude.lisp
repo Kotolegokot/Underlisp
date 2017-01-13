@@ -1,27 +1,14 @@
 ;; (define name value)
 ;; only binds value to name
 ;; when name hasn't been used before
-(set define (macro (name value)
-                   (if (defined? name)
-                       ()
-                     `(set ~name ~value))))
-
-;; (defmacro name lambda-list body)
-(define defmacro
-  (macro (name lambda-list &rest body)
-         `(define ~name (macro ~lambda-list @body))))
-
-;; (setmacro name lambda-list body)
-(defmacro setmacro (name lambda-list &rest body)
-  `(set ~name (macro ~lambda-list @body)))
+(defmacro define (name value)
+  (if (defined? name)
+      ()
+      `(set ~name ~value)))
 
 ;; (define name lambda-list body)
 (defmacro defun (name lambda-list &rest body)
   `(define ~name (lambda ~lambda-list @body)))
-
-;; (setfun name lambda-list body)
-(defmacro setfun (name lambda-list &rest body)
-  `(set ~name (lambda ~lambda-list @body)))
 
 ;; (when true-condition body)
 (defmacro when (cond &rest body)
@@ -260,11 +247,11 @@
     (if (empty? pairs)
         ()
       (let ((first (head pairs)))
-        (prepend
-         (if (empty? (tail first))
+        (append
+         (list (if (empty? (tail first))
              `(true ~(head first))
            `((= ~expr-var ~(head first))
-             ~(head (tail first))))
+             ~(head (tail first)))))
          (handle-pairs expr-var (tail pairs))))))
 
   (let ((expr-var (gensym)))

@@ -10,13 +10,6 @@ import Util
 import Point
 import Exception
 
--- | special operator macro
--- | (macro lambda-list [body])
--- soMacro :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
--- soMacro _ _ e (lambdaList:body) = return (e, procedure $ Macro e prototype body [])
---   where prototype = parseLambdaList lambdaList
--- soMacro _ _ _ []                 = reportUndef "at least one argument requried"
-
 -- soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 -- soMacroExpand eval evalScope e [SList p (first:args)] = do
 --   (_, first') <- eval e first
@@ -91,8 +84,7 @@ soEval _    _ _ _     = reportUndef "just one argument required"
 
 builtinFunctions = []
 
-specialOperators = [--("macro",        Nothing,         soMacro)
-                   --,("macro-expand", Just (1 :: Int), soMacroExpand)
+specialOperators = [--,("macro-expand", Just (1 :: Int), soMacroExpand)
                     ("quote",        Just (1 :: Int), soQuote)
                    ,("backquote",    Just 1,          soBackquote)
                    ,("interprete",   Just 1,          soInterprete)

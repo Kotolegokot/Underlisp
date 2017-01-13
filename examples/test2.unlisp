@@ -1,0 +1,28 @@
+;; (define name value)
+;; only binds value to name
+;; when name hasn't been used before
+(defmacro define (name value)
+  (if (defined? name)
+      ()
+      `(set ~name ~value)))
+
+;; (define name lambda-list body)
+(defmacro defun (name lambda-list &rest body)
+  `(define ~name (lambda ~lambda-list @body)))
+
+;; (when true-condition body)
+(defmacro when (cond &rest body)
+  `(if ~cond (seq @body)))
+
+;; (unless false-condition body)
+(defmacro unless (cond &rest body)
+  `(when (not ~cond) @body))
+
+;; (cond (condition1 exp1) (condition2 exp2) ...)
+(defmacro cond (&rest pairs)
+  (if (empty? pairs)
+      ()
+      `(if ~(head (head pairs))
+	   ~(head (tail (head pairs)))
+	   (cond @(tail pairs)))))
+

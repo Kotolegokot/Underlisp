@@ -1,5 +1,6 @@
 module Exception (LispError (..)
                  , report
+                 , reportCmd
                  , reportUndef
                  , catch
                  , throw
@@ -26,7 +27,11 @@ instance Show LispError where
     where msg' = filename ++ ":" ++ show row ++ ":" ++ show column ++  ": " ++ cmd ++ ": " ++ msg
 
 report :: Point -> String -> a
-report point msg = throw $ LispError point "" msg
+report point = throw . LispError point ""
+
+reportCmd :: Point -> String -> String -> a
+reportCmd = throw .:: LispError
+  where (.::) = (.) . (.) . (.)
 
 reportUndef :: String -> a
 reportUndef = report Undefined
