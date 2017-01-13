@@ -6,6 +6,10 @@
 (defmacro mutateq (name value)
   `(mutate '~name ~value))
 
+;; (defq? name)
+(defmacro defq? (name)
+  `(def? '~name))
+
 ;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &rest body)
   `(setq ~name (lambda ~lambda-list @body)))

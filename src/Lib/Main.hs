@@ -33,13 +33,13 @@ soLet eval evalScope e ((SList p pairs):body) = do
 soLet _    _          _       [expr]               = report (point expr) "list expected"
 soLet _    _          _       _                    = reportUndef "at least one argument expected"
 
-soIsDefined :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soIsDefined eval _ e [arg] = do
-  (_, expr) <- eval e arg
-  return $ case expr of
-    SAtom _ (ASymbol s) -> (e, bool $ s `memberSExpr` e)
-    _                   -> report (point expr) "symbol expected"
-soIsDefined _    _ _ _     = reportUndef "just one argument required"
+soIsDef :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soIsDef eval _ e [sKey] = do
+  (_, key) <- eval e sKey
+  if not $ isSymbol key
+    then report (point sKey) "symbol expected"
+    else return (e, bool $ (fromSymbol key) `memberSExpr` e)
+soIsDef _    _ _ _     = reportUndef "just one argument required"
 
 -- special operator define
 soSet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
@@ -109,6 +109,6 @@ specialOperators = [("let",      Nothing,         soLet)
                    ,("set",      Just (2 :: Int), soSet)
                    ,("mutate",   Just 2,          soMutate)
                    ,("lambda",   Nothing,         soLambda)
-                   ,("defined?", Just 1,          soIsDefined)
+                   ,("def?",     Just 1,          soIsDef)
                    ,("bind",     Nothing,         soBind)
                    ,("apply",    Just 2,          soApply)]
