@@ -274,7 +274,7 @@ isSpecialOp _                   = False
 instance Show Procedure where
   show (UserDefined _ _ _ _)  = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
-  show (SpecialOp name _ _ _) = "#<procedure:" ++ name ++ ">"
+  show (SpecialOp name _ _ _) = "#<special operator:" ++ name ++ ">"
 ---- procedure ----
 
 ---- environment ----
