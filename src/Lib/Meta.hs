@@ -10,19 +10,25 @@ import Util
 import Point
 import Exception
 
+soMacroExpand :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soMacroExpand eval evalScope e [sexpr] = do
+  (_, sexpr') <- eval e sexpr
+  expanded <- expandMacros e [sexpr']
+  return (e, (head $ expanded))
+
 soMacroExpand1 :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soMacroExpand1 eval evalScope e [sexpr] = do
   (_, sexpr') <- eval e sexpr
   if not $ isList sexpr'
-    then report (point sexpr) "list expected"
+    then return (e, sexpr')
     else let list = fromList sexpr'
-         in if not $ isSymbol (head list)
-            then report (point $ head list) "symbol expected"
-            else case lookupMacro (fromSymbol $ head list) e of
-                   Just m@(Macro p localE prototype sexprs bound) -> do
-                     result <- callMacro p expandAndEvalScope e m $ tail list
-                     return (e, result)
-                   Nothing                                        -> report (point sexpr') "macro invocation expected"
+         in  if not $ isSymbol (head list)
+             then return (e, sexpr')
+             else case lookupMacro (fromSymbol $ head list) e of
+                    Just m@(Macro p localE prototype sexprs bound) -> do
+                      result <- callMacro p expandAndEvalScope e m $ tail list
+                      return (e, result)
+                    Nothing                                        -> return (e, sexpr')
 soMacroExpand1 _    _          _ _                    = reportUndef "just one argument required"
 
 -- | special operator quote
@@ -88,6 +94,7 @@ soEval _    _ _ _     = reportUndef "just one argument required"
 builtinFunctions = []
 
 specialOperators = [("macroexpand-1", Just (1 :: Int), soMacroExpand1)
+                   ,("macroexpand",   Just 1,          soMacroExpand)
                    ,("quote",         Just 1,          soQuote)
                    ,("backquote",     Just 1,          soBackquote)
                    ,("interprete",    Just 1,          soInterprete)

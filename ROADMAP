@@ -10,11 +10,10 @@ case takes pairs of the form (expr body...)
 --no-prelude argument
 &body
 
-1. macroexpand
-2. special operators aren't functions and so aren't first-class objects and objects at all
+1. special operators aren't functions and so aren't first-class objects and objects at all
 
-3. read function
-4. reader-macros
+2. read function
+3. reader-macros
 
 data types:
   fractional
