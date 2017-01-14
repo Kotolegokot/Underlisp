@@ -14,6 +14,13 @@
 (defmacro undefq (name)
   `(undef '~name))
 
+;; (flet ([name lambda-list function-body*]*) flet-body*)
+(defmacro flet (l &rest body)
+  `(let ~(map (lambda (item)
+		`(~(head item) (lambda @(tail item))))
+	      l)
+	@body))
+
 ;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &rest body)
   `(setq ~name (lambda ~lambda-list @body)))
