@@ -125,3 +125,9 @@ specialOperators = [("env",          Nothing,          soEnv)
                    ,("current-env",  Just 0,           soCurrentEnv)
                    ,("get-args",     Just 0,           soGetArgs)
                    ,("with-args",    Nothing,          soWithArgs)]
+
+assureStrings :: [SExpr] -> [String]
+assureStrings = foldl (\acc s -> if isString s
+                                 then acc ++ [fromString s]
+                                 else report (point s) "string expected")
+                []

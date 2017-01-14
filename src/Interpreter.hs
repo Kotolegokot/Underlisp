@@ -46,7 +46,7 @@ repl prelude = do
                                        then putStrLn "\nBye"
                                        else ioError err) $ do
             line <- getLine
-            (e', expr) <- catch (E.evalScopeInterpolated e $ R.read p line)
+            (e', expr) <- catch (E.expandAndEvalScopeInterpolated e $ R.read p line)
                           (\err -> do hPutStrLn stderr $ show (err :: LispError)
                                       return (e, nil))
             unless (isNil expr) $
