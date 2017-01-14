@@ -340,6 +340,9 @@ memberSExpr key e = isJust $ lookupSExpr key e
 envMember :: String -> Env -> Bool
 envMember key (Env _ _ xs) = key `Map.member` Map.unions xs
 
+envDelete :: String -> Env -> Env
+envDelete key (Env g args xs) = Env g args $ map (Map.delete key) xs
+
 envMerge :: Env -> Map String EnvItem
 envMerge (Env _ _ xs) = Map.unions xs
 

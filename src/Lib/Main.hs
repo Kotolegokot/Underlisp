@@ -41,6 +41,14 @@ soIsDef eval _ e [sKey] = do
     else return (e, bool $ (fromSymbol key) `memberSExpr` e)
 soIsDef _    _ _ _     = reportUndef "just one argument required"
 
+soUndef :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
+soUndef eval _ e [sKey] = do
+  (_, key) <- eval e sKey
+  if not $ isSymbol key
+    then report (point sKey) "symbol expected"
+    else return (envDelete (fromSymbol key) e, nil)
+soUndef _    _ _ _      = reportUndef "just one argument required"
+
 -- special operator define
 soSet :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
 soSet eval _ e [sVar, sValue] = do
@@ -110,5 +118,6 @@ specialOperators = [("let",      Nothing,         soLet)
                    ,("mutate",   Just 2,          soMutate)
                    ,("lambda",   Nothing,         soLambda)
                    ,("def?",     Just 1,          soIsDef)
+                   ,("undef",    Just 1,          soUndef)
                    ,("bind",     Nothing,         soBind)
                    ,("apply",    Just 2,          soApply)]

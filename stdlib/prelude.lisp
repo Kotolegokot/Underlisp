@@ -10,6 +10,10 @@
 (defmacro defq? (name)
   `(def? '~name))
 
+;; (undefq name)
+(defmacro undefq (name)
+  `(undef '~name))
+
 ;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &rest body)
   `(setq ~name (lambda ~lambda-list @body)))
