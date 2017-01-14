@@ -12,8 +12,7 @@ import Point
 import Exception
 import Util
 
-preludePath = "stdlib/prelude.lisp" :: String
---preludePath = "examples/test2.unlisp"
+preludePath = "stdlib/prelude.unlisp" :: String
 
 -- | evaluates a module and returns nothing
 evaluateProgram :: [SExpr] -> [String] -> IO ()
