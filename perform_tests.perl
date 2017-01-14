@@ -9,7 +9,7 @@ opendir(DIR, $directory) or die $!;
 while (my $file = readdir DIR) {
     if ($file =~ m/\.unlisp$/) {
         print "running '$directory/$file'...\n";
-        `dist/build/Underlisp/Underlisp $directory/$file`;
+        `dist/build/underlisp/underlisp $directory/$file`;
     }
 }
 closedir(DIR);

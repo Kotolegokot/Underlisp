@@ -5,9 +5,9 @@
 (defun dfa (start-state accepting-states delta)
   (list start-state accepting-states delta))
 
-(define dfa.start-state      head)
-(define dfa.accepting-states [nth 1])
-(define dfa.delta            [nth 2])
+(setq dfa.start-state      head)
+(setq dfa.accepting-states [nth 1])
+(setq dfa.delta            [nth 2])
 
 (defun dfa.test (dfa sequence)
   (let ((last-state (foldl (dfa.delta dfa)

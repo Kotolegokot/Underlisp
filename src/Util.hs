@@ -5,11 +5,21 @@ module Util where
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.List (elemIndices, delete)
-import Control.Monad (foldM)
+import Control.Monad (foldM, void)
 import Prototype
 import Point
 import Exception
 import Base
+
+-- | evaluates a module with given environment and returns nothing
+evaluateProgram :: Env -> [String] -> [SExpr] -> IO ()
+evaluateProgram e args body = void $ expandAndEvalScope (setArgs e args) body
+
+-- | evaluates a module with given environment
+evaluateModule :: Env -> [SExpr] -> IO (Map String EnvItem)
+evaluateModule e body = do
+  (e, _) <- expandAndEvalScope e body
+  return $ lexical e
 
 bindArgs :: Prototype -> [SExpr] -> Map String EnvItem
 bindArgs (Prototype argNames False) args
@@ -41,6 +51,14 @@ parseLambdaList _ = reportUndef "lambda list must be a list"
 -- | evaluates a lexical scope
 evalScope :: Env -> [SExpr] -> IO (Env, SExpr)
 evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+
+-- | evaluates a lexical scope as if it is the same
+-- | lexical level
+evalScopeInterpolated :: Env -> [SExpr] -> IO (Env, SExpr)
+evalScopeInterpolated e sexprs = do
+  let (e', sexprs') = collectMacros e sexprs
+  sexprs'' <- expandMacros e' sexprs'
+  foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e', nil) sexprs''
 
 -- | evaluates an s-expression
 eval :: Env -> SExpr -> IO (Env, SExpr)

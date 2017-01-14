@@ -11,5 +11,5 @@ main = do
     ["--help"]      -> do
       exec <- getExecutablePath
       putStrLn $ "usage: '" ++ exec ++ "' <filename>"
-    (filename:args) -> interpreteProgram filename args
-    []              -> repl
+    (filename:args) -> interpreteProgram True filename args
+    []              -> repl True
