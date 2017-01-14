@@ -255,10 +255,7 @@ instance Show Macro where
 ---- procedure ----
 data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
                | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) (Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
-
-type Eval             = Env -> SExpr   -> IO (Env, SExpr)
-type EvalScope        = Env -> [SExpr] -> IO (Env, SExpr)
+               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 

@@ -54,8 +54,8 @@ eval e (SList _ (first:args))  = do
     else report (point first) $ "unable to execute s-expression: '" ++ show first' ++ "'"
   where eval' c | isUserDefined c || isBuiltIn c = do
                     pairs <- mapM (eval e) args
-                    call (point first) eval evalScope e c (map snd pairs)
-                | isSpecialOp c     = call (point first) eval evalScope e c args
+                    call (point first) e c (map snd pairs)
+                | isSpecialOp c     = call (point first) e c args
 eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym)) = case envLookup sym e of
   Just (EnvSExpr s) -> return (e, setPoint s p)
@@ -65,11 +65,11 @@ eval e sexpr                   = return (e, sexpr)
 ---- applicable
 class Applicable a where
   bind :: a -> [SExpr] -> a
-  call :: Point -> Eval -> EvalScope -> Env -> a -> [SExpr] -> IO (Env, SExpr)
+  call :: Point -> Env -> a -> [SExpr] -> IO (Env, SExpr)
 ---- applicable
 
-callMacro :: EvalScope -> Env -> Macro -> [SExpr] -> IO SExpr
-callMacro expandAndEvalScope e (Macro p localE prototype sexprs bound) args = do
+callMacro :: Env -> Macro -> [SExpr] -> IO SExpr
+callMacro e (Macro p localE prototype sexprs bound) args = do
   let argBindings = bindArgs prototype (bound ++ args)
   (_, evaluated) <- expandAndEvalScope (lappend (pass localE) argBindings) sexprs
   return $ setPoint evaluated p
@@ -114,7 +114,7 @@ expandMacro' Default e l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
   | sym == "interpolate" = reportCmd p "interpolate" "calling out of backquote"
   | otherwise = case lookupMacro (fromSymbol first) e of
       Just m  -> do
-        expr <- callMacro expandAndEvalScope e m rest
+        expr <- callMacro e m rest
         expandMacro' Default e expr
       Nothing -> do
         list' <- mapM (expandMacro' Default e) (first:rest)
@@ -157,7 +157,7 @@ instance Applicable Procedure where
     | otherwise                                 = SpecialOp name (Just argsCount) f (bound ++ args)
   bind (SpecialOp name Nothing f bound) args = SpecialOp name Nothing f (bound ++ args)
 
-  call p eval evalScope e c args = do
+  call p e c args = do
     (e', expr) <- call' eval evalScope e c args
     return (e', setPoint expr p)
       where call' eval evalScope e (UserDefined localE prototype sexprs bound) args = do
@@ -172,7 +172,7 @@ instance Applicable Procedure where
 
             call' eval evalScope e (SpecialOp name _ f bound) args = rethrow
               (\le -> if null $ leCmd le then le { leCmd = name } else le) $ do
-                (e', expr) <- f eval evalScope e (bound ++ args)
+                (e', expr) <- f e (bound ++ args)
                 return (e', expr)
 
 assureStrings :: [SExpr] -> [String]

@@ -13,7 +13,7 @@ import Lib.Ord as Ord
 
 import Base
 
-specialOperators :: [(String, Maybe Int, Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr))]
+specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> IO (Env, SExpr))]
 specialOperators = concat [Bool.specialOperators
                           ,Char.specialOperators
                           ,Ctrl.specialOperators

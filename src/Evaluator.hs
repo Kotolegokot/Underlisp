@@ -61,8 +61,8 @@ startEnv = envFromList $
     [("initial-env", Just 0, biInitialEnv)])
 
 -- | loads environment from a file
-soEnvFromFile :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soEnvFromFile eval eval_scope e [arg] = do
+soEnvFromFile :: Env -> [SExpr] -> IO (Env, SExpr)
+soEnvFromFile e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SList p l -> do
@@ -71,11 +71,11 @@ soEnvFromFile eval eval_scope e [arg] = do
       e' <- evaluateModule $ Reader.read p text
       return (e, env e')
     other     -> report (point other) "string expected"
-soEnvFromFile _    _          _        _    = reportUndef "just one argument required"
+soEnvFromFile _ _     = reportUndef "just one argument required"
 
 -- | loads environment from a file without prelude loaded
-soEnvFromFileNoPrelude :: Eval -> EvalScope  -> Env -> [SExpr] -> IO (Env, SExpr)
-soEnvFromFileNoPrelude eval evalScope e [arg] = do
+soEnvFromFileNoPrelude :: Env -> [SExpr] -> IO (Env, SExpr)
+soEnvFromFileNoPrelude e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SList p list -> do
@@ -84,7 +84,7 @@ soEnvFromFileNoPrelude eval evalScope e [arg] = do
       e' <- evaluateModuleNoPrelude $ Reader.read p text
       return (e, env e')
     other        -> report (point other) "string expected"
-soEnvFromFileNoPrelude _    _          _       _      = reportUndef "just one argument required"
+soEnvFromFileNoPrelude _       _      = reportUndef "just one argument required"
 
 -- | returns start environment plus prelude
 biInitialEnv :: [SExpr] -> IO SExpr

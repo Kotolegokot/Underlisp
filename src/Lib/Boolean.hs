@@ -5,34 +5,35 @@ module Lib.Boolean (builtinFunctions
 
 import Base
 import Exception
+import Util
 
 biNot :: [SExpr] -> IO SExpr
 biNot [sexpr] = return . bool . not . fromBool $ sexpr
 biNot _       = reportUndef "just one argument required"
 
-soAnd :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soAnd eval evalScope context (x:xs) = do
-  (_, expr) <- eval context x
+soAnd :: Env -> [SExpr] -> IO (Env, SExpr)
+soAnd e (x:xs) = do
+  (_, expr) <- eval e x
   case fromBool expr of
-    True  -> soAnd eval evalScope context xs
-    False -> return (context, bool False)
-soAnd _    _          context []     = return (context, bool True)
+    True  -> soAnd e xs
+    False -> return (e, bool False)
+soAnd e []     = return (e, bool True)
 
-soOr :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soOr eval evalScope context (x:xs) = do
-  (_, expr) <- eval context x
+soOr :: Env -> [SExpr] -> IO (Env, SExpr)
+soOr e (x:xs) = do
+  (_, expr) <- eval e x
   case fromBool expr of
-    True  -> return (context, bool True)
-    False -> soOr eval evalScope context xs
-soOr _    _          context []     = return (context, bool False)
+    True  -> return (e, bool True)
+    False -> soOr e xs
+soOr e []     = return (e, bool False)
 
-soImpl :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soImpl eval _ context [arg1, arg2] = do
-  (_, expr1) <- eval context arg1
+soImpl :: Env -> [SExpr] -> IO (Env, SExpr)
+soImpl e [arg1, arg2] = do
+  (_, expr1) <- eval e arg1
   if not $ fromBool expr1
-    then return (context, bool True)
-    else eval context arg2
-soImpl _    _  _      _            = reportUndef "two arguments requried"
+    then return (e, bool True)
+    else eval e arg2
+soImpl _ _            = reportUndef "two arguments requried"
 
 builtinFunctions = [("not", Just (1 :: Int),  biNot)]
 specialOperators = [("and", Nothing,          soAnd)

@@ -4,11 +4,12 @@ module Lib.Control (builtinFunctions
 import Control.Monad (foldM)
 import Base
 import Exception
+import Util
 
-soIf :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soIf eval evalScope e [condSexpr]                        = soIf eval evalScope e [condSexpr, nil,       nil]
-soIf eval evalScope e [condSexpr, trueSexpr]             = soIf eval evalScope e [condSexpr, trueSexpr, nil]
-soIf eval evalScope e [condSexpr, trueSexpr, falseSexpr] = do
+soIf :: Env -> [SExpr] -> IO (Env, SExpr)
+soIf e [condSexpr]                        = soIf e [condSexpr, nil,       nil]
+soIf e [condSexpr, trueSexpr]             = soIf e [condSexpr, trueSexpr, nil]
+soIf e [condSexpr, trueSexpr, falseSexpr] = do
   (_, cond) <- eval e condSexpr
   if fromBool cond
     then do
@@ -17,15 +18,15 @@ soIf eval evalScope e [condSexpr, trueSexpr, falseSexpr] = do
     else do
       (_, expr) <- eval e falseSexpr
       return (e, expr)
-soIf _    _          _        _                          = reportUndef "1 to 3 arguments requried"
+soIf _        _                          = reportUndef "1 to 3 arguments requried"
 
-soScope :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soScope _ evalScope e args = do
+soScope :: Env -> [SExpr] -> IO (Env, SExpr)
+soScope e args = do
   (_, expr) <- evalScope e args
   return (e, expr)
 
-soSeq :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soSeq eval _ e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+soSeq :: Env -> [SExpr] -> IO (Env, SExpr)
+soSeq e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 
 builtinFunctions = []
 

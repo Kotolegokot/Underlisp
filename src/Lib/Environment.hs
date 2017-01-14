@@ -10,8 +10,8 @@ import Exception
 import Point
 import Util
 
-soEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soEnv eval eval_scope e args = do
+soEnv :: Env -> [SExpr] -> IO (Env, SExpr)
+soEnv e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
   return (e, env $ extractEnv e symbols)
@@ -26,37 +26,37 @@ extractEnv e keys = foldl (\acc sexpr -> if not $ isSymbol sexpr
                     Map.empty
                     keys
 
-soImportEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soImportEnv eval _ e [arg] = do
+soImportEnv :: Env -> [SExpr] -> IO (Env, SExpr)
+soImportEnv e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
     SAtom _ (AEnv add) -> (xappend e add, nil)
     _                  -> report (point sexpr) "context expected"
-soImportEnv _   _ _ []     = reportUndef "just one argument required"
+soImportEnv _ []     = reportUndef "just one argument required"
 
-soLoadEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soLoadEnv eval _ e [arg] = do
+soLoadEnv :: Env -> [SExpr] -> IO (Env, SExpr)
+soLoadEnv e [arg] = do
   (_, sexpr) <- eval e arg
   return $ case sexpr of
     SAtom _ (AEnv add) -> (lappend e add, nil)
     _                  -> report (point arg) "context expected"
-soLoadEnv _   _ _ []     = reportUndef "just one argument required"
+soLoadEnv _ []    = reportUndef "just one argument required"
 
-soCurrentEnv :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soCurrentEnv _ _ e [] = return (e, env $ envMerge e)
-soCurrentEnv _ _ _ _  = reportUndef "no arguments required"
+soCurrentEnv :: Env -> [SExpr] -> IO (Env, SExpr)
+soCurrentEnv e [] = return (e, env $ envMerge e)
+soCurrentEnv _ _  = reportUndef "no arguments required"
 
 biFunctionEnv :: [SExpr] -> IO SExpr
 biFunctionEnv [SAtom _ (AProcedure (UserDefined e _ _ _))] = return . env $ envMerge e
 biFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
 biFunctionEnv _                                           = reportUndef "just one argument required"
 
-soGetArgs :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soGetArgs _ _ e [] = return (e, list . map (list . map char) $ getArgs e)
-soGetArgs _ _ _ _  = reportUndef "no arguments required"
+soGetArgs :: Env -> [SExpr] -> IO (Env, SExpr)
+soGetArgs e [] = return (e, list . map (list . map char) $ getArgs e)
+soGetArgs _ _  = reportUndef "no arguments required"
 
-soWithArgs :: Eval -> EvalScope -> Env -> [SExpr] -> IO (Env, SExpr)
-soWithArgs eval evalScope e (args:sexprs) = do
+soWithArgs :: Env -> [SExpr] -> IO (Env, SExpr)
+soWithArgs e (args:sexprs) = do
   (_, args') <- eval e args
   let args'' = if isList args'
                then assureStrings $ fromList args'
@@ -64,7 +64,7 @@ soWithArgs eval evalScope e (args:sexprs) = do
       e'     = setArgs e args''
   (_, expr) <- evalScope e' sexprs
   return (e, expr)
-soWithArgs _    _         _ _             = reportUndef "at least one argument required"
+soWithArgs _ _             = reportUndef "at least one argument required"
 
 biGetEnv :: [SExpr] -> IO SExpr
 biGetEnv [name]
