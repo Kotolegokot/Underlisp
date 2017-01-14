@@ -5,7 +5,6 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Char (isSpace)
 import Base
-import Util
 import Point
 import Exception
 

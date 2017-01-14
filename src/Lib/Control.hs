@@ -4,7 +4,7 @@ module Lib.Control (builtinFunctions
 import Control.Monad (foldM)
 import Base
 import Exception
-import Util
+import Evaluator
 
 soIf :: Env -> [SExpr] -> IO (Env, SExpr)
 soIf e [condSexpr]                        = soIf e [condSexpr, nil,       nil]

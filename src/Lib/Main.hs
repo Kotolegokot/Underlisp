@@ -7,7 +7,7 @@ import qualified Data.Map as Map
 import Data.Char (toUpper)
 import Base
 import Exception
-import Util
+import Evaluator
 import Type
 
 -- | special operator lambda

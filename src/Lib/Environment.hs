@@ -8,7 +8,7 @@ import qualified Reader
 import Base
 import Exception
 import Point
-import Util
+import Evaluator
 
 soEnv :: Env -> [SExpr] -> IO (Env, SExpr)
 soEnv e args = do

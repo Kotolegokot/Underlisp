@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import qualified Reader
 import Base
-import Util
+import Evaluator
 import Point
 import Exception
 

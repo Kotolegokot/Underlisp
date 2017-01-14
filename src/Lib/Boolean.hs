@@ -5,7 +5,7 @@ module Lib.Boolean (builtinFunctions
 
 import Base
 import Exception
-import Util
+import Evaluator
 
 biNot :: [SExpr] -> IO SExpr
 biNot [sexpr] = return . bool . not . fromBool $ sexpr

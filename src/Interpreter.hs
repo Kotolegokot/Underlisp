@@ -10,7 +10,7 @@ import System.IO
 import System.IO.Error (isEOFError)
 import Data.Map (Map)
 import qualified Reader as R
-import qualified Util as E
+import qualified Evaluator as E
 import Lib.Everything
 import Base
 import Point
