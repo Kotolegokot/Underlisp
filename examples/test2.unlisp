@@ -1,0 +1,2 @@
+(defmacro test-macro (list)
+  `(write-ln (type ~list)))

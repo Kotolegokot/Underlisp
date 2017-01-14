@@ -15,10 +15,10 @@
   `(undef '~name))
 
 ;; (flet ([name lambda-list function-body*]*) flet-body*)
-(defmacro flet (l &rest body)
+(defmacro flet (list &rest body)
   `(let ~(map (lambda (item)
 		`(~(head item) (lambda @(tail item))))
-	      l)
+	      list)
 	@body))
 
 ;; (setq name lambda-list body)

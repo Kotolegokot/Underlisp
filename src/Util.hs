@@ -71,7 +71,7 @@ class Applicable a where
 callMacro :: EvalScope -> Env -> Macro -> [SExpr] -> IO SExpr
 callMacro expandAndEvalScope e (Macro p localE prototype sexprs bound) args = do
   let argBindings = bindArgs prototype (bound ++ args)
-  (_, evaluated) <- expandAndEvalScope (lappend localE argBindings) sexprs
+  (_, evaluated) <- expandAndEvalScope (lappend (pass localE) argBindings) sexprs
   return $ setPoint evaluated p
 
 -- | expands macros and evaluates a scope

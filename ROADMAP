@@ -1,13 +1,12 @@
 pattern matching
 FFI
-call stack
-adequate REPL
+IMPORTANT: call stack
+IMPORTANT: adequate REPL
 partial exporting in modules
-fix error rows and columns
+IMPORTANT: fix error rows and columns
 exceptions
-add undef (unset) function
 case takes pairs of the form (expr body...)
---no-prelude argument
+IMPORTANT --no-prelude argument
 &body
 &optional
 
