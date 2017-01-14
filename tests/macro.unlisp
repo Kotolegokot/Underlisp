@@ -1,10 +1,10 @@
 (defmacro put-in-the-middle (x xs)
   `(~(head xs) ~x ~(head (tail xs))))
 
-(set write (lambda (str)
-	     (if (not (empty? str))
-		 (seq (put-char (head str))
-		      (write (tail str))))))
+(setq write (lambda (str)
+	      (if (not (empty? str))
+		  (seq (put-char (head str))
+		       (write (tail str))))))
 
 
 (assert (= (put-in-the-middle 4 (- 3)) 1))
