@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Evaluator where
 
 import qualified Data.Map as Map

@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes       #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Lib.Boolean (builtinFunctions
                    ,specialOperators) where
 

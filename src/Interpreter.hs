@@ -26,12 +26,14 @@ interpreteProgram prelude filename args = do
   text <- readFile filename
   E.evaluateProgram e args $ R.read (startPoint filename) text
 
+-- | interpretes a module and returns its lexical scope
 interpreteModule :: Bool -> String -> IO (Map String EnvItem)
 interpreteModule prelude filename = do
   e <- loadEnv prelude
   text <- readFile filename
   E.evaluateModule e $ R.read (startPoint filename) text
 
+-- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
 repl prelude = do
   e <- loadEnv prelude
