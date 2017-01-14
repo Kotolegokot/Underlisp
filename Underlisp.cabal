@@ -1,21 +1,23 @@
 name:                Underlisp
 version:             0.1.0.0
--- synopsis:            
-description:         a little lisp interpreter written in Haskell
+synopsis:            a little lisp interpreter written in Haskell
+-- description:
 license:             GPL-3
 license-file:        LICENSE
-author:              Kotolegokot
+author:              Kotik Andreev
 maintainer:          gkotolegokot@gmail.com
-copyright:           Kotik Andreev gkotolegokot@gmail.com
+copyright:           Copyright: (c) 2016-2017 Kotik Andreev gkotolegokot@gmail.com
 category:            Language
+stability:           alpha
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
+homepage:            https://github.com/Kotolegokot/Underlisp
 
 executable Underlisp
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >= 4.8 && < 4.10, containers >= 0.5.8e.1, dsp >= 0.2.3.1, unix >= 2.7.2.0, cond >= 0.1
+  build-depends:       base >=4.8 && <4.10, containers >= 0.5.8.1, dsp >= 0.2.3.1, unix >= 2.7.2.0, cond >= 0.1, cmdlib >= 0.3.6
   hs-source-dirs:      src
   default-language:    Haskell2010
