@@ -5,7 +5,7 @@ import Data.Map (Map)
 import Data.List (elemIndices, delete)
 import Control.Monad (foldM, void)
 import Control.Monad.Except
-import Control.Monad.Writer hiding (pass)
+import SWriterT
 import Prototype
 import Point
 import Fail
@@ -44,7 +44,7 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 -- | if any function is invoked
 eval :: Env -> SExpr -> Eval (Env, SExpr)
 eval e l@(SList p (sFirst:args)) = do
-  addCall l
+  add (Call p l)
   (_, first) <- eval e sFirst
   rethrow (\le -> if lePoint le == Undefined
                        then le { lePoint = point first }

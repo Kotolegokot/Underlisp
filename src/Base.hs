@@ -11,6 +11,7 @@ import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
 
+import SWriterT
 import Fail
 import Prototype
 import Point
@@ -417,10 +418,10 @@ showStack = join . fmap ((++ "\n") . show)
 printStack :: [Call] -> IO ()
 printStack = putStr . showStack
 
-type Eval = ExceptT Fail (CallStackT IO)
+type Eval = ExceptT Fail (SWriterT Call IO)
 
 runEval :: Eval a -> IO (Either Fail a, [Call])
-runEval = runCallStackT . runExceptT
+runEval = runSWriterT . runExceptT
 
 evalEval :: Eval a -> IO (Either Fail a)
 evalEval = runEval >=> return . fst
@@ -442,21 +443,10 @@ instance Show Fail where
   show (Fail point     msg) = show point ++ ": " ++ msg
 ---- eval ----
 
----- call stack ----
-type CallStackT = StateT [Call]
-
-addCall :: MonadState [Call] m => SExpr -> m ()
-addCall expr = do
-  xs <- get
-  put (Call (point expr) expr:xs)
-  return ()
-
-runCallStackT :: CallStackT m a -> m (a, [Call])
-runCallStackT cst = runStateT cst []
-
+---- call ----
 data Call = Call { cPoint  :: Point
                  , cExpr   :: SExpr }
 
 instance Show Call where
   show (Call point expr) = show point ++ ": " ++ show expr
----- call stack ----
+---- call ----
