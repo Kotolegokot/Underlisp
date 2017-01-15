@@ -5,7 +5,6 @@ IMPORTANT: adequate REPL
 IMPORTANT: fix error rows and columns
 exceptions
 case takes pairs of the form (expr body...)
-IMPORTANT --no-prelude argument
 &body
 &optional
 IMPORTANT: use StateT instead of WriterT
