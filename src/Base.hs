@@ -440,7 +440,9 @@ handleEval ev = do
   (result, callstack) <- runEval ev
   case result of
     Right _ -> return ()
-    Left f  -> hPrint stderr f -- TODO: print call stack
+    Left f  -> do
+      printStack callstack
+      hPrint stderr f
 
 instance Show Fail where
   show (Fail Undefined msg) = msg
