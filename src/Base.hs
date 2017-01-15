@@ -69,9 +69,19 @@ instance Show SExpr where
   show expr
     | isEmptyList expr = "()"
     | isString expr    = show $ fromString expr
-    | isList   expr    = "(" ++ showList (fromList expr) ++ ")"
+    | isList   expr    = handleList (fromList expr)
     | isAtom   expr    = show $ fromAtom expr
-    where showList [x]    = show x
+    where handleList [SAtom _ (ASymbol "backquote"),   arg] = "`" ++ show arg
+          handleList [SAtom _ (ASymbol "quote"),       arg] = "'" ++ show arg
+          handleList [SAtom _ (ASymbol "interpolate"), arg] = "~" ++ show arg
+          handleList [SAtom _ (ASymbol "unfold"),      arg] = "@" ++ show arg
+          handleList (SAtom _ (ASymbol "bind")   :    args) = "[" ++ showList args ++ "]"
+          handleList l@(SAtom _ (ASymbol "list")   :  args)
+            | all isChar args = show $ map fromChar args
+            | otherwise       = "(" ++ showList l ++ ")"
+          handleList l = "(" ++ showList l ++ ")"
+
+          showList [x]    = show x
           showList (x:xs) = show x ++ " " ++ showList xs
           showList []     = ""
 

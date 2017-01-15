@@ -1,14 +1,13 @@
 pattern matching
 FFI
-IMPORTANT: adequate REPL
 partial exporting in modules
+IMPORTANT: adequate REPL
 IMPORTANT: fix error rows and columns
 exceptions
 case takes pairs of the form (expr body...)
 IMPORTANT --no-prelude argument
 &body
 &optional
-show s-exprs with ',`,~," and so on
 IMPORTANT: use StateT instead of WriterT
 
 1. special operators aren't functions and so aren't first-class objects and objects at all
