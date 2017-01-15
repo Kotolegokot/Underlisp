@@ -6,8 +6,9 @@ import Fail
 import Evaluator
 
 biNot :: [SExpr] -> Eval SExpr
-biNot [sexpr] = return . bool . not . fromBool $ sexpr
-biNot _       = reportUndef "just one argument required"
+biNot [SAtom p (ABool b)] = return $ SAtom p (ABool $ not b)
+biNot [other]             = report (point other) "boolean expected"
+biNot _                   = reportUndef "just one argument required"
 
 soAnd :: Env -> [SExpr] -> Eval (Env, SExpr)
 soAnd e (x:xs) = do
