@@ -1,40 +1,24 @@
-module Exception (LispError (..)
+{-# LANGUAGE FlexibleContexts #-}
+module Exception (Fail (..)
                  , report
-                 , reportCmd
                  , reportUndef
-                 , catch
-                 , throw
-                 , rethrow
-                 , handle) where
+                 , catchError
+                 , throwError
+                 , liftIO
+                 , rethrow) where
 
-import System.IO
-import Data.Typeable
-import Data.Dynamic
-import Control.Exception
+import Control.Monad.Except
 
 import Point
 
-data LispError = LispError { lePoint :: Point
-                           , leCmd   :: String
-                           , leMsg   :: String }
-  deriving (Eq, Typeable)
+data Fail = Fail { lePoint :: Point
+                 , leMsg   :: String }
 
-instance Exception LispError
+report :: MonadError Fail m => Point -> String -> m a
+report point msg = throwError $ Fail point msg
 
-instance Show LispError where
-  show (LispError Undefined cmd msg)                   = cmd ++ ": " ++ msg
-  show (LispError (Point filename row column) cmd msg) = msg'
-    where msg' = filename ++ ":" ++ show row ++ ":" ++ show column ++  ": " ++ cmd ++ ": " ++ msg
-
-report :: Point -> String -> a
-report point = throw . LispError point ""
-
-reportCmd :: Point -> String -> String -> a
-reportCmd = throw .:: LispError
-  where (.::) = (.) . (.) . (.)
-
-reportUndef :: String -> a
+reportUndef :: MonadError Fail m => String -> m a
 reportUndef = report Undefined
 
-rethrow :: Exception e => (e -> e) -> IO a -> IO a
-rethrow f = handle (\e -> throw $ f e)
+rethrow :: MonadError e m => (e -> e) -> m a -> m a
+rethrow f m = catchError m (\e -> throwError $ f e)

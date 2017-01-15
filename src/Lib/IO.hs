@@ -5,20 +5,20 @@ import System.IO (stdout, hFlush)
 import Base
 import Exception
 
-biFlush :: [SExpr] -> IO SExpr
-biFlush [] = hFlush stdout >> return nil
+biFlush :: [SExpr] -> Eval SExpr
+biFlush [] = liftIO (hFlush stdout) >> return nil
 biFlush _  = reportUndef "no arguments required"
 
-biGetLine :: [SExpr] -> IO SExpr
-biGetLine [] = getLine >>= (return . list . map char)
+biGetLine :: [SExpr] -> Eval SExpr
+biGetLine [] = liftIO getLine >>= (return . list . map char)
 biGetLine _  = reportUndef "no arguments required"
 
-biToString :: [SExpr] -> IO SExpr
+biToString :: [SExpr] -> Eval SExpr
 biToString [arg] = return . list . map char $ show arg
 biToString _     = reportUndef "just one argument required"
 
-biPutChar :: [SExpr] -> IO SExpr
-biPutChar [SAtom _ (AChar c)]    = putChar c >> return nil
+biPutChar :: [SExpr] -> Eval SExpr
+biPutChar [SAtom _ (AChar c)]    = liftIO (putChar c) >> return nil
 biPutChar [expr]                 = report (point expr) "char expected"
 biPutChar _                      = reportUndef "just one argument required"
 

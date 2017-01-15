@@ -13,7 +13,7 @@ import Lib.Ord as Ord
 
 import Base
 
-specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> IO (Env, SExpr))]
+specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> Eval (Env, SExpr))]
 specialOperators = concat [Bool.specialOperators
                           ,Char.specialOperators
                           ,Ctrl.specialOperators
@@ -25,7 +25,7 @@ specialOperators = concat [Bool.specialOperators
                           ,Meta.specialOperators
                           ,Ord.specialOperators]
 
-builtinFunctions :: [(String, Maybe Int, [SExpr] -> IO SExpr)]
+builtinFunctions :: [(String, Maybe Int, [SExpr] -> Eval SExpr)]
 builtinFunctions = concat [Bool.builtinFunctions
                           ,Char.builtinFunctions
                           ,Ctrl.builtinFunctions

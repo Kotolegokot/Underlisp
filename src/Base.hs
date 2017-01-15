@@ -6,6 +6,7 @@ import qualified Data.Map as Map
 import qualified Control.Conditional as C
 import Control.Monad.Writer
 import Control.Monad.Except
+import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
 
@@ -256,8 +257,8 @@ instance Show Macro where
 
 ---- procedure ----
 data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
-               | BuiltIn     String (Maybe Int) ([SExpr] -> IO SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> IO (Env, SExpr)) [SExpr]
+               | BuiltIn     String (Maybe Int) ([SExpr] -> Eval SExpr) [SExpr]
+               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> Eval (Env, SExpr)) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
@@ -398,12 +399,30 @@ lexical  (Env _ _ (x:_ )) = x
 external (Env _ _ (_:xs)) = Map.unions xs
 ---- environment ----
 
----- lisp state ---
+---- eval ---
 data Call = Call { cPoint  :: Point
                  , cExpr   :: SExpr }
 
-type Eval = ExceptT LispError (WriterT [Call] IO)
+type Eval = ExceptT Fail (WriterT [Call] IO)
 
-runEval :: Eval a -> IO (Either LispError a, [Call])
+runEval :: Eval a -> IO (Either Fail a, [Call])
 runEval = runWriterT . runExceptT
----- lisp state ----
+
+evalEval :: Eval a -> IO (Either Fail a)
+evalEval = runEval >=> return . fst
+
+execEval :: Eval a -> IO [Call]
+execEval = runEval >=> return . snd
+
+handleEval :: Eval a -> IO ()
+handleEval ev = do
+  (result, callstack) <- runEval ev
+  case result of
+    Right _ -> return ()
+    Left f  -> hPrint stderr f -- TODO: print call stack
+
+instance Show Fail where
+  show (Fail Undefined msg)                   = msg
+  show (Fail (Point filename row column) msg) =
+    filename ++ ":" ++ show row ++ ":" ++ show column ++ ": " ++ msg
+---- eval ----

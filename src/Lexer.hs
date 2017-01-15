@@ -15,7 +15,7 @@ data State = None | Comment | Char | String | OtherAtom
   deriving (Eq, Show)
 
 -- | takes a string and splits it into lexems
-tokenize :: Point -> String -> [(Lexeme, Point)]
+tokenize :: Point -> String -> Eval [(Lexeme, Point)]
 tokenize point sequence = tokenize' point [] None sequence
     where tokenize' point lexemes None xs@(x:rest)
             | isOpen x       = tokenize' (forward x point) ((Open x, point)                      : lexemes) None    rest
@@ -36,9 +36,13 @@ tokenize point sequence = tokenize' point [] None sequence
 
           tokenize' origPoint lexemes Char sequence = parse_char origPoint [] sequence
             where parse_char point name xs@(x:rest)
-                    | isSeparator x = tokenize' point ((translateChar origPoint name, origPoint) : lexemes) None xs
-                    | otherwise      = parse_char (forward x point) (name ++ [x]) rest
-                  parse_char point name [] = tokenize' point ((translateChar origPoint name, origPoint) : lexemes) None []
+                    | isSeparator x = do
+                        c <- translateChar origPoint name
+                        tokenize' point ((c, origPoint) : lexemes) None xs
+                    | otherwise     = parse_char (forward x point) (name ++ [x]) rest
+                  parse_char point name [] = do
+                    c <- translateChar origPoint name
+                    tokenize' point ((c, origPoint) : lexemes) None []
 
           tokenize' origPoint lexemes String sequence = parse_string origPoint [] sequence
               where parse_string point string xs@(x:rest)
@@ -52,7 +56,7 @@ tokenize point sequence = tokenize' point [] None sequence
                       | otherwise      = parse_atom (forwardColumn point) (atom ++ [x]) rest
                     parse_atom point atom [] = tokenize' point ((LAtom (strToAtom atom), origPoint) : lexemes) None []
 
-          tokenize' _     lexemes _         []       = reverse lexemes
+          tokenize' _     lexemes _         []       = return $ reverse lexemes
 
 matchingBracket :: Char -> Char
 matchingBracket x = case x of
@@ -64,12 +68,12 @@ matchingBracket x = case x of
                        '}' -> '{'
                        _   -> undefined
 
-translateChar :: Point -> String -> Lexeme
-translateChar point name = LAtom . AChar $ case name of
-  "space"   -> ' '
-  "newline" -> '\n'
-  "tab"     -> '\t'
-  [c]       -> c
+translateChar :: Point -> String -> Eval Lexeme
+translateChar point name = case name of
+  "space"   -> return . LAtom . AChar $ ' '
+  "newline" -> return . LAtom . AChar $ '\n'
+  "tab"     -> return . LAtom . AChar $ '\t'
+  [c]       -> return . LAtom . AChar $ c
   other     -> report point $ "undefined character name: '" ++ other ++ "'"
 
 isSeparator :: Char -> Bool

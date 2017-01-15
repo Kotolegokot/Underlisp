@@ -10,13 +10,13 @@ import Evaluator
 import Point
 import Exception
 
-soMacroExpand :: Env -> [SExpr] -> IO (Env, SExpr)
+soMacroExpand :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand e [sexpr] = do
   (_, sexpr') <- eval e sexpr
   expanded <- expandMacros e [sexpr']
   return (e, head expanded)
 
-soMacroExpand1 :: Env -> [SExpr] -> IO (Env, SExpr)
+soMacroExpand1 :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand1 e [sexpr] = do
   (_, evaluated) <- eval e sexpr
   soMacroExpand1' evaluated
@@ -29,12 +29,12 @@ soMacroExpand1 e [sexpr] = do
 soMacroExpand1 _ _       = reportUndef "just one argument required"
 
 -- | special operator quote
-soQuote :: Env -> [SExpr] -> IO (Env, SExpr)
+soQuote :: Env -> [SExpr] -> Eval (Env, SExpr)
 soQuote e [arg] = return (e, arg)
 soQuote _ _     = reportUndef "just one argument requried"
 
 -- | special operator backquote
-soBackquote :: Env -> [SExpr] -> IO (Env, SExpr)
+soBackquote :: Env -> [SExpr] -> Eval (Env, SExpr)
 soBackquote e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = report p "just one argument required"
   | otherwise        = do
@@ -43,7 +43,7 @@ soBackquote e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
 soBackquote e [SList _ l] = do
   pairs <- mapM' (soBackquote e . return) l
   return (e, list $ map snd pairs)
-    where mapM' :: (SExpr -> IO (Env, SExpr)) -> [SExpr] -> IO [(Env, SExpr)]
+    where mapM' :: (SExpr -> Eval (Env, SExpr)) -> [SExpr] -> Eval [(Env, SExpr)]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList _ [SAtom _ (ASymbol "unfold"), arg] -> do
@@ -63,15 +63,17 @@ soBackquote e [arg]        = return (e, arg)
 soBackquote _ _            = reportUndef "just one argument required"
 
 -- | special operator interprete
-soInterprete :: Env -> [SExpr] -> IO (Env, SExpr)
+soInterprete :: Env -> [SExpr] -> Eval (Env, SExpr)
 soInterprete e [arg] = do
   (_, expr) <- eval e arg
-  case expr of
-    SList p str -> evalScope e . Reader.read p  $ map fromChar str
-    _           -> report (point arg) "string expected"
+  if not $ isString expr
+    then report (point arg) "string expected"
+    else do
+      read <- Reader.read (point arg) $ fromString expr
+      expandAndEvalScope e read
 soInterprete _ _     = reportUndef "just one argument required"
 
-soGensym :: Env -> [SExpr] -> IO (Env, SExpr)
+soGensym :: Env -> [SExpr] -> Eval (Env, SExpr)
 soGensym e [] = do
   let (g, sym) = gensym (getG e) e
   return (setG e g, sym)
@@ -82,7 +84,7 @@ soGensym e [] = do
 soGensym _ _  = reportUndef "no arguments required"
 
 -- | special operator eval
-soEval :: Env -> [SExpr] -> IO (Env, SExpr)
+soEval :: Env -> [SExpr] -> Eval (Env, SExpr)
 soEval e [arg] = do
   (_, expr) <- eval e arg
   eval e expr

@@ -6,7 +6,7 @@ import Base
 import Exception
 import Evaluator
 
-soIf :: Env -> [SExpr] -> IO (Env, SExpr)
+soIf :: Env -> [SExpr] -> Eval (Env, SExpr)
 soIf e [condSexpr]                        = soIf e [condSexpr, nil,       nil]
 soIf e [condSexpr, trueSexpr]             = soIf e [condSexpr, trueSexpr, nil]
 soIf e [condSexpr, trueSexpr, falseSexpr] = do
@@ -20,12 +20,12 @@ soIf e [condSexpr, trueSexpr, falseSexpr] = do
       return (e, expr)
 soIf _        _                          = reportUndef "1 to 3 arguments requried"
 
-soScope :: Env -> [SExpr] -> IO (Env, SExpr)
+soScope :: Env -> [SExpr] -> Eval (Env, SExpr)
 soScope e args = do
   (_, expr) <- evalScope e args
   return (e, expr)
 
-soSeq :: Env -> [SExpr] -> IO (Env, SExpr)
+soSeq :: Env -> [SExpr] -> Eval (Env, SExpr)
 soSeq e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 
 builtinFunctions = []

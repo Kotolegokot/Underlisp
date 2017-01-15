@@ -5,7 +5,7 @@ module Interpreter (interpreteProgram
 
 import Control.Exception
 import Control.Conditional (cond)
-import Control.Monad (unless)
+import Control.Monad (unless, void)
 import System.IO
 import System.IO.Error (isEOFError)
 import Data.Map (Map)
@@ -21,49 +21,59 @@ preludePath = "stdlib/prelude.unlisp"
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
-interpreteProgram prelude filename args = do
+interpreteProgram prelude filename args = handleEval $do
   e <- loadEnv prelude
-  text <- readFile filename
-  E.evaluateProgram e args $ R.read (startPoint filename) text
+  text <- liftIO $ readFile filename
+  read <- R.read (startPoint filename) text
+  E.evaluateProgram e args read
 
 -- | interpretes a module and returns its lexical scope
-interpreteModule :: Bool -> String -> IO (Map String EnvItem)
+interpreteModule :: Bool -> String -> Eval (Map String EnvItem)
 interpreteModule prelude filename = do
   e <- loadEnv prelude
-  text <- readFile filename
-  E.evaluateModule e $ R.read (startPoint filename) text
+  text <- liftIO $ readFile filename
+  read <- R.read (startPoint filename) text
+  E.evaluateModule e read
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
-repl prelude = do
+repl prelude = void $ runEval $ do
   e <- loadEnv prelude
-  handleLines (startPoint "<repl>") e
+  liftIO $ handle (\(err :: IOError) -> if isEOFError err
+                                        then putStrLn "\nBye"
+                                        else ioError err) $
+    handleLines (startPoint "<repl>") e
   where handleLines :: Point -> Env -> IO ()
         handleLines p e = do
           putStr $ "[" ++ show (pRow p) ++ "]> "
           hFlush stdout
-          handle (\(err :: IOError) -> if isEOFError err
-                                       then putStrLn "\nBye"
-                                       else ioError err) $ do
-            line <- getLine
-            (e', expr) <- catch (E.expandAndEvalScopeInterpolated e $ R.read p line)
-                          (\err -> do hPutStrLn stderr $ show (err :: LispError)
-                                      return (e, nil))
-            unless (isNil expr) $
-              putStrLn $ "=> " ++ show expr
-            handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
+          line <- getLine
+
+          (result, callstack) <- runEval $ do
+            read <- R.read p line
+            E.expandAndEvalScopeInterpolated e read
+
+          (e', expr) <- case result of
+            Right val -> return (val :: (Env, SExpr))
+            Left  f   -> do
+              hPrint stderr f
+              return (e, nil)
+
+          unless (isNil expr) (putStrLn $ "=> " ++ show expr)
+          handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
 
 -- | loads start environment
 -- | no prelude if the first argument is false
-loadEnv :: Bool -> IO Env
+loadEnv :: Bool -> Eval Env 
 loadEnv True  = loadPrelude
 loadEnv False = return startEnv
 
 -- | loads prelude and start environment
-loadPrelude :: IO Env
+loadPrelude :: Eval Env
 loadPrelude = do
-  text <- readFile preludePath
-  (e, _) <- E.expandAndEvalScope startEnv $ R.read (startPoint preludePath) text
+  text <- liftIO (readFile preludePath)
+  read <- R.read (startPoint preludePath) text
+  (e, _) <- E.expandAndEvalScope startEnv read
   return e
 
 -- | start environment
@@ -79,7 +89,7 @@ startEnv = envFromList $
     [("initial-env", Just 0, biInitialEnv)])
 
 -- | loads environment from a file
-soEnvFromFile :: Env -> [SExpr] -> IO (Env, SExpr)
+soEnvFromFile :: Env -> [SExpr] -> Eval (Env, SExpr)
 soEnvFromFile e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
@@ -90,7 +100,7 @@ soEnvFromFile e [sArg] = do
 soEnvFromFile _ _        = reportUndef "just one argument required"
 
 -- | loads environment from a file without prelude loaded
-soEnvFromFileNoPrelude :: Env -> [SExpr] -> IO (Env, SExpr)
+soEnvFromFileNoPrelude :: Env -> [SExpr] -> Eval (Env, SExpr)
 soEnvFromFileNoPrelude e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
@@ -101,7 +111,7 @@ soEnvFromFileNoPrelude e [sArg] = do
 soEnvFromFileNoPrelude _ _       = reportUndef "just one argument required"
 
 -- | returns start environment plus prelude
-biInitialEnv :: [SExpr] -> IO SExpr
+biInitialEnv :: [SExpr] -> Eval SExpr
 biInitialEnv [] = do
   prelude <- loadPrelude
   return . env $ envMerge prelude

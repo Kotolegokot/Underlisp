@@ -5,11 +5,11 @@ import Base
 import Exception
 import Evaluator
 
-biNot :: [SExpr] -> IO SExpr
+biNot :: [SExpr] -> Eval SExpr
 biNot [sexpr] = return . bool . not . fromBool $ sexpr
 biNot _       = reportUndef "just one argument required"
 
-soAnd :: Env -> [SExpr] -> IO (Env, SExpr)
+soAnd :: Env -> [SExpr] -> Eval (Env, SExpr)
 soAnd e (x:xs) = do
   (_, expr) <- eval e x
   case fromBool expr of
@@ -17,7 +17,7 @@ soAnd e (x:xs) = do
     False -> return (e, bool False)
 soAnd e []     = return (e, bool True)
 
-soOr :: Env -> [SExpr] -> IO (Env, SExpr)
+soOr :: Env -> [SExpr] -> Eval (Env, SExpr)
 soOr e (x:xs) = do
   (_, expr) <- eval e x
   case fromBool expr of
@@ -25,7 +25,7 @@ soOr e (x:xs) = do
     False -> soOr e xs
 soOr e []     = return (e, bool False)
 
-soImpl :: Env -> [SExpr] -> IO (Env, SExpr)
+soImpl :: Env -> [SExpr] -> Eval (Env, SExpr)
 soImpl e [arg1, arg2] = do
   (_, expr1) <- eval e arg1
   if not $ fromBool expr1

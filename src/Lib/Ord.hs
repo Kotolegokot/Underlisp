@@ -4,11 +4,11 @@ module Lib.Ord (builtinFunctions
 import Base
 import Exception
 
-biEQ :: [SExpr] -> IO SExpr
+biEQ :: [SExpr] -> Eval SExpr
 biEQ [arg1, arg2] = return . bool $ arg1 == arg2
 biEQ _            = reportUndef "two arguments required"
 
-biLT :: [SExpr] -> IO SExpr
+biLT :: [SExpr] -> Eval SExpr
 biLT [arg1, arg2] = return . bool $ arg1 < arg2
 biLT _            = reportUndef "two arguments required"
 

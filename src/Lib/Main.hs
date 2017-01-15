@@ -12,13 +12,14 @@ import Type
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
-soLambda :: Env -> [SExpr] -> IO (Env, SExpr)
-soLambda e (lambdaList:body) = return (e, procedure $ UserDefined e prototype body [])
-  where prototype = parseLambdaList lambdaList
+soLambda :: Env -> [SExpr] -> Eval (Env, SExpr)
+soLambda e (lambdaList:body) = do
+  prototype <- parseLambdaList lambdaList
+  return (e, procedure $ UserDefined e prototype body [])
 soLambda _ []                = reportUndef "at least one argument expected"
 
 -- special operator let
-soLet :: Env -> [SExpr] -> IO (Env, SExpr)
+soLet :: Env -> [SExpr] -> Eval (Env, SExpr)
 soLet e ((SList p pairs):body) = do
   e' <- handlePairs pairs (pass e)
   (_, expr) <- evalScope e' body
@@ -33,7 +34,7 @@ soLet e ((SList p pairs):body) = do
 soLet _       [expr]               = report (point expr) "list expected"
 soLet _       _                    = reportUndef "at least one argument expected"
 
-soIsDef :: Env -> [SExpr] -> IO (Env, SExpr)
+soIsDef :: Env -> [SExpr] -> Eval (Env, SExpr)
 soIsDef e [sKey] = do
   (_, key) <- eval e sKey
   if not $ isSymbol key
@@ -41,7 +42,7 @@ soIsDef e [sKey] = do
     else return (e, bool $ (fromSymbol key) `memberSExpr` e)
 soIsDef _ _      = reportUndef "just one argument required"
 
-soUndef :: Env -> [SExpr] -> IO (Env, SExpr)
+soUndef :: Env -> [SExpr] -> Eval (Env, SExpr)
 soUndef e [sKey] = do
   (_, key) <- eval e sKey
   if not $ isSymbol key
@@ -50,7 +51,7 @@ soUndef e [sKey] = do
 soUndef _ _      = reportUndef "just one argument required"
 
 -- special operator define
-soSet :: Env -> [SExpr] -> IO (Env, SExpr)
+soSet :: Env -> [SExpr] -> Eval (Env, SExpr)
 soSet e [sVar, sValue] = do
   (_, var) <- eval e sVar
   if not $ isSymbol var
@@ -62,7 +63,7 @@ soSet e [sVar, sValue] = do
 soSet _ _              = reportUndef "two arguments required"
 
 -- special operator mutate
-soMutate :: Env -> [SExpr] -> IO (Env, SExpr)
+soMutate :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMutate e [sVar, sValue] = do
   (_, var) <- eval e sVar
   let key = fromSymbol var
@@ -76,25 +77,28 @@ soMutate e [sVar, sValue] = do
 soMutate _ _               = reportUndef "two arguments required"
 
 -- built-in function type
-biType :: [SExpr] -> IO SExpr
+biType :: [SExpr] -> Eval SExpr
 biType [sexpr] = return . symbol . map toUpper . showType $ sexpr
 biType _       = reportUndef "just one argument required"
 
-soBind :: Env -> [SExpr] -> IO (Env, SExpr)
+soBind :: Env -> [SExpr] -> Eval (Env, SExpr)
 soBind e (first:args) = do
   (_, first') <- eval e first
   if not $ isProcedure first'
     then report (point first) "procedure expected"
     else case fromProcedure first' of
-           so@(SpecialOp _ _ _ _) -> return (e, procedure $ bind so args)
+           so@(SpecialOp _ _ _ _) -> do
+             p <- bind so args
+             return (e, procedure p)
            other                  -> do
              pairs <- mapM (eval e) args
              let args' = map snd pairs
-             return (e, procedure $ bind other args')
+             p <- bind other args'
+             return (e, procedure p)
 soBind _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
-soApply :: Env -> [SExpr] -> IO (Env, SExpr)
+soApply :: Env -> [SExpr] -> Eval (Env, SExpr)
 soApply e [first, args] = do
   (_, first') <- eval e first
   (_, args')  <- eval e args
@@ -104,7 +108,7 @@ soApply e [first, args] = do
 soApply _ _             = reportUndef "two arguments required"
 
 -- built-in function error
-biError :: [SExpr] -> IO SExpr
+biError :: [SExpr] -> Eval SExpr
 biError [sexpr]
   | not $ isString sexpr = report (point sexpr) "string expected"
   | otherwise            = reportUndef $ fromString sexpr
