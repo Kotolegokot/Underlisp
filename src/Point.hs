@@ -4,7 +4,11 @@ data Point = Point { pFilename :: String
                    , pRow      :: Int
                    , pColumn   :: Int }
            | Undefined
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Ord)
+
+instance Show Point where
+  show Undefined                   = ""
+  show (Point filename row column) = filename ++ ":" ++ show row ++ ":" ++ show column
 
 row :: (Int -> Int) -> Point -> Point
 row _ Undefined = Undefined

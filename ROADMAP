@@ -1,6 +1,5 @@
 pattern matching
 FFI
-IMPORTANT: call stack
 IMPORTANT: adequate REPL
 partial exporting in modules
 IMPORTANT: fix error rows and columns

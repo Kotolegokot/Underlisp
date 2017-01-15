@@ -403,15 +403,26 @@ external (Env _ _ (_:xs)) = Map.unions xs
 data Call = Call { cPoint  :: Point
                  , cExpr   :: SExpr }
 
-type Eval = ExceptT Fail (WriterT [Call] IO)
+instance Show Call where
+  show (Call point expr) = show point ++ ": " ++ show expr
 
-runEval :: Eval a -> IO (Either Fail a, [Call])
+type CallStack = [Call]
+
+showStack :: CallStack -> String
+showStack = join . fmap ((++ "\n") . show)
+
+printStack :: CallStack -> IO ()
+printStack = putStr . showStack
+
+type Eval = ExceptT Fail (WriterT CallStack IO)
+
+runEval :: Eval a -> IO (Either Fail a, CallStack)
 runEval = runWriterT . runExceptT
 
 evalEval :: Eval a -> IO (Either Fail a)
 evalEval = runEval >=> return . fst
 
-execEval :: Eval a -> IO [Call]
+execEval :: Eval a -> IO CallStack
 execEval = runEval >=> return . snd
 
 handleEval :: Eval a -> IO ()
@@ -422,7 +433,6 @@ handleEval ev = do
     Left f  -> hPrint stderr f -- TODO: print call stack
 
 instance Show Fail where
-  show (Fail Undefined msg)                   = msg
-  show (Fail (Point filename row column) msg) =
-    filename ++ ":" ++ show row ++ ":" ++ show column ++ ": " ++ msg
+  show (Fail Undefined msg) = msg
+  show (Fail point     msg) = show point ++ ": " ++ msg
 ---- eval ----
