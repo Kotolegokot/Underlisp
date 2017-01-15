@@ -1,11 +1,12 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
 module Base where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Control.Conditional as C
-import Control.Monad.Writer
 import Control.Monad.Except
+import Control.Monad.State
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -410,29 +411,21 @@ external (Env _ _ (_:xs)) = Map.unions xs
 ---- environment ----
 
 ---- eval ---
-data Call = Call { cPoint  :: Point
-                 , cExpr   :: SExpr }
-
-instance Show Call where
-  show (Call point expr) = show point ++ ": " ++ show expr
-
-type CallStack = [Call]
-
-showStack :: CallStack -> String
+showStack :: [Call] -> String
 showStack = join . fmap ((++ "\n") . show)
 
-printStack :: CallStack -> IO ()
+printStack :: [Call] -> IO ()
 printStack = putStr . showStack
 
-type Eval = ExceptT Fail (WriterT CallStack IO)
+type Eval = ExceptT Fail (CallStackT IO)
 
-runEval :: Eval a -> IO (Either Fail a, CallStack)
-runEval = runWriterT . runExceptT
+runEval :: Eval a -> IO (Either Fail a, [Call])
+runEval = runCallStackT . runExceptT
 
 evalEval :: Eval a -> IO (Either Fail a)
 evalEval = runEval >=> return . fst
 
-execEval :: Eval a -> IO CallStack
+execEval :: Eval a -> IO [Call]
 execEval = runEval >=> return . snd
 
 handleEval :: Eval a -> IO ()
@@ -448,3 +441,22 @@ instance Show Fail where
   show (Fail Undefined msg) = msg
   show (Fail point     msg) = show point ++ ": " ++ msg
 ---- eval ----
+
+---- call stack ----
+type CallStackT = StateT [Call]
+
+addCall :: MonadState [Call] m => SExpr -> m ()
+addCall expr = do
+  xs <- get
+  put (Call (point expr) expr:xs)
+  return ()
+
+runCallStackT :: CallStackT m a -> m (a, [Call])
+runCallStackT cst = runStateT cst []
+
+data Call = Call { cPoint  :: Point
+                 , cExpr   :: SExpr }
+
+instance Show Call where
+  show (Call point expr) = show point ++ ": " ++ show expr
+---- call stack ----

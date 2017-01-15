@@ -43,8 +43,8 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 -- | evaluates an s-expression writing into call stack
 -- | if any function is invoked
 eval :: Env -> SExpr -> Eval (Env, SExpr)
-eval e l@(SList p (sFirst:args))  = do
-  tell [Call p l]
+eval e l@(SList p (sFirst:args)) = do
+  addCall l
   (_, first) <- eval e sFirst
   rethrow (\le -> if lePoint le == Undefined
                        then le { lePoint = point first }
@@ -58,11 +58,11 @@ eval e l@(SList p (sFirst:args))  = do
               pairs <- mapM (eval e) args
               call (point sFirst) e procedure (map snd pairs)
           | isSpecialOp procedure                          = call (point sFirst) e procedure args
-eval e (SAtom p (ASymbol "_")) = report p "addressing '_' is forbidden"
-eval e (SAtom p (ASymbol sym)) = case envLookup sym e of
+eval e (SAtom p (ASymbol "_"))   = report p "addressing '_' is forbidden"
+eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
   Just (EnvSExpr s) -> return (e, setPoint s p)
   _                 -> report p $ "undefined identificator '" ++ sym ++ "'"
-eval e other                   = return (e, other)
+eval e other                     = return (e, other)
 
 -- | creates bindings from a function prototype and
 -- | and actual arguments

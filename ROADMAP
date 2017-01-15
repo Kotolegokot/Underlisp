@@ -7,7 +7,6 @@ exceptions
 case takes pairs of the form (expr body...)
 &body
 &optional
-IMPORTANT: use StateT instead of WriterT
 
 1. special operators aren't functions and so aren't first-class objects and objects at all
 
