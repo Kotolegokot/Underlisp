@@ -2,7 +2,7 @@ module Lib.Boolean (builtinFunctions
                    ,specialOperators) where
 
 import Base
-import Exception
+import Fail
 import Evaluator
 
 biNot :: [SExpr] -> Eval SExpr

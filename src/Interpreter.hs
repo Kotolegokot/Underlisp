@@ -3,7 +3,7 @@ module Interpreter (interpreteProgram
                    ,interpreteModule
                    ,repl) where
 
-import Control.Exception
+import Control.Exception (handle)
 import Control.Conditional (cond)
 import Control.Monad (unless, void)
 import System.IO
@@ -14,7 +14,7 @@ import qualified Evaluator as E
 import Lib.Everything
 import Base
 import Point
-import Exception
+import Fail
 
 preludePath :: String
 preludePath = "stdlib/prelude.unlisp"

@@ -3,7 +3,7 @@ module Lib.IO (builtinFunctions
 
 import System.IO (stdout, hFlush)
 import Base
-import Exception
+import Fail
 
 biFlush :: [SExpr] -> Eval SExpr
 biFlush [] = liftIO (hFlush stdout) >> return nil

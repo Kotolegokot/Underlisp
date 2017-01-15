@@ -8,7 +8,7 @@ import Control.Monad.Except
 import Control.Monad.Writer hiding (pass)
 import Prototype
 import Point
-import Exception
+import Fail
 import Base
 
 -- | evaluates a module with the given environment and returns nothing

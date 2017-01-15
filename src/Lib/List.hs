@@ -2,7 +2,7 @@ module Lib.List (builtinFunctions
                 ,specialOperators) where
 
 import Base
-import Exception
+import Fail
 
 biList :: [SExpr] -> Eval SExpr
 biList = return . list

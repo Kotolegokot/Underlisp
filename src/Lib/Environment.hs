@@ -8,7 +8,7 @@ import Data.Map (Map)
 import Control.Monad (foldM)
 import qualified Reader
 import Base
-import Exception
+import Fail
 import Point
 import Evaluator
 

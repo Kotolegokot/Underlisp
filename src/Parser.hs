@@ -5,7 +5,7 @@ import Debug.Trace
 import Base
 import Lexer
 import Point
-import Exception
+import Fail
 
 -- | takes a list of lexemes and generates a complete s-expression
 parse :: [(Lexeme, Point)] -> Eval [SExpr]

@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Exception (Fail (..)
+module Fail (Fail (..)
                  , report
                  , reportUndef
                  , catchError

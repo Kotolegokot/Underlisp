@@ -10,7 +10,7 @@ import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
 
-import Exception
+import Fail
 import Prototype
 import Point
 import Type

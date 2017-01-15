@@ -6,7 +6,7 @@ import Data.Map (Map)
 import Data.Char (isSpace)
 import Base
 import Point
-import Exception
+import Fail
 
 data Lexeme = Open Char | Closed Char | LAtom Atom | LString String | Sugar String
   deriving Eq

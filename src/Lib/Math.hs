@@ -4,7 +4,7 @@ module Lib.Math (builtinFunctions
 
 import Numeric.Special.Trigonometric
 import Base
-import Exception
+import Fail
 
 biSum :: [SExpr] -> Eval SExpr
 biSum sexprs = do

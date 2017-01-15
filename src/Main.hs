@@ -2,7 +2,7 @@ module Main where
 
 import System.Environment
 import Interpreter
-import Exception
+import Fail
 
 main :: IO ()
 main = do
