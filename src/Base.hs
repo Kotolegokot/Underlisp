@@ -4,6 +4,8 @@ module Base where
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Control.Conditional as C
+import Control.Monad.Writer
+import Control.Monad.Except
 import Data.Maybe
 import Text.Read (readMaybe)
 
@@ -395,3 +397,13 @@ xappend _                   _   = undefined
 lexical  (Env _ _ (x:_ )) = x
 external (Env _ _ (_:xs)) = Map.unions xs
 ---- environment ----
+
+---- lisp state ---
+data Call = Call { cPoint  :: Point
+                 , cExpr   :: SExpr }
+
+type Eval = ExceptT LispError (WriterT [Call] IO)
+
+runEval :: Eval a -> IO (Either LispError a, [Call])
+runEval = runWriterT . runExceptT
+---- lisp state ----
