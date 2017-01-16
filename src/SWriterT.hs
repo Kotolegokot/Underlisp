@@ -1,5 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
-module SWriterT where
+module SWriterT (SWriterT
+                ,add
+                ,runSWriterT
+                ,evalSWriterT
+                ,execSWriterT
+                ,module Control.Monad.State) where
 
 import Control.Monad.State
 
@@ -13,3 +18,9 @@ add w = do
 
 runSWriterT :: SWriterT w m a -> m (a, [w])
 runSWriterT = flip runStateT $ []
+
+evalSWriterT :: Monad m => SWriterT w m a -> m a
+evalSWriterT = flip evalStateT $ []
+
+execSWriterT :: Monad m => SWriterT w m a -> m [w]
+execSWriterT = flip execStateT $ []
