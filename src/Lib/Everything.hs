@@ -10,6 +10,8 @@ import Lib.Main as Main
 import Lib.Math as Math
 import Lib.Meta as Meta
 import Lib.Ord as Ord
+import Lib.Sequence as Sequence
+import Lib.Vector as Vector
 
 import Base
 
@@ -23,7 +25,9 @@ specialOperators = concat [Bool.specialOperators
                           ,Main.specialOperators
                           ,Math.specialOperators
                           ,Meta.specialOperators
-                          ,Ord.specialOperators]
+                          ,Ord.specialOperators
+                          ,Sequence.specialOperators
+                          ,Vector.specialOperators]
 
 builtinFunctions :: [(String, Maybe Int, [SExpr] -> Eval SExpr)]
 builtinFunctions = concat [Bool.builtinFunctions
@@ -35,4 +39,6 @@ builtinFunctions = concat [Bool.builtinFunctions
                           ,Main.builtinFunctions
                           ,Math.builtinFunctions
                           ,Meta.builtinFunctions
-                          ,Ord.builtinFunctions]
+                          ,Ord.builtinFunctions
+                          ,Sequence.builtinFunctions
+                          ,Vector.builtinFunctions]

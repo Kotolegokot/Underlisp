@@ -1,9 +1,14 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase       #-}
 module Base where
 
-import Data.Map (Map)
+-- maps
 import qualified Data.Map as Map
+import Data.Map (Map)
+
+-- vectors
+import qualified Data.Vector as Vec
+import Data.Vector (Vector)
+
+-- other
 import qualified Control.Conditional as C
 import Control.Monad.Except
 import Control.Monad.State
@@ -11,6 +16,7 @@ import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
 
+-- local modules
 import SWriterT
 import Fail
 import Prototype
@@ -112,11 +118,16 @@ isBool _                   = False
 isSymbol (SAtom _ (ASymbol _)) = True
 isSymbol _                     = False
 
+isVector (SAtom _ (AVector _)) = True
+isVector _                     = False
+
 isProcedure (SAtom _ (AProcedure _)) = True
 isProcedure _                       = False
 
 isEnv (SAtom _ (AEnv _)) = True
 isEnv _                  = False
+
+isSequence x = isList x || isVector x
 
 isNumber x = isFloat x || isInt x
 
@@ -142,6 +153,10 @@ fromSymbol :: SExpr -> String
 fromSymbol (SAtom _ (ASymbol s)) = s
 fromSymbol _                     = undefined
 
+fromVector :: SExpr -> Vector SExpr
+fromVector (SAtom _ (AVector v)) = v
+fromVector _                     = undefined
+
 fromProcedure :: SExpr -> Procedure
 fromProcedure (SAtom _ (AProcedure c)) = c
 fromProcedure _                       = undefined
@@ -149,6 +164,12 @@ fromProcedure _                       = undefined
 fromEnv :: SExpr -> Map String EnvItem
 fromEnv (SAtom _ (AEnv e)) = e
 fromEnv _                  = undefined
+
+fromSequence :: SExpr -> [SExpr]
+fromSequence s
+  | isList s   = fromList s
+  | isVector s = Vec.toList $ fromVector s
+  | otherwise  = undefined
 
 fromNumber :: SExpr -> Float
 fromNumber n
@@ -177,6 +198,9 @@ bool = atom . ABool
 symbol :: String -> SExpr
 symbol = atom . ASymbol
 
+vector :: Vector SExpr -> SExpr
+vector = atom . AVector
+
 procedure :: Procedure -> SExpr
 procedure = atom . AProcedure
 
@@ -186,64 +210,72 @@ env = atom . AEnv
 
 ---- atom ----
 data Atom = ANil
-          | AInt      Int
-          | AFloat    Float
-          | AChar     Char
-          | ABool     Bool
-          | ASymbol   String
+          | AInt       Int
+          | AFloat     Float
+          | AChar      Char
+          | ABool      Bool
+          | ASymbol    String
+          | AVector    (Vector SExpr)
           | AProcedure Procedure
-          | AEnv      (Map String EnvItem)
+          | AEnv       (Map String EnvItem)
 
 instance Eq Atom where
-  ANil          == ANil          = True
-  (AInt i)      == (AInt i')     = i == i'
-  (AFloat f)    == (AFloat f')   = f == f'
-  (AInt i)      == (AFloat f)    = fromIntegral i == f
-  (AFloat f)    == (AInt i)      = f == fromIntegral i
-  (AChar c)     == (AChar c')    = c == c'
-  (ABool b)     == (ABool b')    = b == b'
-  (ASymbol s)   == (ASymbol s')  = s == s'
+  ANil           == ANil           = True
+  (AInt i)       == (AInt i')      = i == i'
+  (AFloat f)     == (AFloat f')    = f == f'
+  (AInt i)       == (AFloat f)     = fromIntegral i == f
+  (AFloat f)     == (AInt i)       = f == fromIntegral i
+  (AChar c)      == (AChar c')     = c == c'
+  (ABool b)      == (ABool b')     = b == b'
+  (ASymbol s)    == (ASymbol s')   = s == s'
+  (AVector v)    == (AVector v')   = v == v'
   (AProcedure _) == (AProcedure _) = undefined
-  (AEnv e)      == (AEnv e')     = e == e'
-  _             == _             = False
+  (AEnv e)       == (AEnv e')      = e == e'
+  _              == _              = False
 
 instance Ord Atom where
-  compare ANil          ANil             = EQ
-  compare (AInt i)      (AInt i')        = compare i i'
-  compare (AFloat f)    (AFloat f')      = compare f f'
-  compare (AInt i)      (AFloat f)       = compare (fromIntegral i) f
-  compare (AFloat f)    (AInt i)         = compare f (fromIntegral i)
-  compare (AChar c)     (AChar c')       = compare c c'
-  compare (ABool b)     (ABool b')       = compare b b'
-  compare (ASymbol s)   (ASymbol s')     = compare s s'
-  compare (AProcedure _) (AProcedure _') = undefined
-  compare (AEnv e)      (AEnv e')        = undefined
-  compare _             _                = undefined
+  compare ANil           ANil             = EQ
+  compare (AInt i)       (AInt i')        = compare i i'
+  compare (AFloat f)     (AFloat f')      = compare f f'
+  compare (AInt i)       (AFloat f)       = compare (fromIntegral i) f
+  compare (AFloat f)     (AInt i)         = compare f (fromIntegral i)
+  compare (AChar c)      (AChar c')       = compare c c'
+  compare (ABool b)      (ABool b')       = compare b b'
+  compare (ASymbol s)    (ASymbol s')     = compare s s'
+  compare (AVector v)    (AVector v')     = compare v v'
+  compare (AProcedure _) (AProcedure _')  = undefined
+  compare (AEnv e)       (AEnv e')        = undefined
+  compare _              _                = undefined
 
 instance Show Atom where
-  show ANil          = "nil"
-  show (AInt i)      = show i
-  show (AFloat f)    = show f
-  show (AChar c)     = case c of
+  show ANil           = "nil"
+  show (AInt i)       = show i
+  show (AFloat f)     = show f
+  show (AChar c)      = case c of
     '\n' -> "#newline"
     '\t' -> "#tab"
     ' '  -> "#space"
     _    -> ['#', c]
-  show (ABool b)     = C.bool "false" "true" b
-  show (ASymbol s)   = s
+  show (ABool b)      = C.bool "false" "true" b
+  show (ASymbol s)    = s
+  show (AVector v)    = "!(" ++ showVector 0 ++ ")"
+    where showVector i
+            | i == Vec.length v - 1 = show (v Vec.! i)
+            | otherwise             = show (v Vec.! i) ++ " " ++ showVector (i + 1)
   show (AProcedure c) = show c
-  show (AEnv e)      = show e
+  show (AEnv e)       = show e
 
 instance Type Atom where
   showType a = case a of
-    ANil        -> "Nil"
-    AInt      _ -> "Int"
-    AFloat    _ -> "Float"
-    AChar     _ -> "Char"
-    ABool     _ -> "Bool"
-    ASymbol   _ -> "Symbol"
+    ANil         -> "Nil"
+    AInt       _ -> "Int"
+    AFloat     _ -> "Float"
+    AChar      _ -> "Char"
+    ABool      _ -> "Bool"
+    ASymbol    _ -> "Symbol"
+    AVector    _ -> "Vector"
     AProcedure _ -> "Procedure"
-    AEnv      _ -> "Env"
+    AEnv       _ -> "Env"
 
 strToAtom :: String -> Atom
 strToAtom atom
@@ -412,12 +444,6 @@ external (Env _ _ (_:xs)) = Map.unions xs
 ---- environment ----
 
 ---- eval ---
-showStack :: [Call] -> String
-showStack = join . fmap ((++ "\n") . show)
-
-printStack :: [Call] -> IO ()
-printStack = putStr . showStack
-
 type Eval = ExceptT Fail (SWriterT Call IO)
 
 runEval :: Eval a -> IO (Either Fail a, [Call])
@@ -449,4 +475,10 @@ data Call = Call { cPoint  :: Point
 
 instance Show Call where
   show (Call point expr) = show point ++ ": " ++ show expr
+
+showStack :: [Call] -> String
+showStack = join . fmap ((++ "\n") . show)
+
+printStack :: [Call] -> IO ()
+printStack = putStr . showStack
 ---- call ----

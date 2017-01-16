@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 module Interpreter (interpreteProgram
                    ,interpreteModule
                    ,repl) where

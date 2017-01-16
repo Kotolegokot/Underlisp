@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lib.Math (builtinFunctions
                 ,specialOperators) where
 

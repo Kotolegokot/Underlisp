@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lib.Environment (builtinFunctions
                        ,specialOperators) where
 

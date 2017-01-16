@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module SWriterT (SWriterT
                 ,add
                 ,runSWriterT

@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Fail (Fail (..)
                  , report
                  , reportUndef

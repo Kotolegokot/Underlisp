@@ -19,11 +19,6 @@ biTail [SList p []]       = report p "empty list"
 biTail [sexpr]            = report (point sexpr) "list expected"
 biTail _                  = reportUndef "just one argument required"
 
-biIsEmpty :: [SExpr] -> Eval SExpr
-biIsEmpty [SList p list]    = return . bool . null $ list
-biIsEmpty [sexpr]           = report (point sexpr) "list expected"
-biIsEmpty _                 = reportUndef "just one argument requried"
-
 biAppend :: [SExpr] -> Eval SExpr
 biAppend [list1, list2]
   | not $ isList list1 = report (point list1) "first argument must be a list"
@@ -34,7 +29,6 @@ biAppend _ = reportUndef "two arguments required"
 builtinFunctions = [("list",   Nothing,          biList)
                    ,("head",   Just (1 :: Int),  biHead)
                    ,("tail",   Just 1,           biTail)
-                   ,("empty?", Just 1,           biIsEmpty)
                    ,("append", Just 2,           biAppend)]
 
 specialOperators = []

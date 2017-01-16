@@ -142,17 +142,6 @@
         xs
       (last (tail xs)))))
 
-(defun nth (n xs)
-  (contract n int?)
-  (contract xs list?)
-  (cond ((empty? xs)        (error "nth: empty list"))
-        ((>= n (length xs)) (error "nth: out of bounds"))
-        ((< n 0)            (error "nth: negative index"))
-        (otherwise
-         (if (zero? n)
-             (head xs)
-           (nth (- n 1) (tail xs))))))
-
 (defun map (f xs)
   (contract f procedure?)
   (contract xs list?)

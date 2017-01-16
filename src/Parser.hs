@@ -1,7 +1,5 @@
 module Parser (parse) where
 
-import Debug.Trace
-
 import Base
 import Lexer
 import Point
