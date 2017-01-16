@@ -1,7 +1,6 @@
 pattern matching
 FFI
 partial exporting in modules
-IMPORTANT: adequate REPL
 IMPORTANT: fix error rows and columns
 exceptions
 case takes pairs of the form (expr body...)

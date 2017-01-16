@@ -6,6 +6,7 @@ module Interpreter (interpreteProgram
 import Control.Exception (handle)
 import Control.Conditional (cond)
 import Control.Monad (unless, void)
+import System.Console.Readline
 import System.IO
 import System.IO.Error (isEOFError)
 import Data.Map (Map)
@@ -39,30 +40,28 @@ interpreteModule prelude filename = do
 repl :: Bool -> IO ()
 repl prelude = void $ runEval $ do
   e <- loadEnv prelude
-  liftIO $ handle (\(err :: IOError) -> if isEOFError err
-                                        then putStrLn "\nBye"
-                                        else ioError err) $
-    handleLines (startPoint "<repl>") e
-  where handleLines :: Point -> Env -> IO ()
-        handleLines p e = do
-          putStr $ "[" ++ show (pRow p) ++ "]> "
-          hFlush stdout
-          line <- getLine
+  liftIO $ handleLines (startPoint "<repl>") e
+    where handleLines :: Point -> Env -> IO ()
+          handleLines p e = do
+            line <- readline $ "[" ++ show (pRow p) ++ "]> "
 
-          (result, callstack) <- runEval $ do
-            read <- R.read p line
-            E.expandAndEvalScopeInterpolated e read
+            case line of
+              Nothing   -> putStrLn "\nBye!" >> return ()
+              Just line -> do
+                (result, callstack) <- runEval $ do
+                  read <- R.read p line
+                  E.expandAndEvalScopeInterpolated e read
 
-          printStack callstack
+                printStack callstack
 
-          (e', expr) <- case result of
-            Right val -> return (val :: (Env, SExpr))
-            Left  f   -> do
-              hPrint stderr f
-              return (e, nil)
+                (e', expr) <- case result of
+                  Right val -> return (val :: (Env, SExpr))
+                  Left  f   -> do
+                    hPrint stderr f
+                    return (e, nil)
 
-          unless (isNil expr) (putStrLn $ "=> " ++ show expr)
-          handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
+                unless (isNil expr) (putStrLn $ "=> " ++ show expr)
+                handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
 
 -- | loads start environment
 -- | no prelude if the first argument is false
