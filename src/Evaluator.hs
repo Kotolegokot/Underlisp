@@ -95,8 +95,8 @@ parseLambdaList _ = reportUndef "lambda list must be a list"
 
 -- | invokes a macro with the given environment and arguments
 callMacro :: Env -> Macro -> [SExpr] -> Eval SExpr
-callMacro e (Macro p localE prototype sexprs bound) args = do
-  argBindings <- bindArgs prototype (bound ++ args)
+callMacro e (Macro p localE prototype sexprs) args = do
+  argBindings <- bindArgs prototype args
   (_, evaluated) <- expandAndEvalScope (lappend (pass localE) argBindings) sexprs
   return $ setPoint evaluated p
 
@@ -159,7 +159,7 @@ parseDefmacro e (SList p (SAtom defmacroPoint (ASymbol "defmacro"):name:lambdaLi
   | not $ isSymbol name = report (point name) "string expected"
   | otherwise           = do
       prototype <- parseLambdaList lambdaList
-      return $ Just (fromSymbol name, Macro p e prototype body [])
+      return $ Just (fromSymbol name, Macro p e prototype body)
 parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = report p "at least two arguments required"
 parseDefmacro _ _                                          = return Nothing
 

@@ -290,7 +290,7 @@ strToAtom atom
 ---- atom ----
 
 ---- macro ----
-data Macro = Macro Point Env Prototype [SExpr] [SExpr]
+data Macro = Macro Point Env Prototype [SExpr]
 
 instance Eq Macro where
   (==) = undefined
@@ -393,8 +393,8 @@ envMerge (Env _ _ xs) = Map.unions xs
 linsert :: String -> EnvItem -> Env -> Env
 linsert key value (Env g args (x:xs)) = Env g args (x' : xs)
   where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs bound)
-                        -> EnvMacro $ Macro p (linsert key value e) prototype sexprs bound
+                      EnvMacro (Macro p e prototype sexprs)
+                        -> EnvMacro $ Macro p (linsert key value e) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
                         -> EnvSExpr . SAtom p . AProcedure $ UserDefined (linsert key value e) prototype sexprs bound
                       EnvSExpr other
@@ -406,8 +406,8 @@ xinsert :: String -> EnvItem -> Env -> Env
 xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
   where ext = Map.fromList [(key, value)]
         x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs bound)
-                        -> EnvMacro $ Macro p (xinsert key value e) prototype sexprs bound
+                      EnvMacro (Macro p e prototype sexprs)
+                        -> EnvMacro $ Macro p (xinsert key value e) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
                         -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xinsert key value e) prototype sexprs bound
                       EnvSExpr other
@@ -418,8 +418,8 @@ xinsert _   _     _                   = undefined
 lappend :: Env -> Map String EnvItem -> Env
 lappend (Env g args (x:xs)) add = Env g args (x' : xs)
   where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs bound)
-                        -> EnvMacro $ Macro p (lappend e add) prototype sexprs bound
+                      EnvMacro (Macro p e prototype sexprs)
+                        -> EnvMacro $ Macro p (lappend e add) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
                         -> EnvSExpr . SAtom p . AProcedure $ UserDefined (lappend e add) prototype sexprs bound
                       EnvSExpr other
@@ -430,8 +430,8 @@ lappend _                   _   = undefined
 xappend :: Env -> Map String EnvItem -> Env
 xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
   where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs bound)
-                        -> EnvMacro $ Macro p (xappend e add) prototype sexprs bound
+                      EnvMacro (Macro p e prototype sexprs)
+                        -> EnvMacro $ Macro p (xappend e add) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
                         -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xappend e add) prototype sexprs bound
                       EnvSExpr other

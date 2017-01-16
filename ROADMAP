@@ -1,13 +1,13 @@
 pattern matching
 FFI
-partial exporting in modules
 IMPORTANT: fix error rows and columns
 completion in REPL
-exceptions
 parallelism and concurrency
 &body
 &optional
 forbid rebinding special operators
+condition system
+full-featured module system
 
 1. split built-in functions and special operators adequately
 2. special operators aren't functions and so aren't first-class objects and objects at all
