@@ -8,10 +8,10 @@ import Base
 import Point
 import Fail
 
-data Lexeme = Open Char | Closed Char | LAtom Atom | LString String | Sugar String
-  deriving Eq
+data Lexeme = Open Char | Closed Char | LAtom Atom | LString String | SugarCall String | SugarApply String
+  deriving (Eq, Show)
 
-data State = None | Comment | Char | String | OtherAtom
+data State = None | Comment | Char | String | Vector | OtherAtom
   deriving (Eq, Show)
 
 -- | takes a string and splits it into lexems
@@ -20,15 +20,25 @@ tokenize point sequence = tokenize' point [] None sequence
     where tokenize' point lexemes None xs@(x:rest)
             | isOpen x       = tokenize' (forward x point) ((Open x, point)                      : lexemes) None    rest
             | isClosed x     = tokenize' (forward x point) ((Closed (matchingBracket x), point)  : lexemes) None    rest
-            | x == '\''      = tokenize' (forward x point) ((Sugar "quote",       point)         : lexemes) None    rest
-            | x == '`'       = tokenize' (forward x point) ((Sugar "backquote",   point)         : lexemes) None    rest
-            | x == '~'       = tokenize' (forward x point) ((Sugar "interpolate", point)         : lexemes) None    rest
-            | x == '@'       = tokenize' (forward x point) ((Sugar "unfold",      point)         : lexemes) None    rest
+            | x == '\''      = tokenize' (forward x point) ((SugarCall "quote",       point)         : lexemes) None    rest
+            | x == '`'       = tokenize' (forward x point) ((SugarCall "backquote",   point)         : lexemes) None    rest
+            | x == '~'       = tokenize' (forward x point) ((SugarCall "interpolate", point)         : lexemes) None    rest
+            | x == '@'       = tokenize' (forward x point) ((SugarCall "unfold",      point)         : lexemes) None    rest
             | x == '#'       = tokenize' (forward x point) lexemes                                          Char    rest
             | x == '"'       = tokenize' (forward x point) lexemes                                          String  rest
             | x == ';'       = tokenize' (forward x point) lexemes                                          Comment rest
+            | x == '!'       = tokenize' (forward x point) lexemes                                          Vector  rest
             | isSeparator x  = tokenize' (forward x point) lexemes                                          None    rest
             | otherwise      = tokenize' point             lexemes                                          OtherAtom xs
+
+          tokenize' origPoint lexemes Vector seq@(x:xs)
+            | isOpen x      = tokenize' origPoint ((SugarApply "vector", origPoint) : lexemes) None seq
+            | otherwise     = parseAtom origPoint "!" seq
+              where parseAtom point atom xs@(x:rest)
+                      | isSeparator x = tokenize' point ((LAtom (strToAtom atom), origPoint) : lexemes) None xs
+                      | otherwise     = parseAtom (forwardColumn point) (atom ++ [x]) rest
+                    parseAtom point atom [] = tokenize' point ((LAtom (strToAtom atom), origPoint) : lexemes) None []
+          tokenize' point lexemes Vector [] = tokenize' point ((LAtom (ASymbol "!"), point) : lexemes) None []
 
           tokenize' point lexemes Comment (x:xs) = case x of
             '\n' -> tokenize' (forward x point) lexemes None    xs
