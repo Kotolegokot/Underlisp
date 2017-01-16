@@ -253,9 +253,9 @@
       (let ((first (head pairs)))
         (append
          (list (if (empty? (tail first))
-             `(true ~(head first))
-           `((= ~expr-var ~(head first))
-             ~(head (tail first)))))
+		   `(true ~(head first))
+		   `((= ~expr-var ~(head first))
+		     (seq @(tail first)))))
          (handle-pairs expr-var (tail pairs))))))
 
   (let ((expr-var (gensym)))

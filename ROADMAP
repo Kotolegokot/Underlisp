@@ -4,7 +4,6 @@ partial exporting in modules
 IMPORTANT: fix error rows and columns
 completion in REPL
 exceptions
-case takes pairs of the form (expr body...)
 parallelism and concurrency
 &body
 &optional
