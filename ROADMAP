@@ -8,6 +8,9 @@ parallelism and concurrency
 &body
 &optional
 forbid rebinding special operators
+concat and append take any amount of arguments
+general map function
+defconstant
 
 1. split built-in functions and special operators adequately
 2. special operators aren't functions and so aren't first-class objects and objects at all
@@ -17,6 +20,7 @@ forbid rebinding special operators
 data types:
   fractional
   long numbers
+  complex numbers
   maps
     and so forth...
 
