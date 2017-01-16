@@ -47,8 +47,8 @@ eval e l@(SList p (sFirst:args)) = do
   add (Call p l)
   (_, first) <- eval e sFirst
   rethrow (\le -> if lePoint le == Undefined
-                       then le { lePoint = point first }
-                       else le) $
+                  then le { lePoint = point sFirst }
+                  else le) $
     if isProcedure first
     then eval' $ fromProcedure first
     else report (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"

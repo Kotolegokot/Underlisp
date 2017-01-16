@@ -2,13 +2,14 @@ pattern matching
 FFI
 partial exporting in modules
 IMPORTANT: fix error rows and columns
+completion in REPL
 exceptions
 case takes pairs of the form (expr body...)
+parallelism and concurrency
 &body
 &optional
 
 1. special operators aren't functions and so aren't first-class objects and objects at all
-
 2. read function
 3. reader-macros
 

@@ -1,8 +1,8 @@
-(import-module "stdlib/char.lisp")
+(import-module "stdlib/char.unlisp")
 
 (defun string->dec (str)
   (contract str string?)
-  (setfun string->dec' (str)
+  (defun string->dec' (str)
     (if (empty? str)
 	0
       (+ (digit->dec (head str))
@@ -17,7 +17,7 @@
 
 (defun string->hex (str)
   (contract str string?)
-  (setfun string->hex' (str)
+  (defun string->hex' (str)
      (if (empty? str)
 	 0
        (+ (digit->hex (head str))

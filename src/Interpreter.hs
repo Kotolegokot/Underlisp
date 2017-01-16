@@ -48,7 +48,7 @@ repl prelude = void $ runEval $ do
             case line of
               Nothing   -> putStrLn "\nBye!" >> return ()
               Just line -> do
-                addHistory line
+                unless (null line) $ addHistory line
                 (result, callstack) <- runEval $ do
                   read <- R.read p line
                   E.expandAndEvalScopeInterpolated e read

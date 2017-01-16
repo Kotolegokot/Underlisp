@@ -2,9 +2,9 @@ module Reader (read) where
 
 import Prelude hiding (read)
 import Base
+import Point
 import Lexer
 import Parser
-import Point
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
