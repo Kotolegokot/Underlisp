@@ -4,7 +4,6 @@ module Lib.List (builtinFunctions
 import Control.Monad (liftM)
 
 import Base
-import Fail
 
 biList :: [SExpr] -> Eval SExpr
 biList = return . list

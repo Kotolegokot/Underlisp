@@ -7,7 +7,6 @@ import Control.Monad (mapM, liftM)
 import Safe (atMay)
 
 import Base
-import Fail
 import Point
 
 biIsEmpty :: [SExpr] -> Eval SExpr

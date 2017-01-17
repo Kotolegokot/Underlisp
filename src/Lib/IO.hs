@@ -1,9 +1,10 @@
 module Lib.IO (builtinFunctions
               ,specialOperators) where
 
+import Control.Monad.IO.Class (liftIO)
+
 import System.IO (stdout, hFlush)
 import Base
-import Fail
 
 biFlush :: [SExpr] -> Eval SExpr
 biFlush [] = liftIO (hFlush stdout) >> return nil

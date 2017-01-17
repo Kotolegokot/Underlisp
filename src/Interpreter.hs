@@ -4,6 +4,7 @@ module Interpreter (interpreteProgram
 
 import Control.Exception (handle)
 import Control.Conditional (cond)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad (unless, void)
 import System.Console.Readline
 import System.IO
@@ -14,7 +15,6 @@ import qualified Evaluator as E
 import Lib.Everything
 import Base
 import Point
-import Fail
 
 preludePath :: String
 preludePath = "stdlib/prelude.unlisp"
@@ -48,14 +48,13 @@ repl prelude = void $ runEval $ do
               Nothing   -> putStrLn "\nBye!" >> return ()
               Just line -> do
                 unless (null line) $ addHistory line
-                (result, callstack) <- runEval $ do
+                result <- runEval $ do
                   read <- R.read p line
                   E.expandAndEvalScopeInterpolated e read
 
                 (e', expr) <- case result of
                   Right val -> return (val :: (Env, SExpr))
                   Left  f   -> do
-                    printStack callstack
                     hPrint stderr f
                     return (e, nil)
 

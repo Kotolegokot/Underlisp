@@ -9,7 +9,6 @@ import qualified Reader
 import Base
 import Evaluator
 import Point
-import Fail
 
 soMacroExpand :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand e [sexpr] = do

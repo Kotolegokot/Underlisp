@@ -6,7 +6,6 @@ import Data.Maybe (isJust)
 import qualified Data.Map as Map
 import Data.Char (toUpper)
 import Base
-import Fail
 import Evaluator
 import Type
 

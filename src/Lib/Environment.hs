@@ -4,10 +4,10 @@ module Lib.Environment (builtinFunctions
 import System.Posix.Env
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad (foldM)
 import qualified Reader
 import Base
-import Fail
 import Point
 import Evaluator
 

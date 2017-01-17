@@ -4,7 +4,6 @@ import System.Console.GetOpt
 import System.Environment
 import Data.Maybe (fromMaybe)
 import Interpreter
-import Fail
 
 data Options = Options
   { optPrelude :: Bool

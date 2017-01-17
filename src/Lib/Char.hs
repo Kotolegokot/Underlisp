@@ -3,7 +3,6 @@ module Lib.Char (builtinFunctions
 
 import Data.Char (ord, chr)
 import Base
-import Fail
 
 biCharToInt :: [SExpr] -> Eval SExpr
 biCharToInt [c]

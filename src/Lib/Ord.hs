@@ -2,7 +2,6 @@ module Lib.Ord (builtinFunctions
                ,specialOperators) where
 
 import Base
-import Fail
 
 biEQ :: [SExpr] -> Eval SExpr
 biEQ [arg1, arg2] = return . bool $ arg1 == arg2

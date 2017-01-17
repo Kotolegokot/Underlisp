@@ -4,11 +4,10 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.List (elemIndices, delete)
 import Control.Monad (foldM, void)
+import Control.Monad.Reader
 import Control.Monad.Except
-import SWriterT
 import Prototype
 import Point
-import Fail
 import Base
 
 -- | evaluates a module with the given environment and returns nothing
@@ -44,20 +43,20 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 -- | if any function is invoked
 eval :: Env -> SExpr -> Eval (Env, SExpr)
 eval e l@(SList p (sFirst:args)) = do
-  add (Call p l)
   (_, first) <- eval e sFirst
   rethrow (\le -> if lePoint le == Undefined
                   then le { lePoint = point sFirst }
                   else le) $
     if isProcedure first
-    then eval' $ fromProcedure first
+    then eval' (fromProcedure first)
     else report (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
   where eval' :: Procedure -> Eval (Env, SExpr)
-        eval' procedure
-          | isUserDefined procedure || isBuiltIn procedure = do
-              pairs <- mapM (eval e) args
-              call (point sFirst) e procedure (map snd pairs)
-          | isSpecialOp procedure                          = call (point sFirst) e procedure args
+        eval' pr
+          | isUserDefined pr || isBuiltIn pr = do
+              args' <- mapM (return . snd <=< eval e) args
+              add (Call p $ SList p (procedure pr:args')) $ call (point sFirst) e pr args'
+          | isSpecialOp pr                   =
+              add (Call p $ SList p (procedure pr:args)) $ call (point sFirst) e pr args
 eval e (SAtom p (ASymbol "_"))   = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
   Just (EnvSExpr s) -> return (e, setPoint s p)

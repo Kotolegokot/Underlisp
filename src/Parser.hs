@@ -3,7 +3,6 @@ module Parser (parse) where
 import Base
 import Lexer
 import Point
-import Fail
 
 -- | takes a list of lexemes and generates a complete s-expression
 parse :: [(Lexeme, Point)] -> Eval [SExpr]

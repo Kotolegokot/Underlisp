@@ -3,7 +3,6 @@ module Lib.Control (builtinFunctions
 
 import Control.Monad (foldM)
 import Base
-import Fail
 import Evaluator
 
 soIf :: Env -> [SExpr] -> Eval (Env, SExpr)

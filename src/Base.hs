@@ -11,14 +11,12 @@ import Data.Vector (Vector)
 -- other
 import qualified Control.Conditional as C
 import Control.Monad.Except
-import Control.Monad.State
+import Control.Monad.Reader
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
 
 -- local modules
-import SWriterT
-import Fail
 import Prototype
 import Point
 import Type
@@ -445,29 +443,21 @@ external (Env _ _ (_:xs)) = Map.unions xs
 ---- environment ----
 
 ---- eval ---
-type Eval = ExceptT Fail (SWriterT Call IO)
+type Eval = ExceptT Fail (ReaderT [Call] IO)
 
-runEval :: Eval a -> IO (Either Fail a, [Call])
-runEval = runSWriterT . runExceptT
-
-evalEval :: Eval a -> IO (Either Fail a)
-evalEval = runEval >=> return . fst
-
-execEval :: Eval a -> IO [Call]
-execEval = runEval >=> return . snd
+runEval :: Eval a -> IO (Either Fail a)
+runEval = (`runReaderT` []) . runExceptT
 
 handleEval :: Eval a -> IO ()
 handleEval ev = do
-  (result, callstack) <- runEval ev
+  result <- runEval ev
   case result of
     Right _ -> return ()
     Left f  -> do
-      printStack callstack
       hPrint stderr f
 
-instance Show Fail where
-  show (Fail Undefined msg) = msg
-  show (Fail point     msg) = show point ++ ": " ++ msg
+add :: Call -> Eval a -> Eval a
+add call = local (call:)
 ---- eval ----
 
 ---- call ----
@@ -478,8 +468,28 @@ instance Show Call where
   show (Call point expr) = show point ++ ": " ++ show expr
 
 showStack :: [Call] -> String
-showStack = join . fmap ((++ "\n") . show)
+showStack = join . reverse . fmap ((++ "\n") . show)
 
 printStack :: [Call] -> IO ()
 printStack = putStr . showStack
----- call ----
+
+---- fail ----
+data Fail = Fail { lePoint :: Point
+                 , leMsg   :: String
+                 , leStack :: [Call] }
+
+instance Show Fail where
+  show (Fail Undefined msg stack) = showStack stack ++ msg
+  show (Fail point     msg stack) = showStack stack ++ show point ++ ": " ++ msg
+
+report :: Point -> String -> Eval a
+report point msg = do
+  callstack <- ask
+  throwError $ Fail point msg callstack
+
+reportUndef :: String -> Eval a
+reportUndef = report Undefined
+
+rethrow :: MonadError e m => (e -> e) -> m a -> m a
+rethrow f m = catchError m (\e -> throwError $ f e)
+---- fail ----
