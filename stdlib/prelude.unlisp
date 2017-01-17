@@ -63,21 +63,28 @@
 
 ;; type predicates
 (defun list? (x)
-  (= 'LIST (type x)))
+  (= 'list (type x)))
+(defun vector? (x)
+  (= 'vector (type x)))
 (defun int? (x)
-  (= 'INT (type x)))
+  (= 'int (type x)))
 (defun float? (x)
-  (= 'FLOAT (type x)))
+  (= 'float (type x)))
 (defun char? (x)
-  (= 'CHAR (type x)))
+  (= 'char (type x)))
 (defun bool? (x)
-  (= 'BOOL (type x)))
+  (= 'bool (type x)))
 (defun symbol? (x)
-  (= 'SYMBOL (type x)))
+  (= 'symbol (type x)))
 (defun procedure? (x)
-  (= 'PROCEDURE (type x)))
+  (= 'procedure (type x)))
 (defun env? (x)
-  (= 'ENV (type x)))
+  (= 'env (type x)))
+
+;; tells if x is a sequence
+(defun sequence? (x)
+  (or (vector? x)
+      (list? x)))
 
 ;; tells if x is an int or float
 (defun number? (x)
@@ -91,7 +98,7 @@
 
 ;; tells whether x is an atom
 (defun atom? (x)
-  (/= 'LIST (type x)))
+  (not (list? x)))
 
 ;; tells whether x is nil
 (defun nil? (x)

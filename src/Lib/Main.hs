@@ -77,7 +77,7 @@ soMutate _ _               = reportUndef "two arguments required"
 
 -- built-in function type
 biType :: [SExpr] -> Eval SExpr
-biType [sexpr] = return . symbol . map toUpper . showType $ sexpr
+biType [sexpr] = return . symbol . showType $ sexpr
 biType _       = reportUndef "just one argument required"
 
 soBind :: Env -> [SExpr] -> Eval (Env, SExpr)

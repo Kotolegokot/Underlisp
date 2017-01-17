@@ -93,7 +93,7 @@ instance Show SExpr where
 
 instance Type SExpr where
   showType sexpr
-    | isList sexpr = "List"
+    | isList sexpr = "list"
     | isAtom sexpr = showType $ fromAtom sexpr
 
 isNil, isInt, isFloat, isChar, isBool, isSymbol, isProcedure, isEnv, isNumber, isString :: SExpr -> Bool
@@ -266,15 +266,15 @@ instance Show Atom where
 
 instance Type Atom where
   showType a = case a of
-    ANil         -> "Nil"
-    AInt       _ -> "Int"
-    AFloat     _ -> "Float"
-    AChar      _ -> "Char"
-    ABool      _ -> "Bool"
-    ASymbol    _ -> "Symbol"
-    AVector    _ -> "Vector"
-    AProcedure _ -> "Procedure"
-    AEnv       _ -> "Env"
+    ANil         -> "nil"
+    AInt       _ -> "int"
+    AFloat     _ -> "float"
+    AChar      _ -> "char"
+    ABool      _ -> "bool"
+    ASymbol    _ -> "symbol"
+    AVector    _ -> "vector"
+    AProcedure _ -> "procedure"
+    AEnv       _ -> "env"
 
 strToAtom :: String -> Atom
 strToAtom atom
