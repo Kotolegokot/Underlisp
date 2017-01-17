@@ -6,6 +6,9 @@ parallelism and concurrency
 &body
 &optional
 forbid rebinding special operators
+concat and append take any amount of arguments
+general map function
+defconstant
 condition system
 full-featured module system
 
@@ -17,6 +20,7 @@ full-featured module system
 data types:
   fractional
   long numbers
+  complex numbers
   maps
     and so forth...
 
