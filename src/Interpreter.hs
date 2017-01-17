@@ -52,11 +52,10 @@ repl prelude = void $ runEval $ do
                   read <- R.read p line
                   E.expandAndEvalScopeInterpolated e read
 
-                printStack callstack
-
                 (e', expr) <- case result of
                   Right val -> return (val :: (Env, SExpr))
                   Left  f   -> do
+                    printStack callstack
                     hPrint stderr f
                     return (e, nil)
 

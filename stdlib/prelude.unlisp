@@ -108,8 +108,8 @@
 (defmacro contract (var predicate)
   `(unless (~predicate ~var)
      (error (format
-	     "contract violation~%expected: ~a~%~given: ~a"
-	     '~predicate ~var))))
+	     "contract violation~%expected: ~a~%~given: ~a (of type ~a)"
+	     '~predicate ~var (type ~var)))))
 
 (defun reverse (xs)
   (contract xs list?)
@@ -147,8 +147,8 @@
   (contract xs list?)
   (if (empty? xs)
       ()
-    (prepend (f (head xs))
-             (map f (tail xs)))))
+      (prepend (f (head xs))
+	       (map f (tail xs)))))
 
 (defun map-nil (f xs)
   (contract f procedure?)

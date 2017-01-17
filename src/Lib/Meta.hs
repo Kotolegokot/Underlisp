@@ -4,6 +4,7 @@ module Lib.Meta (builtinFunctions
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Monad ((>=>))
 import qualified Reader
 import Base
 import Evaluator
@@ -85,10 +86,9 @@ soGensym _ _  = reportUndef "no arguments required"
 
 -- | special operator eval
 soEval :: Env -> [SExpr] -> Eval (Env, SExpr)
-soEval e [arg] = do
-  (_, expr) <- eval e arg
-  eval e expr
-soEval _ _     = reportUndef "just one argument required"
+soEval e args = do
+  args' <- mapM (eval e >=> return . snd) args
+  expandAndEvalScope e args'
 
 builtinFunctions = []
 
