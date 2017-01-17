@@ -89,7 +89,13 @@ soEval e args = do
   args' <- mapM (eval e >=> return . snd) args
   expandAndEvalScope e args'
 
-builtinFunctions = []
+-- | converts a string into a symbol
+biToSymbol :: [SExpr] -> Eval SExpr
+biToSymbol [str]
+  | not $ isString str = report (point str) "string expected"
+  | otherwise          = return . symbol $ fromString str
+
+builtinFunctions = [("->symbol", Just (1 :: Int), biToSymbol)]
 
 specialOperators = [("macroexpand-1", Just (1 :: Int), soMacroExpand1)
                    ,("macroexpand",   Just 1,          soMacroExpand)
