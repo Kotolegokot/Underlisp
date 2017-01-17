@@ -3,6 +3,7 @@ module Lib.Sequence (builtinFunctions
 
 import qualified Data.Vector as Vec
 import Data.Vector (Vector)
+import Control.Monad (mapM, liftM)
 import Safe (atMay)
 
 import Base
@@ -17,17 +18,22 @@ biIsEmpty [expr]
 biIsEmpty _ = reportUndef "just one argument requried"
 
 biConcat :: [SExpr] -> Eval SExpr
-biConcat [sType, seq1, seq2]
-  | not $ isSymbol sType  = report (point sType) "symbol expected"
-  | not $ isSequence seq1 = report (point seq1) "sequence expected"
-  | not $ isSequence seq2 = report (point seq2) "sequence expected"
-  | otherwise             = toSequence (point sType) (fromSymbol sType) $ fromSequence seq1 ++ fromSequence seq2
-biConcat _ = reportUndef "three arguments required"
+biConcat (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
 
-toSequence :: Point -> String -> [SExpr] -> Eval SExpr
-toSequence _ "vector" = return . vector . Vec.fromList
-toSequence _ "list"   = return . list
-toSequence p other    = const $ report p $ "undefined type: '" ++ other ++ "'"
+getSequence :: SExpr -> Eval [SExpr]
+getSequence expr
+  | not $ isSequence expr = report (point expr) "sequence expected"
+  | otherwise             = return $ fromSequence expr
+
+toSequence :: SExpr -> [SExpr] -> Eval SExpr
+toSequence sType
+  | not $ isSymbol sType   = const $ report p "symbol expected"
+  | otherwise              = case returnType of
+      "vector" -> return . vector . Vec.fromList
+      "list"   -> return . list
+      other    -> const $ report p ("undefined type: '" ++ other ++ "'")
+    where returnType = fromSymbol sType
+          p          = point sType
 
 biNth :: [SExpr] -> Eval SExpr
 biNth [sN, seq]

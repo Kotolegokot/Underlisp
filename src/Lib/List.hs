@@ -1,6 +1,8 @@
 module Lib.List (builtinFunctions
                 ,specialOperators) where
 
+import Control.Monad (liftM)
+
 import Base
 import Fail
 
@@ -20,11 +22,12 @@ biTail [sexpr]            = report (point sexpr) "list expected"
 biTail _                  = reportUndef "just one argument required"
 
 biAppend :: [SExpr] -> Eval SExpr
-biAppend [list1, list2]
-  | not $ isList list1 = report (point list1) "first argument must be a list"
-  | not $ isList list2 = report (point list2) "second argument must be a list"
-  | otherwise          = return $ list (fromList list1 ++ fromList list2)
-biAppend _ = reportUndef "two arguments required"
+biAppend = liftM (list . concat) . mapM getList
+
+getList :: SExpr -> Eval [SExpr]
+getList expr
+  | not $ isList expr = report (point expr) "list expected"
+  | otherwise         = return $ fromList expr
 
 builtinFunctions = [("list",   Nothing,          biList)
                    ,("head",   Just (1 :: Int),  biHead)
