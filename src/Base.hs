@@ -260,6 +260,7 @@ instance Show Atom where
   show (ASymbol s)    = s
   show (AVector v)    = "!(" ++ showVector 0 ++ ")"
     where showVector i
+            | i >= Vec.length v     = ""
             | i == Vec.length v - 1 = show (v Vec.! i)
             | otherwise             = show (v Vec.! i) ++ " " ++ showVector (i + 1)
   show (AProcedure c) = show c
