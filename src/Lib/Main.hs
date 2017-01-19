@@ -59,7 +59,7 @@ soSet e [sVar, sValue] = do
     else do
       case lookupSExpr key e of
         Just (SAtom _ (AProcedure (SpecialOp _ _ _ _))) -> reportUndef "rebinding special operators is forbidden"
-        Nothing                                         -> do
+        _                                               -> do
           (_, value) <- eval e sValue
           return (linsert key (EnvSExpr value) e, nil)
 soSet _ _              = reportUndef "two arguments required"
