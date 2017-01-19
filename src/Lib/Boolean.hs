@@ -1,8 +1,12 @@
 module Lib.Boolean (builtinFunctions
                    ,specialOperators) where
 
+import Control.Monad (foldM)
+import Control.Conditional (ifM, (<&&>), (<||>))
 import Base
 import Evaluator
+
+default (Int)
 
 biNot :: [SExpr] -> Eval SExpr
 biNot [SAtom p (ABool b)] = return $ SAtom p (ABool $ not b)
@@ -10,30 +14,23 @@ biNot [other]             = report (point other) "boolean expected"
 biNot _                   = reportUndef "just one argument required"
 
 soAnd :: Env -> [SExpr] -> Eval (Env, SExpr)
-soAnd e (x:xs) = do
-  (_, expr) <- eval e x
-  if fromBool expr
-    then soAnd e xs
-    else return (e, bool False)
-soAnd e []     = return (e, bool True)
+soAnd e xs = do
+  result <- foldM (\acc x -> return acc <&&> (getBool =<< snd <$> eval e x)) False xs
+  return (e, bool result)
 
 soOr :: Env -> [SExpr] -> Eval (Env, SExpr)
-soOr e (x:xs) = do
-  (_, expr) <- eval e x
-  if fromBool expr
-    then return (e, bool True)
-    else soOr e xs
-soOr e []     = return (e, bool False)
+soOr e xs = do
+  result <- foldM (\acc x -> return acc <||> (getBool =<< snd <$> eval e x)) True xs
+  return (e, bool result)
 
 soImpl :: Env -> [SExpr] -> Eval (Env, SExpr)
 soImpl e [arg1, arg2] = do
-  (_, expr1) <- eval e arg1
-  if not $ fromBool expr1
-    then return (e, bool True)
-    else eval e arg2
+  (_, exp1) <- eval e arg1
+  result <- ifM (getBool exp1) (snd <$> eval e arg2) (return $ bool True)
+  return (e, result)
 soImpl _ _            = reportUndef "two arguments requried"
 
-builtinFunctions = [("not", Just (1 :: Int),  biNot)]
-specialOperators = [("and", Nothing,          soAnd)
-                   ,("or",  Nothing,          soOr)
-                   ,("->",  Just (2 :: Int),  soImpl)]
+builtinFunctions = [("not", Just 1,  biNot)]
+specialOperators = [("and", Nothing, soAnd)
+                   ,("or",  Nothing, soOr)
+                   ,("->",  Just 2,  soImpl)]

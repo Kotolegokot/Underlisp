@@ -5,6 +5,8 @@ import Base
 import Evaluator
 import Type
 
+default (Int)
+
 -- | special operator lambda
 -- (lambda lambda-list [body])
 soLambda :: Env -> [SExpr] -> Eval (Env, SExpr)
@@ -31,95 +33,78 @@ soLet _       _                    = reportUndef "at least one argument expected
 
 soIsDef :: Env -> [SExpr] -> Eval (Env, SExpr)
 soIsDef e [sKey] = do
-  (_, key) <- eval e sKey
-  if not $ isSymbol key
-    then report (point sKey) "symbol expected"
-    else return (e, bool $ fromSymbol key `memberSExpr` e)
+  key <- getSymbol =<< snd <$> eval e sKey
+  return (e, bool $ key `memberSExpr` e)
 soIsDef _ _      = reportUndef "just one argument required"
 
 soUndef :: Env -> [SExpr] -> Eval (Env, SExpr)
 soUndef e [sKey] = do
-  (_, key) <- eval e sKey
-  if not $ isSymbol key
-    then report (point sKey) "symbol expected"
-    else return (envDelete (fromSymbol key) e, nil)
+  key <- getSymbol =<< snd <$> eval e sKey
+  return (envDelete key e, nil)
 soUndef _ _      = reportUndef "just one argument required"
 
 -- special operator define
 soSet :: Env -> [SExpr] -> Eval (Env, SExpr)
-soSet e [sVar, sValue] = do
-  (_, var) <- eval e sVar
-  let key = fromSymbol var
-  if not $ isSymbol var
-    then report (point sVar) "first argument must be a symbol"
-    else case lookupSExpr key e of
-           Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
-           _                                               -> do
-             (_, value) <- eval e sValue
-             return (linsert key (EnvSExpr value) e, nil)
+soSet e [sKey, sValue] = do
+  key <- getSymbol =<< snd <$> eval e sKey
+  case lookupSExpr key e of
+    Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
+    _                                               -> do
+      (_, value) <- eval e sValue
+      return (linsert key (EnvSExpr value) e, nil)
 soSet _ _              = reportUndef "two arguments required"
 
 -- special operator mutate
 soMutate :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMutate e [sVar, sValue] = do
-  (_, var) <- eval e sVar
-  let key = fromSymbol var
-  if not $ isSymbol var
-    then report (point sVar) "first argument must be a symbol"
-    else case lookupSExpr key e of
-           Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
-           Just _                                          -> do
-             (_, value) <- eval e sValue
-             return (linsert key (EnvSExpr value) e, nil)
-           Nothing                                         -> reportUndef $ "undefined identificator '" ++ key ++ "'"
+  key <- getSymbol =<< snd <$> eval e sVar
+  case lookupSExpr key e of
+    Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
+    Just _                                          -> do
+      (_, value) <- eval e sValue
+      return (linsert key (EnvSExpr value) e, nil)
+    Nothing                                         -> reportUndef $ "undefined identificator '" ++ key ++ "'"
 soMutate _ _               = reportUndef "two arguments required"
 
 -- built-in function type
 biType :: [SExpr] -> Eval SExpr
-biType [sexpr] = return . symbol . showType $ sexpr
-biType _       = reportUndef "just one argument required"
+biType [exp] = return . symbol . showType $ exp
+biType _     = reportUndef "just one argument required"
 
 soBind :: Env -> [SExpr] -> Eval (Env, SExpr)
 soBind e (first:args) = do
-  (_, first') <- eval e first
-  if not $ isProcedure first'
-    then report (point first) "procedure expected"
-    else case fromProcedure first' of
-           so@SpecialOp {} -> do
-             p <- bind so args
-             return (e, procedure p)
-           other                  -> do
-             pairs <- mapM (eval e) args
-             let args' = map snd pairs
-             p <- bind other args'
-             return (e, procedure p)
+  pr <- getProcedure =<< snd <$> eval e first
+  case pr of
+    so@SpecialOp {} -> do
+      p <- bind so args
+      return (e, procedure p)
+    other           -> do
+      args' <- mapM ((snd <$>) . eval e) args
+      p <- bind other args'
+      return (e, procedure p)
 soBind _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
 soApply :: Env -> [SExpr] -> Eval (Env, SExpr)
 soApply e [first, args] = do
-  (_, first') <- eval e first
-  (_, args')  <- eval e args
-  if not $ isList args'
-    then report (point args) "list expected"
-    else call (point first) e (fromProcedure first') (fromList args')
+  pr <- getProcedure =<< snd <$> eval e first
+  l <- getList =<< snd <$> eval e args
+  call (point first) e pr l
 soApply _ _             = reportUndef "two arguments required"
 
 -- built-in function error
 biError :: [SExpr] -> Eval SExpr
-biError [sexpr]
-  | not $ isString sexpr = report (point sexpr) "string expected"
-  | otherwise            = reportUndef $ fromString sexpr
-biError _             = reportUndef "just one argument required"
+biError [exp] = reportUndef =<< getString exp
+biError _     = reportUndef "just one argument required"
 
-builtinFunctions = [("type",  Just (1 :: Int), biType)
-                   ,("error", Just 1,           biError)]
+builtinFunctions = [("type",  Just 1, biType)
+                   ,("error", Just 1, biError)]
 
-specialOperators = [("let",      Nothing,         soLet)
-                   ,("set",      Just (2 :: Int), soSet)
-                   ,("mutate",   Just 2,          soMutate)
-                   ,("lambda",   Nothing,         soLambda)
-                   ,("def?",     Just 1,          soIsDef)
-                   ,("undef",    Just 1,          soUndef)
-                   ,("bind",     Nothing,         soBind)
-                   ,("apply",    Just 2,          soApply)]
+specialOperators = [("let",      Nothing, soLet)
+                   ,("set",      Just 2,  soSet)
+                   ,("mutate",   Just 2,  soMutate)
+                   ,("lambda",   Nothing, soLambda)
+                   ,("def?",     Just 1,  soIsDef)
+                   ,("undef",    Just 1,  soUndef)
+                   ,("bind",     Nothing, soBind)
+                   ,("apply",    Just 2,  soApply)]

@@ -13,6 +13,7 @@ import qualified Control.Conditional as C
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Applicative ((<|>))
+import Control.Arrow
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -21,6 +22,7 @@ import Text.Read (readMaybe)
 import Prototype
 import Point
 import Type
+import Util
 
 ---- s-expression ----
 data SExpr = SList Point [SExpr] | SAtom Point Atom
@@ -30,8 +32,7 @@ isList (SList _ _) = True
 isList _           = False
 
 isEmptyList :: SExpr -> Bool
-isEmptyList (SList _ []) = True
-isEmptyList _            = False
+isEmptyList = (isList &&& null . fromList) >>> uncurry (&&)
 
 isAtom :: SExpr -> Bool
 isAtom (SAtom _ _) = True
@@ -44,6 +45,12 @@ fromList _            = undefined
 fromAtom :: SExpr -> Atom
 fromAtom (SAtom _ a) = a
 fromAtom _           = undefined
+
+getList :: SExpr -> Eval [SExpr]
+getList = unpackSExpr fromList "list expected"
+
+getAtom :: SExpr -> Eval Atom
+getAtom = unpackSExpr fromAtom "atom expected"
 
 nil :: SExpr
 nil = SAtom Undefined ANil
@@ -126,11 +133,11 @@ isProcedure _                       = False
 isEnv (SAtom _ (AEnv _)) = True
 isEnv _                  = False
 
-isSequence x = isList x || isVector x
+isSequence = isList &&& isVector >>> uncurry (||)
 
-isNumber x = isFloat x || isInt x
+isNumber = isFloat &&& isInt >>> uncurry (||)
 
-isString expr = isList expr && all isChar (fromList expr)
+isString = isList &&& (all isChar . fromList) >>> uncurry (&&)
 
 fromInt :: SExpr -> Int
 fromInt (SAtom _ (AInt i)) = i
@@ -181,6 +188,42 @@ fromString s = map fromChar $ fromList s
 
 toString :: String -> SExpr
 toString = list . map char
+
+unpackSExpr :: (SExpr -> a) -> String -> SExpr -> Eval a
+unpackSExpr fromA msg exp = fromFalsumM (report (point exp) (msg ++ " expected")) (fromA exp)
+
+getInt :: SExpr -> Eval Int
+getInt = unpackSExpr fromInt "int"
+
+getFloat :: SExpr -> Eval Float
+getFloat = unpackSExpr fromFloat "float"
+
+getChar :: SExpr -> Eval Char
+getChar = unpackSExpr fromChar "char"
+
+getBool :: SExpr -> Eval Bool
+getBool = unpackSExpr fromBool "bool"
+
+getSymbol :: SExpr -> Eval String
+getSymbol = unpackSExpr fromSymbol "symbol"
+
+getVector :: SExpr -> Eval (Vector SExpr)
+getVector = unpackSExpr fromVector "vector"
+
+getProcedure :: SExpr -> Eval Procedure
+getProcedure = unpackSExpr fromProcedure "procedure"
+
+getEnv :: SExpr -> Eval (Map String EnvItem)
+getEnv = unpackSExpr fromEnv "env"
+
+getSequence :: SExpr -> Eval [SExpr]
+getSequence = unpackSExpr fromSequence "sequence"
+
+getNumber :: SExpr -> Eval Float
+getNumber = unpackSExpr fromNumber "number"
+
+getString :: SExpr -> Eval String
+getString = unpackSExpr fromString "string"
 
 int :: Int -> SExpr
 int = atom . AInt

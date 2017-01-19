@@ -2,8 +2,9 @@ module Lib.List (builtinFunctions
                 ,specialOperators) where
 
 import Control.Monad (liftM)
-
 import Base
+
+default (Int)
 
 biList :: [SExpr] -> Eval SExpr
 biList = return . list
@@ -23,14 +24,9 @@ biTail _                  = reportUndef "just one argument required"
 biAppend :: [SExpr] -> Eval SExpr
 biAppend = liftM (list . concat) . mapM getList
 
-getList :: SExpr -> Eval [SExpr]
-getList expr
-  | not $ isList expr = report (point expr) "list expected"
-  | otherwise         = return $ fromList expr
-
-builtinFunctions = [("list",   Nothing,          biList)
-                   ,("head",   Just (1 :: Int),  biHead)
-                   ,("tail",   Just 1,           biTail)
-                   ,("append", Just 2,           biAppend)]
+builtinFunctions = [("list",   Nothing, biList)
+                   ,("head",   Just 1,  biHead)
+                   ,("tail",   Just 1,  biTail)
+                   ,("append", Just 2,  biAppend)]
 
 specialOperators = []

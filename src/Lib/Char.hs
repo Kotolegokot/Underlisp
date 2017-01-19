@@ -1,22 +1,21 @@
 module Lib.Char (builtinFunctions
                 ,specialOperators) where
 
+import Prelude hiding (getChar)
 import Data.Char (ord, chr)
 import Base
 
+default (Int)
+
 biCharToInt :: [SExpr] -> Eval SExpr
-biCharToInt [c]
-  | not $ isChar c = report (point c) "char expected"
-  | otherwise      = return . int . ord $ fromChar c
-biCharToInt _ = reportUndef "just one argument required"
+biCharToInt [exp] = int . ord <$> getChar exp
+biCharToInt _     = reportUndef "just one argument required"
 
 biIntToChar :: [SExpr] -> Eval SExpr
-biIntToChar [i]
-  | not $ isInt i = report (point i) "int expected"
-  | otherwise     = return . char . chr $ fromInt i
-biIntToChar _ = reportUndef "just one argument required"
+biIntToChar [exp] = char . chr <$> getInt exp
+biIntToChar _     = reportUndef "just one argument required"
 
-builtinFunctions = [("char->int", Just (1 :: Int), biCharToInt)
-                   ,("int->char", Just 1,          biIntToChar)]
+builtinFunctions = [("char->int", Just 1, biCharToInt)
+                   ,("int->char", Just 1, biIntToChar)]
 
 specialOperators = []

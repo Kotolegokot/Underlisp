@@ -6,6 +6,8 @@ import qualified Reader
 import Base
 import Evaluator
 
+default (Int)
+
 soMacroExpand :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand e [sexpr] = do
   (_, sexpr') <- eval e sexpr
@@ -62,12 +64,9 @@ soBackquote _ _            = reportUndef "just one argument required"
 -- | special operator interprete
 soInterprete :: Env -> [SExpr] -> Eval (Env, SExpr)
 soInterprete e [arg] = do
-  (_, expr) <- eval e arg
-  if not $ isString expr
-    then report (point arg) "string expected"
-    else do
-      read <- Reader.read (point arg) $ fromString expr
-      expandAndEvalScope e read
+  str <- getString =<< snd <$> eval e arg
+  read <- Reader.read (point arg) str
+  expandAndEvalScope e read
 soInterprete _ _     = reportUndef "just one argument required"
 
 soGensym :: Env -> [SExpr] -> Eval (Env, SExpr)
@@ -88,17 +87,15 @@ soEval e args = do
 
 -- | converts a string into a symbol
 biToSymbol :: [SExpr] -> Eval SExpr
-biToSymbol [str]
-  | not $ isString str = report (point str) "string expected"
-  | otherwise          = return . symbol $ fromString str
+biToSymbol [exp] = symbol <$> getString exp
 biToSymbol _ = reportUndef "just one argument required"
 
-builtinFunctions = [("->symbol", Just (1 :: Int), biToSymbol)]
+builtinFunctions = [("->symbol", Just 1, biToSymbol)]
 
-specialOperators = [("macroexpand-1", Just (1 :: Int), soMacroExpand1)
-                   ,("macroexpand",   Just 1,          soMacroExpand)
-                   ,("quote",         Just 1,          soQuote)
-                   ,("backquote",     Just 1,          soBackquote)
-                   ,("interprete",    Just 1,          soInterprete)
-                   ,("gensym",        Just 0,          soGensym)
-                   ,("eval",          Just 1,          soEval)]
+specialOperators = [("macroexpand-1", Just 1, soMacroExpand1)
+                   ,("macroexpand",   Just 1, soMacroExpand)
+                   ,("quote",         Just 1, soQuote)
+                   ,("backquote",     Just 1, soBackquote)
+                   ,("interprete",    Just 1, soInterprete)
+                   ,("gensym",        Just 0, soGensym)
+                   ,("eval",          Just 1, soEval)]
