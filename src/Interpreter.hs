@@ -2,13 +2,10 @@ module Interpreter (interpreteProgram
                    ,interpreteModule
                    ,repl) where
 
-import Control.Exception (handle)
-import Control.Conditional (cond)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad (unless, void)
 import System.Console.Readline
 import System.IO
-import System.IO.Error (isEOFError)
 import Data.Map (Map)
 import qualified Reader as R
 import qualified Evaluator as E
@@ -21,7 +18,7 @@ preludePath = "stdlib/prelude.unlisp"
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
-interpreteProgram prelude filename args = handleEval $do
+interpreteProgram prelude filename args = handleEval $ do
   e <- loadEnv prelude
   text <- liftIO $ readFile filename
   read <- R.read (startPoint filename) text
@@ -35,6 +32,7 @@ interpreteModule prelude filename = do
   read <- R.read (startPoint filename) text
   E.evaluateModule e read
 
+
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
 repl prelude = void $ runEval $ do
@@ -45,7 +43,6 @@ repl prelude = void $ runEval $ do
             line <- readline $ "[" ++ show (pRow p) ++ "]> "
 
             case line of
-              Nothing   -> putStrLn "\nBye!" >> return ()
               Just line -> do
                 unless (null line) $ addHistory line
                 result <- runEval $ do
@@ -60,6 +57,7 @@ repl prelude = void $ runEval $ do
 
                 unless (isNil expr) (putStrLn $ "=> " ++ show expr)
                 handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
+              Nothing   -> putStrLn "Bye!"
 
 -- | loads start environment
 -- | no prelude if the first argument is false
@@ -79,12 +77,13 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Env
 startEnv = envFromList $
-  (fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ SpecialOp name args f [])) $
-    specialOperators ++
+  fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ SpecialOp name args f []))
+    (specialOperators ++
     [("env-from-file", Just 1, soEnvFromFile)
-    ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)]) ++
-  (fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ BuiltIn name args f [])) $
-    builtinFunctions ++
+    ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)])
+  ++
+  fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ BuiltIn name args f []))
+    (builtinFunctions ++
     [("initial-env", Just 0, biInitialEnv)])
 
 -- | loads environment from a file

@@ -1,8 +1,7 @@
 module Main where
 
 import System.Console.GetOpt
-import System.Environment
-import Data.Maybe (fromMaybe)
+import System.Environment (getArgs)
 import Interpreter
 
 data Options = Options
@@ -10,6 +9,7 @@ data Options = Options
   , optHelp    :: Bool
   } deriving Show
 
+defaultOptions :: Options
 defaultOptions = Options { optPrelude = True
                          , optHelp    = False }
 
@@ -36,7 +36,7 @@ main :: IO ()
 main = do
   args <- getArgs
   (opts, restArgs) <- parseOpts args
-  if (optHelp opts)
+  if optHelp opts
     then putStrLn $ usageInfo header options
     else case restArgs of
            (filename:args) -> interpreteProgram (optPrelude opts) filename args

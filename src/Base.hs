@@ -77,7 +77,7 @@ instance Show SExpr where
     | isEmptyList expr = "()"
     | isString expr    = show $ fromString expr
     | isList   expr    = handleList (fromList expr)
-    | isAtom   expr    = show $ fromAtom expr
+    | otherwise        = show $ fromAtom expr -- isAtom
     where handleList [SAtom _ (ASymbol "backquote"),   arg] = "`" ++ show arg
           handleList [SAtom _ (ASymbol "quote"),       arg] = "'" ++ show arg
           handleList [SAtom _ (ASymbol "interpolate"), arg] = "~" ++ show arg
@@ -95,9 +95,9 @@ instance Show SExpr where
 instance Type SExpr where
   showType sexpr
     | isList sexpr = "list"
-    | isAtom sexpr = showType $ fromAtom sexpr
+    | otherwise    = showType $ fromAtom sexpr -- isAtom
 
-isNil, isInt, isFloat, isChar, isBool, isSymbol, isProcedure, isEnv, isNumber, isString :: SExpr -> Bool
+isNil, isInt, isFloat, isChar, isBool, isSymbol, isVector, isProcedure, isEnv, isSequence, isNumber, isString :: SExpr -> Bool
 
 isNil (SAtom _ ANil) = True
 isNil _              = False
@@ -304,17 +304,17 @@ data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
-isUserDefined (UserDefined _ _ _ _) = True
-isUserDefined _                     = False
+isUserDefined UserDefined {} = True
+isUserDefined _              = False
 
-isBuiltIn (BuiltIn _ _ _ _) = True
-isBuiltIn _                 = False
+isBuiltIn BuiltIn {} = True
+isBuiltIn _          = False
 
-isSpecialOp (SpecialOp _ _ _ _) = True
-isSpecialOp _                   = False
+isSpecialOp SpecialOp {} = True
+isSpecialOp _            = False
 
 instance Show Procedure where
-  show (UserDefined _ _ _ _)  = "#<procedure>"
+  show UserDefined {}  = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<special operator:" ++ name ++ ">"
 ---- procedure ----
@@ -437,8 +437,13 @@ xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
              x
 xappend _                   _   = undefined
 
-lexical  (Env _ _ (x:_ )) = x
+lexical :: Env -> Map String EnvItem
+lexical (Env _ _ (x:_ )) = x
+lexical _                = undefined
+
+external :: Env -> Map String EnvItem
 external (Env _ _ (_:xs)) = Map.unions xs
+external _                = undefined
 ---- environment ----
 
 ---- eval ---
@@ -452,8 +457,7 @@ handleEval ev = do
   result <- runEval ev
   case result of
     Right _ -> return ()
-    Left f  -> do
-      hPrint stderr f
+    Left f  -> hPrint stderr f
 
 add :: Call -> Eval a -> Eval a
 add call = local (call:)
@@ -490,5 +494,5 @@ reportUndef :: String -> Eval a
 reportUndef = report Undefined
 
 rethrow :: MonadError e m => (e -> e) -> m a -> m a
-rethrow f m = catchError m (\e -> throwError $ f e)
+rethrow f m = catchError m (throwError . f)
 ---- fail ----

@@ -11,11 +11,11 @@ biFlush [] = liftIO (hFlush stdout) >> return nil
 biFlush _  = reportUndef "no arguments required"
 
 biGetLine :: [SExpr] -> Eval SExpr
-biGetLine [] = liftIO getLine >>= (return . list . map char)
+biGetLine [] = toString <$> liftIO getLine
 biGetLine _  = reportUndef "no arguments required"
 
 biToString :: [SExpr] -> Eval SExpr
-biToString [arg] = return . list . map char $ show arg
+biToString [arg] = return . toString $ show arg
 biToString _     = reportUndef "just one argument required"
 
 biPutChar :: [SExpr] -> Eval SExpr

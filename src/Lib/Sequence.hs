@@ -2,12 +2,10 @@ module Lib.Sequence (builtinFunctions
                     ,specialOperators) where
 
 import qualified Data.Vector as Vec
-import Data.Vector (Vector)
 import Control.Monad (mapM, liftM)
 import Safe (atMay)
 
 import Base
-import Point
 
 biIsEmpty :: [SExpr] -> Eval SExpr
 biIsEmpty [expr]
@@ -18,6 +16,7 @@ biIsEmpty _ = reportUndef "just one argument requried"
 
 biConcat :: [SExpr] -> Eval SExpr
 biConcat (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
+biConcat _            = reportUndef "at least one argument expected"
 
 getSequence :: SExpr -> Eval [SExpr]
 getSequence expr

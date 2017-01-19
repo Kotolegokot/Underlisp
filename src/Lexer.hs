@@ -1,8 +1,6 @@
 module Lexer (Lexeme (..)
              , tokenize) where
 
-import qualified Data.Map as Map
-import Data.Map (Map)
 import Data.Char (isSpace)
 import Base
 import Point
@@ -15,7 +13,7 @@ data State = None | Comment | Char | String | Vector | OtherAtom
 
 -- | takes a string and splits it into lexems
 tokenize :: Point -> String -> Eval [(Lexeme, Point)]
-tokenize point sequence = tokenize' point [] None sequence
+tokenize point = tokenize' point [] None
     where tokenize' point lexemes None xs@(x:rest)
             | isOpen x       = tokenize' (forward x point) ((Open x, point)                     : lexemes) None    rest
             | isClosed x     = tokenize' (forward x point) ((Closed (matchingBracket x), point) : lexemes) None    rest
@@ -86,7 +84,7 @@ translateChar point name = case name of
   other     -> report point $ "undefined character name: '" ++ other ++ "'"
 
 isSeparator :: Char -> Bool
-isSeparator a = (isBracket a) || isSpace a
+isSeparator a = isBracket a || isSpace a
 
 isOpen :: Char -> Bool
 isOpen = (`elem` "([{")

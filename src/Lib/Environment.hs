@@ -6,9 +6,7 @@ import qualified Data.Map as Map
 import Data.Map (Map)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad (foldM)
-import qualified Reader
 import Base
-import Point
 import Evaluator
 
 soEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
@@ -19,14 +17,13 @@ soEnv e args = do
   return (e, env extracted)
 
 extractEnv :: Env -> [SExpr] -> Eval (Map String EnvItem)
-extractEnv e keys = foldM (\acc sexpr -> if not $ isSymbol sexpr
-                                         then report (point sexpr) "symbol expected"
-                                         else let key = fromSymbol sexpr
-                                              in  case envLookup key e of
-                                                    Just value -> return $ Map.insert key value acc
-                                                    Nothing    -> report (point sexpr) $ "undefined symbol '" ++ key ++ "'")
-                    Map.empty
-                    keys
+extractEnv e = foldM (\acc sexpr -> if not $ isSymbol sexpr
+                                    then report (point sexpr) "symbol expected"
+                                    else let key = fromSymbol sexpr
+                                         in  case envLookup key e of
+                                               Just value -> return $ Map.insert key value acc
+                                               Nothing    -> report (point sexpr) $ "undefined symbol '" ++ key ++ "'")
+               Map.empty
 
 soImportEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
 soImportEnv e [arg] = do
@@ -34,7 +31,7 @@ soImportEnv e [arg] = do
   case sexpr of
     SAtom _ (AEnv add) -> return (xappend e add, nil)
     _                  -> report (point sexpr) "context expected"
-soImportEnv _ []     = reportUndef "just one argument required"
+soImportEnv _ _     = reportUndef "just one argument required"
 
 soLoadEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
 soLoadEnv e [arg] = do
@@ -42,7 +39,7 @@ soLoadEnv e [arg] = do
   case sexpr of
     SAtom _ (AEnv add) -> return (lappend e add, nil)
     _                  -> report (point arg) "context expected"
-soLoadEnv _ []    = reportUndef "just one argument required"
+soLoadEnv _ _     = reportUndef "just one argument required"
 
 soCurrentEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
 soCurrentEnv e [] = return (e, env $ envMerge e)

@@ -1,10 +1,6 @@
 module Lib.Main (builtinFunctions
                 ,specialOperators) where
 
-import Data.List (delete, elemIndices)
-import Data.Maybe (isJust)
-import qualified Data.Map as Map
-import Data.Char (toUpper)
 import Base
 import Evaluator
 import Type
@@ -19,7 +15,7 @@ soLambda _ []                = reportUndef "at least one argument expected"
 
 -- special operator let
 soLet :: Env -> [SExpr] -> Eval (Env, SExpr)
-soLet e ((SList p pairs):body) = do
+soLet e (SList p pairs : body) = do
   e' <- handlePairs pairs (pass e)
   (_, expr) <- evalScope e' body
   return (e, expr)
@@ -38,7 +34,7 @@ soIsDef e [sKey] = do
   (_, key) <- eval e sKey
   if not $ isSymbol key
     then report (point sKey) "symbol expected"
-    else return (e, bool $ (fromSymbol key) `memberSExpr` e)
+    else return (e, bool $ fromSymbol key `memberSExpr` e)
 soIsDef _ _      = reportUndef "just one argument required"
 
 soUndef :: Env -> [SExpr] -> Eval (Env, SExpr)
@@ -56,12 +52,11 @@ soSet e [sVar, sValue] = do
   let key = fromSymbol var
   if not $ isSymbol var
     then report (point sVar) "first argument must be a symbol"
-    else do
-      case lookupSExpr key e of
-        Just (SAtom _ (AProcedure (SpecialOp _ _ _ _))) -> reportUndef "rebinding special operators is forbidden"
-        _                                               -> do
-          (_, value) <- eval e sValue
-          return (linsert key (EnvSExpr value) e, nil)
+    else case lookupSExpr key e of
+           Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
+           _                                               -> do
+             (_, value) <- eval e sValue
+             return (linsert key (EnvSExpr value) e, nil)
 soSet _ _              = reportUndef "two arguments required"
 
 -- special operator mutate
@@ -72,7 +67,7 @@ soMutate e [sVar, sValue] = do
   if not $ isSymbol var
     then report (point sVar) "first argument must be a symbol"
     else case lookupSExpr key e of
-           Just (SAtom _ (AProcedure (SpecialOp _ _ _ _))) -> reportUndef "rebinding special operators is forbidden"
+           Just (SAtom _ (AProcedure SpecialOp {})) -> reportUndef "rebinding special operators is forbidden"
            Just _                                          -> do
              (_, value) <- eval e sValue
              return (linsert key (EnvSExpr value) e, nil)
@@ -90,7 +85,7 @@ soBind e (first:args) = do
   if not $ isProcedure first'
     then report (point first) "procedure expected"
     else case fromProcedure first' of
-           so@(SpecialOp _ _ _ _) -> do
+           so@SpecialOp {} -> do
              p <- bind so args
              return (e, procedure p)
            other                  -> do

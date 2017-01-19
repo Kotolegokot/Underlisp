@@ -5,7 +5,6 @@ import Data.Map (Map)
 import Data.List (elemIndices, delete)
 import Control.Monad (foldM, void)
 import Control.Monad.Reader
-import Control.Monad.Except
 import Prototype
 import Point
 import Base
@@ -55,7 +54,7 @@ eval e l@(SList p (sFirst:args)) = do
           | isUserDefined pr || isBuiltIn pr = do
               args' <- mapM (return . snd <=< eval e) args
               add (Call p $ SList p (procedure pr:args')) $ call (point sFirst) e pr args'
-          | isSpecialOp pr                   =
+          | otherwise                        = -- isSpecialOp
               add (Call p $ SList p (procedure pr:args)) $ call (point sFirst) e pr args
 eval e (SAtom p (ASymbol "_"))   = report p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
@@ -85,7 +84,7 @@ parseLambdaList (SList p lambdaList)
   | rest && ix /= count - 2        = report p "&rest must be last but one"
   | otherwise                      = return $ if rest
                                      then Prototype (delete "&rest" . map fromSymbol $ lambdaList) rest
-                                     else Prototype (map fromSymbol $ lambdaList) rest
+                                     else Prototype (map fromSymbol lambdaList) rest
   where ixs   = elemIndices (symbol "&rest") lambdaList
         ix    = head ixs
         rest  = length ixs == 1
@@ -102,13 +101,12 @@ callMacro e (Macro p localE prototype sexprs) args = do
 -- | takes a scope and evaluates all top-level
 -- | defmacros in it
 collectMacros :: Env -> [SExpr] -> Eval (Env, [SExpr])
-collectMacros e xs = foldM (\(accE, accSexprs) sexpr -> do
-                               defmacro <- parseDefmacro accE sexpr
-                               return $ case defmacro of
-                                 Just (name, macro) -> (linsert name (EnvMacro macro) accE, accSexprs)
-                                 Nothing            -> (accE, accSexprs ++ [sexpr]))
-                     (e, [])
-                     xs
+collectMacros e = foldM (\(accE, accSexprs) sexpr -> do
+                            defmacro <- parseDefmacro accE sexpr
+                            return $ case defmacro of
+                              Just (name, macro) -> (linsert name (EnvMacro macro) accE, accSexprs)
+                              Nothing            -> (accE, accSexprs ++ [sexpr]))
+                  (e, [])
 
 -- | expands all top-level macros
 expandMacros :: Env -> [SExpr] -> Eval [SExpr]

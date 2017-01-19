@@ -1,20 +1,17 @@
 module Lib.Meta (builtinFunctions
                 ,specialOperators) where
 
-import qualified Data.Set as Set
-import qualified Data.Map as Map
-import Data.Map (Map)
 import Control.Monad ((>=>))
 import qualified Reader
 import Base
 import Evaluator
-import Point
 
 soMacroExpand :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand e [sexpr] = do
   (_, sexpr') <- eval e sexpr
   expanded <- expandMacros e [sexpr']
   return (e, head expanded)
+soMacroExpand _ _       = reportUndef "just one argument required"
 
 soMacroExpand1 :: Env -> [SExpr] -> Eval (Env, SExpr)
 soMacroExpand1 e [sexpr] = do
@@ -94,6 +91,7 @@ biToSymbol :: [SExpr] -> Eval SExpr
 biToSymbol [str]
   | not $ isString str = report (point str) "string expected"
   | otherwise          = return . symbol $ fromString str
+biToSymbol _ = reportUndef "just one argument required"
 
 builtinFunctions = [("->symbol", Just (1 :: Int), biToSymbol)]
 

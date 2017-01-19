@@ -35,6 +35,7 @@ parseList p b pairs = case b of
   '[' -> do
     (SList p' l, rest) <- parseList' p '[' [] pairs
     return  (SList p' (SAtom p' (ASymbol "bind") : l), rest)
+  _   -> undefined
   where parseList' :: Point -> Char -> [SExpr] -> [(Lexeme, Point)] -> Eval (SExpr, [(Lexeme, Point)])
         parseList' p bracket acc ((x,p'):xs) = case x of
           Open      b -> do
@@ -75,6 +76,7 @@ parseSugarApply p s ((Open   b, p'):xs) = do
   (SList _ ls, rest) <- parseList p' b xs
   return (SList p' (SAtom p (ASymbol s):ls), rest)
 parseSugarApply _ _ ((_, p'):_)         = report p' "list expected"
+parseSugarApply p s []                  = report p $ "unexpected EOF after '" ++ s ++ "'"
 
 strToList :: Point -> String -> SExpr
 strToList p str = SList p (SAtom p (ASymbol "list") : chars)

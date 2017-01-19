@@ -12,17 +12,17 @@ biNot _                   = reportUndef "just one argument required"
 soAnd :: Env -> [SExpr] -> Eval (Env, SExpr)
 soAnd e (x:xs) = do
   (_, expr) <- eval e x
-  case fromBool expr of
-    True  -> soAnd e xs
-    False -> return (e, bool False)
+  if fromBool expr
+    then soAnd e xs
+    else return (e, bool False)
 soAnd e []     = return (e, bool True)
 
 soOr :: Env -> [SExpr] -> Eval (Env, SExpr)
 soOr e (x:xs) = do
   (_, expr) <- eval e x
-  case fromBool expr of
-    True  -> return (e, bool True)
-    False -> soOr e xs
+  if fromBool expr
+    then return (e, bool True)
+    else soOr e xs
 soOr e []     = return (e, bool False)
 
 soImpl :: Env -> [SExpr] -> Eval (Env, SExpr)
