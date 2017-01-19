@@ -53,12 +53,15 @@ soUndef _ _      = reportUndef "just one argument required"
 soSet :: Env -> [SExpr] -> Eval (Env, SExpr)
 soSet e [sVar, sValue] = do
   (_, var) <- eval e sVar
+  let key = fromSymbol var
   if not $ isSymbol var
     then report (point sVar) "first argument must be a symbol"
     else do
-      let key = fromSymbol var
-      (_, value) <- eval e sValue
-      return (linsert key (EnvSExpr value) e, nil)
+      case lookupSExpr key e of
+        Just (SAtom _ (AProcedure (SpecialOp _ _ _ _))) -> reportUndef "rebinding special operators is forbidden"
+        Nothing                                         -> do
+          (_, value) <- eval e sValue
+          return (linsert key (EnvSExpr value) e, nil)
 soSet _ _              = reportUndef "two arguments required"
 
 -- special operator mutate
@@ -69,10 +72,11 @@ soMutate e [sVar, sValue] = do
   if not $ isSymbol var
     then report (point sVar) "first argument must be a symbol"
     else case lookupSExpr key e of
-           Just _  -> do
+           Just (SAtom _ (AProcedure (SpecialOp _ _ _ _))) -> reportUndef "rebinding special operators is forbidden"
+           Just _                                          -> do
              (_, value) <- eval e sValue
              return (linsert key (EnvSExpr value) e, nil)
-           Nothing -> reportUndef $ "undefined identificator '" ++ key ++ "'"
+           Nothing                                         -> reportUndef $ "undefined identificator '" ++ key ++ "'"
 soMutate _ _               = reportUndef "two arguments required"
 
 -- built-in function type

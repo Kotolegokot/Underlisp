@@ -12,6 +12,7 @@ import Data.Vector (Vector)
 import qualified Control.Conditional as C
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Applicative ((<|>))
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -281,11 +282,9 @@ strToAtom atom
   | atom == "true"   = ABool True
   | atom == "false"  = ABool False
   | atom == "nil"    = ANil
-  | isJust tryInt    = AInt     $ fromJust tryInt
-  | isJust tryFloat  = AFloat   $ fromJust tryFloat
-  | otherwise        = ASymbol atom
-  where tryInt    = readMaybe atom :: Maybe Int
-        tryFloat  = readMaybe atom :: Maybe Float
+  | otherwise        = fromMaybe (ASymbol atom) (int <|> float)
+  where int   = AInt   <$> (readMaybe atom :: Maybe Int)
+        float = AFloat <$> (readMaybe atom :: Maybe Float)
 ---- atom ----
 
 ---- macro ----

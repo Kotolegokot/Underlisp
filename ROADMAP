@@ -5,7 +5,6 @@ completion in REPL
 parallelism and concurrency
 &body
 &optional
-forbid rebinding special operators
 general map function
 defconstant
 condition system
