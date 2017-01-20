@@ -14,13 +14,13 @@ biNot [other]             = reportE (point other) "boolean expected"
 biNot _                   = reportE' "just one argument required"
 
 soAnd :: [SExpr] -> Lisp SExpr
-soAnd = (bool <$>) . foldM (\acc x -> return acc <&&> (getBool =<< eval x)) True
+soAnd = (bool <$>) . foldM (\acc x -> return acc <&&> (getBool =<< evalAlone x)) True
 
 soOr :: [SExpr] -> Lisp SExpr
-soOr = (bool <$>) . foldM (\acc x -> return acc <||> (getBool =<< eval x)) False
+soOr = (bool <$>) . foldM (\acc x -> return acc <||> (getBool =<< evalAlone x)) False
 
 soImpl :: [SExpr] -> Lisp SExpr
-soImpl [arg1, arg2] = ifM (getBool =<< eval arg1) (eval arg2) (return $ bool True)
+soImpl [arg1, arg2] = ifM (getBool =<< evalAlone arg1) (evalAlone arg2) (return $ bool True)
 soImpl _            = reportE' "two arguments requried"
 
 builtinFunctions = [("not", Just 1,  biNot)]

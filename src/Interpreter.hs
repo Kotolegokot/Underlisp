@@ -49,7 +49,7 @@ repl prelude = void $ do
                 unless (null line) $ addHistory line
                 result <- evalLisp e $ do
                   read <- forwardExcept $ R.read p line
-                  E.expandAndEvalScopeInterpolated read
+                  last <$> E.expandEvalSeq read
 
                 exp <- case result of
                   Right val -> return val
@@ -76,7 +76,7 @@ loadPrelude :: Lisp Env
 loadPrelude = do
   text <- liftIO $ (readFile preludePath)
   read <- forwardExcept $ R.read (startPoint preludePath) text
-  E.expandAndEvalScope read
+  E.expandEvalBody read
   get
 
 -- | start environment

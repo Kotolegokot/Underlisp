@@ -14,36 +14,50 @@ import Base
 evaluateProgram ::[String] -> [SExpr] -> Lisp ()
 evaluateProgram args body = do
   modify $ setArgs args
-  void $ expandAndEvalScope body
+  void $ expandEvalScope body
 
 -- | evaluates a module with the given environment
 evaluateModule :: [SExpr] -> Lisp (Map String EnvItem)
 evaluateModule body = do
   modify passIn
-  void $ expandAndEvalScope body
+  void $ expandEvalScope body
   result <- get
   modify passOut
   return $ lexical result
 
--- | expands macros and evaluates a scope
-expandAndEvalScope :: [SExpr] -> Lisp SExpr
-expandAndEvalScope = collectMacros >=> expandMacros >=> evalScope
+-- | Expand macros and evaluate a scope
+expandEvalScope :: [SExpr] -> Lisp [SExpr]
+expandEvalScope = collectMacros >=> expandMacros >=> evalScope
 
-evalScope :: [SExpr] -> Lisp SExpr
+-- | Just evaluate a scope
+evalScope :: [SExpr] -> Lisp [SExpr]
 evalScope exps = do
   modify passIn
   result <- mapM eval exps
   modify passOut
-  return $ last result
+  return result
+
+-- | Expand macros and evaluate a scope returning
+-- the result of the last expression
+expandEvalBody :: [SExpr] -> Lisp SExpr
+expandEvalBody = collectMacros >=> expandMacros >=> evalBody
+
+-- | Evaluate a scope and return the result
+-- of the last expression
+evalBody :: [SExpr] -> Lisp SExpr
+evalBody = fmap last . evalScope
 
 -- | Expands macros and evaluates a scope as if
 -- | it is at the same lexical level
-expandAndEvalScopeInterpolated :: [SExpr] -> Lisp SExpr
-expandAndEvalScopeInterpolated = collectMacros >=> expandMacros >=> evalScopeInterpolated
+expandEvalSeq :: [SExpr] -> Lisp [SExpr]
+expandEvalSeq = collectMacros >=> expandMacros >=> evalSeq
 
 -- | Evaluates lexical scope
-evalScopeInterpolated :: [SExpr] -> Lisp SExpr
-evalScopeInterpolated = return . last <=< mapM eval
+evalSeq :: [SExpr] -> Lisp [SExpr]
+evalSeq  = mapM eval
+
+evalAlone :: SExpr -> Lisp SExpr
+evalAlone = (head <$>) . evalScope . return
 
 -- | Evaluate an s-expression writing into call stack
 -- | if any function is invoked
@@ -147,11 +161,10 @@ callMacro :: Macro -> [SExpr] -> Lisp SExpr
 callMacro (Macro p localE prototype sexprs) args = do
   previous <- get
   argBindings <- bindArgs prototype args
-  put localE
-  modify $ lappend argBindings
-  evaluated <- expandAndEvalScope sexprs
+  put $ lappend argBindings localE
+  result <- expandEvalBody sexprs
   put previous
-  return $ setPoint evaluated p
+  return $ setPoint result p
 
 -- | Take a scope and evaluate all top-level
 -- | defmacros in it, return the remaining s-expressions
@@ -164,13 +177,13 @@ collectMacros = foldM (\acc sexpr -> do
                             Nothing            -> return $ acc ++ [sexpr])
                 []
 
--- | expands all top-level macros
+-- | Expand all macros in a scope
 expandMacros :: [SExpr] -> Lisp [SExpr]
 expandMacros = mapM expandMacro
 
 data EMState = Default | Backquote
 
--- | expands one macro expression recursively
+-- | Expand one macro expression recursively
 expandMacro :: SExpr -> Lisp SExpr
 expandMacro = expandMacro' Default
   where expandMacro' :: EMState -> SExpr -> Lisp SExpr
@@ -204,14 +217,13 @@ expandMacro = expandMacro' Default
           | otherwise            = return l
         expandMacro' Backquote other = return other
 
--- | parses a defmacro expression
+-- | Parse a defmacro expression
 parseDefmacro :: SExpr -> Lisp (Maybe (String, Macro))
-parseDefmacro (SList p (SAtom defmacroPoint (ASymbol "defmacro"):name:lambdaList:body))
-  | not $ isSymbol name = reportE (point name) "string expected"
-  | otherwise           = do
-      prototype <- parseLambdaList lambdaList
-      currentE <- get
-      return $ Just (fromSymbol name, Macro p currentE prototype body)
+parseDefmacro (SList p (SAtom defmacroPoint (ASymbol "defmacro"):sName:lambdaList:body)) = do
+  name <- getSymbol sName
+  prototype <- parseLambdaList lambdaList
+  currentE <- get
+  return $ Just (name, Macro p currentE prototype body)
 parseDefmacro (SList p (SAtom _ (ASymbol "defmacro"):_)) = reportE p "at least two arguments required"
 parseDefmacro _                                          = return Nothing
 
@@ -240,10 +252,9 @@ call p c args = do
     where call' :: Procedure -> [SExpr] -> Lisp SExpr
           call' (UserDefined localE prototype sexprs bound) args = do
             previous <- get
-            put localE
             argBindings <- bindArgs prototype (bound ++ args)
-            modify (lappend argBindings)
-            result <- evalScope sexprs
+            put $ lappend argBindings localE
+            result <- evalBody sexprs
             put previous
             return result
           call' (BuiltIn name _ f bound) args = f (bound ++ args)

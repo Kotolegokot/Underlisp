@@ -14,7 +14,7 @@ default (Int)
 
 soEnv :: [SExpr] -> Lisp SExpr
 soEnv args = do
-  symbols <- mapM eval args
+  symbols <- mapM evalAlone args
   env <$> extractEnv symbols
 
 extractEnv :: [SExpr] -> Lisp (Map String EnvItem)
@@ -27,14 +27,14 @@ extractEnv = foldM (\acc exp -> do key <- getSymbol exp
 
 soImportEnv :: [SExpr] -> Lisp SExpr
 soImportEnv [arg] = do
-  add <- getEnv =<< eval arg
+  add <- getEnv =<< evalAlone arg
   modify $ xappend add
   return nil
 soImportEnv _     = reportE' "just one argument required"
 
 soLoadEnv :: [SExpr] -> Lisp SExpr
 soLoadEnv [arg] = do
-  add <- getEnv =<< eval arg
+  add <- getEnv =<< evalAlone arg
   modify $ lappend add
   return nil
 soLoadEnv _     = reportE' "just one argument required"
@@ -54,14 +54,14 @@ soGetArgs _  = reportE' "no arguments required"
 
 soWithArgs :: [SExpr] -> Lisp SExpr
 soWithArgs (args:body) = do
-  args' <- eval args
+  args' <- evalAlone args
   args'' <- mapM getString =<< getList args'
   previousArgs <- gets getArgs
   modify $ setArgs args''
-  result <- evalScope body
+  result <- evalBody body
   modify $ setArgs previousArgs
   return result
-soWithArgs _             = reportE' "at least one argument required"
+soWithArgs _           = reportE' "at least one argument required"
 
 biGetEnv :: [SExpr] -> Lisp SExpr
 biGetEnv [name] = do

@@ -22,7 +22,7 @@ soLet :: [SExpr] -> Lisp SExpr
 soLet (SList p pairs : body) = do
   modify passIn
   putBindings pairs
-  exp <- evalScope body
+  exp <- evalBody body
   modify passOut
   return exp
     where putBindings :: [SExpr] -> Lisp ()
@@ -30,7 +30,7 @@ soLet (SList p pairs : body) = do
 
           putBinding :: SExpr -> Lisp ()
           putBinding (SList _ [SAtom _ (ASymbol var), value]) = do
-            exp <- eval value
+            exp <- evalAlone value
             void . modify $ linsert var (EnvSExpr exp)
           putBinding (SList _ [exp1, _]) = reportE (point exp1) "first item in a binding pair must be a keyword"
           putBinding other               = reportE (point other) "(var value) pair expected"
@@ -39,14 +39,14 @@ soLet       _                    = reportE' "at least one argument expected"
 
 soIsDef :: [SExpr] -> Lisp SExpr
 soIsDef [sKey] = do
-  key <- getSymbol =<< eval sKey
+  key <- getSymbol =<< evalAlone sKey
   result <- gets $ memberSExpr key
   return $ bool result
 soIsDef _      = reportE' "just one argument required"
 
 soUndef :: [SExpr] -> Lisp SExpr
 soUndef [sKey] = do
-  key <- getSymbol =<< eval sKey
+  key <- getSymbol =<< evalAlone sKey
   modify $ envDelete key
   return nil
 soUndef _      = reportE' "just one argument required"
@@ -54,12 +54,12 @@ soUndef _      = reportE' "just one argument required"
 -- special operator define
 soSet :: [SExpr] -> Lisp SExpr
 soSet [sKey, sValue] = do
-  key <- getSymbol =<< eval sKey
+  key <- getSymbol =<< evalAlone sKey
   result <- gets $ lookupSExpr key
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
     _                                        -> do
-      value <- eval sValue
+      value <- evalAlone sValue
       modify $ linsert key (EnvSExpr value)
       return nil
 soSet _              = reportE' "two arguments required"
@@ -67,12 +67,12 @@ soSet _              = reportE' "two arguments required"
 -- special operator mutate
 soMutate :: [SExpr] -> Lisp SExpr
 soMutate [sVar, sValue] = do
-  key <- getSymbol =<< eval sVar
+  key <- getSymbol =<< evalAlone sVar
   result <- gets $ lookupSExpr key
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
     Just _                                          -> do
-      value <- eval sValue
+      value <- evalAlone sValue
       modify $ linsert key (EnvSExpr value)
       return nil
     Nothing                                         -> reportE' $ "undefined identificator '" ++ key ++ "'"
@@ -85,19 +85,19 @@ biType _     = reportE' "just one argument required"
 
 soBind :: [SExpr] -> Lisp SExpr
 soBind (first:args) = do
-  pr <- getProcedure =<< eval first
+  pr <- getProcedure =<< evalAlone first
   case pr of
     so@SpecialOp {} -> procedure <$> bind so args
     other           -> do
-      args' <- mapM eval args
+      args' <- mapM evalAlone args
       procedure <$> bind other args'
 soBind []            = reportE' "at least one argument required"
 
 -- special operator apply
 soApply :: [SExpr] -> Lisp SExpr
 soApply (first:args@(_:_)) = do
-  pr <- getProcedure =<< eval first
-  args' <- mapM eval args
+  pr <- getProcedure =<< evalAlone first
+  args' <- mapM evalAlone args
   l <- getList (last args')
   call (point first) pr (init args' ++ l)
 soApply _             = reportE' "at least two arguments required"

@@ -1,13 +1,28 @@
-(setq a 0)
+(setq a 12)
+(setq map (lambda (f xs)
+	    (if (empty? xs)
+		()
+		(append (list (f (head xs)))
+			(map f (tail xs))))))
+(setq print (lambda (x)
+	      (map put-char (->string x))))
 
-(defun inc (f)
-  (set f (+ (eval f) 1)))
+(setq print-ln (lambda (x)
+		 (print x)
+		 (newline)))
 
-(defmacro incq (f)
-  `(inc '~f))
+(setq newline (lambda () (put-char #newline)))
 
-;;(incq a)
-;;(inc 'a)
+(print-ln a)
 
-(print "~a" a)
-(newline)
+(defmacro setq (var value)
+  `(set '~var ~value))
+
+(setq inc (lambda (x)
+	    (set x (+ 1 (eval x)))))
+
+(defmacro incq (var)
+  `(inc '~var))
+
+(incq a)
+(print-ln a)

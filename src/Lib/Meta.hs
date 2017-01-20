@@ -10,13 +10,13 @@ default (Int)
 
 soMacroExpand :: [SExpr] -> Lisp SExpr
 soMacroExpand [exp] = do
-  exp' <- eval exp
+  exp' <- evalAlone exp
   expanded <- expandMacros [exp']
   return $ head expanded
 soMacroExpand _       = reportE' "just one argument required"
 
 soMacroExpand1 :: [SExpr] -> Lisp SExpr
-soMacroExpand1 [exp] = eval exp >>= soMacroExpand1'
+soMacroExpand1 [exp] = evalAlone exp >>= soMacroExpand1'
     where soMacroExpand1' l@(SList _ (SAtom _ (ASymbol sym):args)) = do
             result <- gets $ lookupMacro sym
             case result of
@@ -34,13 +34,13 @@ soQuote _     = reportE' "just one argument requried"
 soBackquote :: [SExpr] -> Lisp SExpr
 soBackquote [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = reportE p "just one argument required"
-  | otherwise        = eval $ head rest
+  | otherwise        = evalAlone $ head rest
 soBackquote [SList _ l] = list <$> mapM' (soBackquote . return) l
     where mapM' :: (SExpr -> Lisp SExpr) -> [SExpr] -> Lisp [SExpr]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList _ [SAtom _ (ASymbol "unfold"), arg] -> do
-              exps <- getList =<< eval arg
+              exps <- getList =<< evalAlone arg
               rest <- mapM' f xs
               return $ exps ++ rest
             SList _ (SAtom p (ASymbol "unfold"):_)    -> reportE p "just one argument required"
@@ -54,9 +54,9 @@ soBackquote _            = reportE' "just one argument required"
 -- | special operator interprete
 soInterprete :: [SExpr] -> Lisp SExpr
 soInterprete [arg] = do
-  str <- getString =<< eval arg
+  str <- getString =<< evalAlone arg
   read <- forwardExcept $ Reader.read (point arg) str
-  expandAndEvalScopeInterpolated read
+  last <$> expandEvalSeq read
 soInterprete _     = reportE' "just one argument required"
 
 soGensym :: [SExpr] -> Lisp SExpr
@@ -74,8 +74,8 @@ soGensym _  = reportE' "no arguments required"
 -- | special operator eval
 soEval :: [SExpr] -> Lisp SExpr
 soEval args = do
-  args' <- mapM eval args
-  evalScopeInterpolated args'
+  args' <- mapM evalAlone args
+  last <$> evalSeq args'
 
 -- | converts a string into a symbol
 biToSymbol :: [SExpr] -> Lisp SExpr
@@ -90,5 +90,4 @@ specialOperators = [("macroexpand-1", Just 1, soMacroExpand1)
                    ,("backquote",     Just 1, soBackquote)
                    ,("interprete",    Just 1, soInterprete)
                    ,("gensym",        Just 0, soGensym)
-                   ,("eval",          Just 1, soEval
-                    )]
+                   ,("eval",          Just 1, soEval)]
