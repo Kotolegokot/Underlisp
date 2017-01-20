@@ -13,12 +13,12 @@ biIsEmpty :: [SExpr] -> Lisp SExpr
 biIsEmpty [exp]
   | isList exp   = bool . null <$> getList exp
   | isVector exp = bool . Vec.null <$> getVector exp
-  | otherwise    = report (point exp) "sequence expected"
-biIsEmpty _ = reportUndef "just one argument requried"
+  | otherwise    = reportE (point exp) "sequence expected"
+biIsEmpty _ = reportE' "just one argument requried"
 
 biConcat :: [SExpr] -> Lisp SExpr
 biConcat (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
-biConcat _            = reportUndef "at least one argument expected"
+biConcat _            = reportE' "at least one argument expected"
 
 toSequence :: SExpr -> [SExpr] -> Lisp SExpr
 toSequence sType exps = do
@@ -26,20 +26,20 @@ toSequence sType exps = do
   case returnType of
     "vector" -> return . vector $ Vec.fromList exps
     "list"   -> return $ list exps
-    other    -> report (point sType) ("undefined type: '" ++ other ++ "'")
+    other    -> reportE (point sType) ("undefined type: '" ++ other ++ "'")
 
 biNth :: [SExpr] -> Lisp SExpr
 biNth [sN, seq] = do
   n <- getInt sN
-  when (n < 0) $ report (point sN) "negative index"
+  when (n < 0) $ reportE (point sN) "negative index"
   cond [(isList seq, case fromList seq `atMay` n of
-                       Nothing  -> reportUndef $ "index too large: " ++ show n
+                       Nothing  -> reportE' $ "index too large: " ++ show n
                        Just val -> return val)
        ,(isVector seq, case fromVector seq Vec.!? n of
-                         Nothing  -> reportUndef $ "index too large: " ++ show n
+                         Nothing  -> reportE' $ "index too large: " ++ show n
                          Just val -> return val)
-       ,(otherwise, report (point seq) "sequence expected")]
-biNth _         = reportUndef "two arguments required"
+       ,(otherwise, reportE (point seq) "sequence expected")]
+biNth _         = reportE' "two arguments required"
 
 builtinFunctions = [("empty?", Just 1, biIsEmpty)
                    ,("concat", Just 2, biConcat)

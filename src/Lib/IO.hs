@@ -10,20 +10,20 @@ default (Int)
 
 biFlush :: [SExpr] -> Lisp SExpr
 biFlush [] = liftIO (hFlush stdout) >> return nil
-biFlush _  = reportUndef "no arguments required"
+biFlush _  = reportE' "no arguments required"
 
 biGetLine :: [SExpr] -> Lisp SExpr
 biGetLine [] = toString <$> liftIO getLine
-biGetLine _  = reportUndef "no arguments required"
+biGetLine _  = reportE' "no arguments required"
 
 biToString :: [SExpr] -> Lisp SExpr
 biToString [arg] = return . toString $ show arg
-biToString _     = reportUndef "just one argument required"
+biToString _     = reportE' "just one argument required"
 
 biPutChar :: [SExpr] -> Lisp SExpr
 biPutChar [SAtom _ (AChar c)]    = liftIO (putChar c) >> return nil
-biPutChar [expr]                 = report (point expr) "char expected"
-biPutChar _                      = reportUndef "just one argument required"
+biPutChar [expr]                 = reportE (point expr) "char expected"
+biPutChar _                      = reportE' "just one argument required"
 
 builtinFunctions = [("flush",    Just 0, biFlush)
                    ,("get-line", Just 0, biGetLine)

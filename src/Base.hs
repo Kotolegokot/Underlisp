@@ -190,7 +190,7 @@ toString :: String -> SExpr
 toString = list . map char
 
 unpackSExpr :: (SExpr -> a) -> String -> SExpr -> Lisp a
-unpackSExpr fromA msg exp = fromFalsumM (report (point exp) (msg ++ " expected")) (fromA exp)
+unpackSExpr fromA msg exp = fromFalsumM (reportE (point exp) (msg ++ " expected")) (fromA exp)
 
 getInt :: SExpr -> Lisp Int
 getInt = unpackSExpr fromInt "int"
@@ -496,6 +496,11 @@ type Lisp = ExceptT Fail (ReaderT [Call] IO)
 runLisp :: Lisp a -> IO (Either Fail a)
 runLisp = (flip runReaderT []) . runExceptT
 
+forwardExcept :: MonadError Fail m => Except Fail a -> m a
+forwardExcept m = case runExcept m of
+  Left fail -> throwError fail
+  Right val -> return val
+
 handleLisp :: Lisp a -> IO ()
 handleLisp ev = do
   result <- runLisp ev
@@ -521,21 +526,31 @@ printStack :: [Call] -> IO ()
 printStack = putStr . showStack
 
 ---- fail ----
-data Fail = Fail { lePoint :: Point
-                 , leMsg   :: String
-                 , leStack :: [Call] }
+data Fail = ReadFail { getPoint :: Point
+                     , getMsg   :: String }
+          | EvalFail { getPoint :: Point
+                     , getMsg :: String
+                     , getStack :: [Call] }
 
 instance Show Fail where
-  show (Fail Undefined msg stack) = showStack stack ++ msg
-  show (Fail point     msg stack) = showStack stack ++ show point ++ ": " ++ msg
+  show (ReadFail Undefined msg) = msg
+  show (ReadFail point     msg) = show point ++ ": " ++ msg
+  show (EvalFail Undefined msg stack) = showStack stack ++ msg
+  show (EvalFail point     msg stack) = showStack stack ++ show point ++ ": " ++ msg
 
-report :: Point -> String -> Lisp a
-report point msg = do
+reportE :: Point -> String -> Lisp a
+reportE point msg = do
   callstack <- ask
-  throwError $ Fail point msg callstack
+  throwError $ EvalFail point msg callstack
 
-reportUndef :: String -> Lisp a
-reportUndef = report Undefined
+reportE' :: String -> Lisp a
+reportE' = reportE Undefined
+
+reportR :: MonadError Fail m => Point -> String -> m a
+reportR point = throwError . ReadFail point
+
+reportR' :: MonadError Fail m => String -> m a
+reportR' = reportR Undefined
 
 rethrow :: MonadError e m => (e -> e) -> m a -> m a
 rethrow f m = catchError m (throwError . f)

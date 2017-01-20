@@ -1,6 +1,7 @@
 module Lexer (Lexeme (..)
              , tokenize) where
 
+import Control.Monad.Except
 import Data.Char (isSpace)
 import Base
 import Point
@@ -12,7 +13,7 @@ data State = None | Comment | Char | String | Vector | OtherAtom
   deriving (Eq, Show)
 
 -- | takes a string and splits it into lexems
-tokenize :: Point -> String -> Lisp [(Lexeme, Point)]
+tokenize :: Point -> String -> Except Fail [(Lexeme, Point)]
 tokenize point = tokenize' point [] None
     where tokenize' point lexemes None xs@(x:rest)
             | isOpen x       = tokenize' (forward x point) ((Open x, point)                     : lexemes) None    rest
@@ -55,7 +56,7 @@ tokenize point = tokenize' point [] None
               where parse_string point string xs@(x:rest)
                       | x == '"'  = tokenize' (forward x point) ((LString (reverse string), origPoint) : lexemes) None rest
                       | otherwise = parse_string (forward x point) (x : string) rest
-                    parse_string point string [] = report point "unexpected EOF in the middle of a string"
+                    parse_string point string [] = reportR point "unexpected EOF in the middle of a string"
 
           tokenize' origPoint lexemes OtherAtom sequence = parse_atom origPoint [] sequence
               where parse_atom point atom xs@(x:rest)
@@ -75,13 +76,13 @@ matchingBracket x = case x of
                        '}' -> '{'
                        _   -> undefined
 
-translateChar :: Point -> String -> Lisp Lexeme
+translateChar :: Point -> String -> Except Fail Lexeme
 translateChar point name = case name of
   "space"   -> return . LAtom . AChar $ ' '
   "newline" -> return . LAtom . AChar $ '\n'
   "tab"     -> return . LAtom . AChar $ '\t'
   [c]       -> return . LAtom . AChar $ c
-  other     -> report point $ "undefined character name: '" ++ other ++ "'"
+  other     -> reportR point $ "undefined character name: '" ++ other ++ "'"
 
 isSeparator :: Char -> Bool
 isSeparator a = isBracket a || isSpace a

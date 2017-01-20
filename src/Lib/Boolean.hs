@@ -10,8 +10,8 @@ default (Int)
 
 biNot :: [SExpr] -> Lisp SExpr
 biNot [SAtom p (ABool b)] = return $ SAtom p (ABool $ not b)
-biNot [other]             = report (point other) "boolean expected"
-biNot _                   = reportUndef "just one argument required"
+biNot [other]             = reportE (point other) "boolean expected"
+biNot _                   = reportE' "just one argument required"
 
 soAnd :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soAnd e xs = do
@@ -28,7 +28,7 @@ soImpl e [arg1, arg2] = do
   (_, exp1) <- eval e arg1
   result <- ifM (getBool exp1) (snd <$> eval e arg2) (return $ bool True)
   return (e, result)
-soImpl _ _            = reportUndef "two arguments requried"
+soImpl _ _            = reportE' "two arguments requried"
 
 builtinFunctions = [("not", Just 1,  biNot)]
 specialOperators = [("and", Nothing, soAnd)

@@ -22,7 +22,7 @@ extractEnv :: Env -> [SExpr] -> Lisp (Map String EnvItem)
 extractEnv e = foldM (\acc exp -> do key <- getSymbol exp
                                      case envLookup key e of
                                        Just value -> return $ Map.insert key value acc
-                                       Nothing    -> report (point exp) $ "undefined symbol '" ++ key ++ "'")
+                                       Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
                Map.empty
 
 soImportEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
@@ -30,29 +30,29 @@ soImportEnv e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SAtom _ (AEnv add) -> return (xappend e add, nil)
-    _                  -> report (point sexpr) "context expected"
-soImportEnv _ _     = reportUndef "just one argument required"
+    _                  -> reportE (point sexpr) "context expected"
+soImportEnv _ _     = reportE' "just one argument required"
 
 soLoadEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soLoadEnv e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
     SAtom _ (AEnv add) -> return (lappend e add, nil)
-    _                  -> report (point arg) "context expected"
-soLoadEnv _ _     = reportUndef "just one argument required"
+    _                  -> reportE (point arg) "context expected"
+soLoadEnv _ _     = reportE' "just one argument required"
 
 soCurrentEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soCurrentEnv e [] = return (e, env $ envMerge e)
-soCurrentEnv _ _  = reportUndef "no arguments required"
+soCurrentEnv _ _  = reportE' "no arguments required"
 
 biFunctionEnv :: [SExpr] -> Lisp SExpr
 biFunctionEnv [SAtom _ (AProcedure (UserDefined e _ _ _))] = return . env $ envMerge e
-biFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
-biFunctionEnv _                                           = reportUndef "just one argument required"
+biFunctionEnv [sexpr]                                     = reportE (point sexpr) "function expected"
+biFunctionEnv _                                           = reportE' "just one argument required"
 
 soGetArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soGetArgs e [] = return (e, list . map toString $ getArgs e)
-soGetArgs _ _  = reportUndef "no arguments required"
+soGetArgs _ _  = reportE' "no arguments required"
 
 soWithArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soWithArgs e (args:sexprs) = do
@@ -61,7 +61,7 @@ soWithArgs e (args:sexprs) = do
   let e' = setArgs e args''
   (_, expr) <- evalScope e' sexprs
   return (e, expr)
-soWithArgs _ _             = reportUndef "at least one argument required"
+soWithArgs _ _             = reportE' "at least one argument required"
 
 biGetEnv :: [SExpr] -> Lisp SExpr
 biGetEnv [name] = do
@@ -70,7 +70,7 @@ biGetEnv [name] = do
   return $ case result of
     Just value -> toString value
     Nothing    -> nil
-biGetEnv _ = reportUndef "just one argument required"
+biGetEnv _ = reportE' "just one argument required"
 
 biSetEnv :: [SExpr] -> Lisp SExpr
 biSetEnv [name, value, rewrite] = do
@@ -79,20 +79,20 @@ biSetEnv [name, value, rewrite] = do
   rewrite' <- getBool rewrite
   liftIO $ E.setEnv name' value' rewrite'
   return nil
-biSetEnv _ = reportUndef "three arguments required"
+biSetEnv _ = reportE' "three arguments required"
 
 biUnsetEnv :: [SExpr] -> Lisp SExpr
 biUnsetEnv [name] = do
   name' <- getString name
   liftIO $ E.unsetEnv name'
   return nil
-biUnsetEnv _ = reportUndef "just one argument required"
+biUnsetEnv _ = reportE' "just one argument required"
 
 biGetEnvironment :: [SExpr] -> Lisp SExpr
 biGetEnvironment [] = do
   environment <- liftIO E.getEnvironment
   return . list $ map (\(name, value) -> list [toString name, toString value]) environment
-biGetEnvironment _  = reportUndef "no arguments required"
+biGetEnvironment _  = reportE' "no arguments required"
 
 biSetEnvironment :: [SExpr] -> Lisp SExpr
 biSetEnvironment [l] = do
@@ -105,9 +105,9 @@ biSetEnvironment [l] = do
           str1' <- getString str1
           str2' <- getString str2
           return ((str1', str2') : xs')
-        assurePairList (SList p _:_) = report p "pair expected"
-        assurePairList (x:_)         = report (point x) "list expected"
-biSetEnvironment _      = reportUndef "just one argument required"
+        assurePairList (SList p _:_) = reportE p "pair expected"
+        assurePairList (x:_)         = reportE (point x) "list expected"
+biSetEnvironment _      = reportE' "just one argument required"
 
 builtinFunctions = [("function-env",    Just 1, biFunctionEnv)
                    ,("get-env",         Just 1, biGetEnv)

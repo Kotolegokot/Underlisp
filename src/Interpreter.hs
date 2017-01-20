@@ -21,7 +21,7 @@ interpreteProgram :: Bool -> String -> [String] -> IO ()
 interpreteProgram prelude filename args = handleLisp $ do
   e <- loadEnv prelude
   text <- liftIO $ readFile filename
-  read <- R.read (startPoint filename) text
+  read <- forwardExcept $ R.read (startPoint filename) text
   E.evaluateProgram e args read
 
 -- | interpretes a module and returns its lexical scope
@@ -29,7 +29,7 @@ interpreteModule :: Bool -> String -> Lisp (Map String EnvItem)
 interpreteModule prelude filename = do
   e <- loadEnv prelude
   text <- liftIO $ readFile filename
-  read <- R.read (startPoint filename) text
+  read <- forwardExcept $ R.read (startPoint filename) text
   E.evaluateModule e read
 
 
@@ -46,7 +46,7 @@ repl prelude = void $ runLisp $ do
               Just line -> do
                 unless (null line) $ addHistory line
                 result <- runLisp $ do
-                  read <- R.read p line
+                  read <- forwardExcept $ R.read p line
                   E.expandAndLispScopeInterpolated e read
 
                 (e', expr) <- case result of
@@ -69,7 +69,7 @@ loadEnv False = return startEnv
 loadPrelude :: Lisp Env
 loadPrelude = do
   text <- liftIO (readFile preludePath)
-  read <- R.read (startPoint preludePath) text
+  read <- forwardExcept $ R.read (startPoint preludePath) text
   (e, _) <- E.expandAndLispScope startEnv read
   return e
 
@@ -91,26 +91,26 @@ soEnvFromFile :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soEnvFromFile e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
-    then report (point sArg) "string expected"
+    then reportE (point sArg) "string expected"
     else do
       e' <- interpreteModule True $ fromString arg
       return (e, env e')
-soEnvFromFile _ _        = reportUndef "just one argument required"
+soEnvFromFile _ _        = reportE' "just one argument required"
 
 -- | loads environment from a file without prelude loaded
 soEnvFromFileNoPrelude :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soEnvFromFileNoPrelude e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
-    then report (point sArg) "string expected"
+    then reportE (point sArg) "string expected"
     else do
       e' <- interpreteModule False $ fromString arg
       return (e, env e')
-soEnvFromFileNoPrelude _ _       = reportUndef "just one argument required"
+soEnvFromFileNoPrelude _ _       = reportE' "just one argument required"
 
 -- | returns start environment plus prelude
 biInitialEnv :: [SExpr] -> Lisp SExpr
 biInitialEnv [] = do
   prelude <- loadPrelude
   return . env $ envMerge prelude
-biInitialEnv _  = reportUndef "no arguments requried"
+biInitialEnv _  = reportE' "no arguments requried"

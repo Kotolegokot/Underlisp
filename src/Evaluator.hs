@@ -43,12 +43,12 @@ evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 eval :: Env -> SExpr -> Lisp (Env, SExpr)
 eval e l@(SList p (sFirst:args)) = do
   (_, first) <- eval e sFirst
-  rethrow (\le -> if lePoint le == Undefined
-                  then le { lePoint = point sFirst }
-                  else le) $
+  rethrow (\fail -> if getPoint fail == Undefined
+                    then fail { getPoint = point sFirst }
+                    else fail) $
     if isProcedure first
     then eval' (fromProcedure first)
-    else report (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
+    else reportE (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
   where eval' :: Procedure -> Lisp (Env, SExpr)
         eval' pr
           | isUserDefined pr || isBuiltIn pr = do
@@ -56,23 +56,23 @@ eval e l@(SList p (sFirst:args)) = do
               add (Call p $ SList p (procedure pr:args')) $ call (point sFirst) e pr args'
           | otherwise                        = -- isSpecialOp
               add (Call p $ SList p (procedure pr:args)) $ call (point sFirst) e pr args
-eval e (SAtom p (ASymbol "_"))   = report p "addressing '_' is forbidden"
+eval e (SAtom p (ASymbol "_"))   = reportE p "addressing '_' is forbidden"
 eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
   Just (EnvSExpr s) -> return (e, setPoint s p)
-  _                 -> report p $ "undefined identificator '" ++ sym ++ "'"
+  _                 -> reportE p $ "undefined identificator '" ++ sym ++ "'"
 eval e other                     = return (e, other)
 
 -- | Create bindings from a function prototype and
 -- | and the actual arguments
 bindArgs :: Prototype -> [SExpr] -> Lisp (Map String EnvItem)
 bindArgs (Prototype argNames optNames Nothing) args
-  | length args > l1 + l2 = reportUndef "too many arguments"
-  | length args < l1      = reportUndef "too little arguments"
+  | length args > l1 + l2 = reportE' "too many arguments"
+  | length args < l1      = reportE' "too little arguments"
   | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (map EnvSExpr $ args ++ repeat nil)
     where l1 = length argNames
           l2 = length optNames
 bindArgs (Prototype argNames optNames rest) args
-  | l < l1      = reportUndef "too little arguments"
+  | l < l1      = reportE' "too little arguments"
   | l < l1 + l2 = return . Map.fromList $ zip names (map EnvSExpr $ args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
   | otherwise   = let (left, right) = splitAt (l1 + l2) args
                       args'         = left ++ [list right]
@@ -105,7 +105,7 @@ parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< get
         parseLambdaList' PLLOptional prototype (x:xs) = do
           x' <- getSymbol x
           case x' of
-            "&optional" -> report (point x) "more than one &optional in a lambda list"
+            "&optional" -> reportE (point x) "more than one &optional in a lambda list"
             "&rest"     -> parseLambdaList' PLLRest     prototype xs
             "&body"     -> parseLambdaList' PLLBody     prototype xs
             other       -> parseLambdaList' PLLOptional prototype { getOptional =
@@ -115,23 +115,23 @@ parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< get
         parseLambdaList' PLLRest prototype (x:xs) = do
           x' <- getSymbol x
           case x' of
-            "&optional" -> report (point x) "no &optional after &rest expected"
-            "&rest"     -> report (point x) "no &rest after &rest expected"
-            "&body"     -> report (point x) "no &body after &rest expected"
+            "&optional" -> reportE (point x) "no &optional after &rest expected"
+            "&rest"     -> reportE (point x) "no &rest after &rest expected"
+            "&body"     -> reportE (point x) "no &body after &rest expected"
             other       -> parseLambdaList' PLLEnd prototype { getRest = Just (Rest other) } xs
-        parseLambdaList' PLLRest _         []     = reportUndef "a symbol after &rest expected"
+        parseLambdaList' PLLRest _         []     = reportE' "a symbol after &rest expected"
 
         parseLambdaList' PLLBody prototype (x:xs) = do
           x' <- getSymbol x
           case x' of
-            "&optional" -> report (point x) "no &optional after &body expected"
-            "&rest"     -> report (point x) "no &rest after &body expected"
-            "&body"     -> report (point x) "no &body after &body expected"
+            "&optional" -> reportE (point x) "no &optional after &body expected"
+            "&rest"     -> reportE (point x) "no &rest after &body expected"
+            "&body"     -> reportE (point x) "no &body after &body expected"
             other       -> parseLambdaList' PLLEnd prototype { getRest = Just (Body other) } xs
-        parseLambdaList' PLLBody _         []     = reportUndef "a symbol after &body expected"
+        parseLambdaList' PLLBody _         []     = reportE' "a symbol after &body expected"
 
         parseLambdaList' PLLEnd prototype []      = return prototype
-        parseLambdaList' PLLEnd _         (x:xs)  = report (point x) "nothing expected at the end of the lambda list"
+        parseLambdaList' PLLEnd _         (x:xs)  = reportE (point x) "nothing expected at the end of the lambda list"
 
 -- | invokes a macro with the given environment and arguments
 callMacro :: Env -> Macro -> [SExpr] -> Lisp SExpr
@@ -169,7 +169,7 @@ expandMacro = expandMacro' Default
           | sym == "backquote"   = do
               rest' <- mapM (expandMacro' Backquote e) rest
               return $ SList p (first:rest')
-          | sym == "interpolate" = report p "calling out of backquote"
+          | sym == "interpolate" = reportE p "calling out of backquote"
           | otherwise = case lookupMacro (fromSymbol first) e of
               Just m  -> do
                 expr <- callMacro e m rest
@@ -195,11 +195,11 @@ expandMacro = expandMacro' Default
 -- | parses a defmacro expression
 parseDefmacro :: Env -> SExpr -> Lisp (Maybe (String, Macro))
 parseDefmacro e (SList p (SAtom defmacroPoint (ASymbol "defmacro"):name:lambdaList:body))
-  | not $ isSymbol name = report (point name) "string expected"
+  | not $ isSymbol name = reportE (point name) "string expected"
   | otherwise           = do
       prototype <- parseLambdaList lambdaList
       return $ Just (fromSymbol name, Macro p e prototype body)
-parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = report p "at least two arguments required"
+parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = reportE p "at least two arguments required"
 parseDefmacro _ _                                          = return Nothing
 
 -- | binds arguments to a procedure
@@ -207,15 +207,15 @@ bind :: Procedure -> [SExpr] -> Lisp Procedure
 bind (UserDefined scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
   return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (UserDefined scope prototype@(Prototype argNames optNames _) sexprs bound) args
-  | length args + length args > length argNames + length optNames = reportUndef "too many arguments"
+  | length args + length args > length argNames + length optNames = reportE' "too many arguments"
   | otherwise                                                     =
       return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (BuiltIn name (Just argsCount) f bound) args
-  | argsCount < (length bound + length args) = reportUndef "too many arguments"
+  | argsCount < (length bound + length args) = reportE' "too many arguments"
   | otherwise                                = return $ BuiltIn name (Just argsCount) f (bound ++ args)
 bind (BuiltIn name Nothing f bound) args = return $ BuiltIn name Nothing f (bound ++ args)
 bind (SpecialOp name (Just argsCount) f bound) args
-  | argsCount < (length bound + length args) = reportUndef "too many arguments"
+  | argsCount < (length bound + length args) = reportE' "too many arguments"
   | otherwise                                 = return $ SpecialOp name (Just argsCount) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = return $ SpecialOp name Nothing f (bound ++ args)
 

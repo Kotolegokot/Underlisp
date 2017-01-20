@@ -13,7 +13,7 @@ soMacroExpand e [sexpr] = do
   (_, sexpr') <- eval e sexpr
   expanded <- expandMacros e [sexpr']
   return (e, head expanded)
-soMacroExpand _ _       = reportUndef "just one argument required"
+soMacroExpand _ _       = reportE' "just one argument required"
 
 soMacroExpand1 :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soMacroExpand1 e [sexpr] = do
@@ -25,17 +25,17 @@ soMacroExpand1 e [sexpr] = do
               return (e, result)
             Nothing  -> return (e, l)
           soMacroExpand1' other                               = return (e, other)
-soMacroExpand1 _ _       = reportUndef "just one argument required"
+soMacroExpand1 _ _       = reportE' "just one argument required"
 
 -- | special operator quote
 soQuote :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soQuote e [arg] = return (e, arg)
-soQuote _ _     = reportUndef "just one argument requried"
+soQuote _ _     = reportE' "just one argument requried"
 
 -- | special operator backquote
 soBackquote :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soBackquote e [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
-  | length rest /= 1 = report p "just one argument required"
+  | length rest /= 1 = reportE p "just one argument required"
   | otherwise        = do
       (_, expr) <- eval e $ head rest
       return (e, expr)
@@ -52,22 +52,22 @@ soBackquote e [SList _ l] = do
                   exprs <- mapM (\sexpr -> return (e, sexpr)) l
                   rest <- mapM' f xs
                   return $ exprs ++ rest
-                other     -> report (point other) "list expected"
-            SList _ (SAtom p (ASymbol "unfold"):_)           -> report p "just one argument required"
+                other     -> reportE (point other) "list expected"
+            SList _ (SAtom p (ASymbol "unfold"):_)           -> reportE p "just one argument required"
             other                                -> do
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
 soBackquote e [arg]        = return (e, arg)
-soBackquote _ _            = reportUndef "just one argument required"
+soBackquote _ _            = reportE' "just one argument required"
 
 -- | special operator interprete
 soInterprete :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soInterprete e [arg] = do
   str <- getString =<< snd <$> eval e arg
-  read <- Reader.read (point arg) str
+  read <- forwardExcept $ Reader.read (point arg) str
   expandAndLispScope e read
-soInterprete _ _     = reportUndef "just one argument required"
+soInterprete _ _     = reportE' "just one argument required"
 
 soGensym :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soGensym e [] = do
@@ -77,7 +77,7 @@ soGensym e [] = do
         gensym n e = case envLookup ("G-" ++ show n) e of
           Just _  -> gensym (n + 1) e
           Nothing -> (n + 1, symbol $ "G-" ++ show n)
-soGensym _ _  = reportUndef "no arguments required"
+soGensym _ _  = reportE' "no arguments required"
 
 -- | special operator eval
 soLisp :: Env -> [SExpr] -> Lisp (Env, SExpr)
@@ -88,7 +88,7 @@ soLisp e args = do
 -- | converts a string into a symbol
 biToSymbol :: [SExpr] -> Lisp SExpr
 biToSymbol [exp] = symbol <$> getString exp
-biToSymbol _ = reportUndef "just one argument required"
+biToSymbol _ = reportE' "just one argument required"
 
 builtinFunctions = [("->symbol", Just 1, biToSymbol)]
 

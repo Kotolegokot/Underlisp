@@ -11,15 +11,15 @@ biList = return . list
 
 biHead :: [SExpr] -> Lisp SExpr
 biHead [SList _ (first:_)] = return first
-biHead [SList p []]        = report p "empty list"
-biHead [sexpr]             = report (point sexpr) "list expected"
-biHead _                   = reportUndef "just one argument required"
+biHead [SList p []]        = reportE p "empty list"
+biHead [sexpr]             = reportE (point sexpr) "list expected"
+biHead _                   = reportE' "just one argument required"
 
 biTail :: [SExpr] -> Lisp SExpr
 biTail [SList p (_:rest)] = return $ SList p rest
-biTail [SList p []]       = report p "empty list"
-biTail [sexpr]            = report (point sexpr) "list expected"
-biTail _                  = reportUndef "just one argument required"
+biTail [SList p []]       = reportE p "empty list"
+biTail [sexpr]            = reportE (point sexpr) "list expected"
+biTail _                  = reportE' "just one argument required"
 
 biAppend :: [SExpr] -> Lisp SExpr
 biAppend = liftM (list . concat) . mapM getList

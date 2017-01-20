@@ -9,11 +9,11 @@ default (Int)
 
 biCharToInt :: [SExpr] -> Lisp SExpr
 biCharToInt [exp] = int . ord <$> getChar exp
-biCharToInt _     = reportUndef "just one argument required"
+biCharToInt _     = reportE' "just one argument required"
 
 biIntToChar :: [SExpr] -> Lisp SExpr
 biIntToChar [exp] = char . chr <$> getInt exp
-biIntToChar _     = reportUndef "just one argument required"
+biIntToChar _     = reportE' "just one argument required"
 
 builtinFunctions = [("char->int", Just 1, biCharToInt)
                    ,("int->char", Just 1, biIntToChar)]
