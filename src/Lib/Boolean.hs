@@ -13,22 +13,15 @@ biNot [SAtom p (ABool b)] = return $ SAtom p (ABool $ not b)
 biNot [other]             = reportE (point other) "boolean expected"
 biNot _                   = reportE' "just one argument required"
 
-soAnd :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soAnd e xs = do
-  result <- foldM (\acc x -> return acc <&&> (getBool =<< snd <$> eval e x)) True xs
-  return (e, bool result)
+soAnd :: [SExpr] -> Lisp SExpr
+soAnd = (bool <$>) . foldM (\acc x -> return acc <&&> (getBool =<< eval x)) True
 
-soOr :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soOr e xs = do
-  result <- foldM (\acc x -> return acc <||> (getBool =<< snd <$> eval e x)) False xs
-  return (e, bool result)
+soOr :: [SExpr] -> Lisp SExpr
+soOr = (bool <$>) . foldM (\acc x -> return acc <||> (getBool =<< eval x)) False
 
-soImpl :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soImpl e [arg1, arg2] = do
-  (_, exp1) <- eval e arg1
-  result <- ifM (getBool exp1) (snd <$> eval e arg2) (return $ bool True)
-  return (e, result)
-soImpl _ _            = reportE' "two arguments requried"
+soImpl :: [SExpr] -> Lisp SExpr
+soImpl [arg1, arg2] = ifM (getBool =<< eval arg1) (eval arg2) (return $ bool True)
+soImpl _            = reportE' "two arguments requried"
 
 builtinFunctions = [("not", Just 1,  biNot)]
 specialOperators = [("and", Nothing, soAnd)

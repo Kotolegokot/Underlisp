@@ -2,27 +2,24 @@ module Lib.Control (builtinFunctions
                    ,specialOperators) where
 
 import Control.Conditional (if')
-import Control.Arrow (first)
-import Control.Monad (foldM)
 import Base
 import Evaluator
 
 default (Int)
 
-soIf :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soIf e [condExp]                    = soIf e [condExp, nil,     nil]
-soIf e [condExp, trueExp]           = soIf e [condExp, trueExp, nil]
-soIf e [condExp, trueExp, falseExp] = do
-  (_, cond) <- eval e condExp
-  cond' <- getBool cond
-  first (const e) <$> eval e (if' cond' trueExp falseExp)
-soIf _        _                          = reportE' "1 to 3 arguments requried"
+soIf :: [SExpr] -> Lisp SExpr
+soIf [condExp]                    = soIf [condExp, nil,     nil]
+soIf [condExp, trueExp]           = soIf [condExp, trueExp, nil]
+soIf [condExp, trueExp, falseExp] = do
+  cond <- getBool =<< eval condExp
+  eval $ if' cond trueExp falseExp
+soIf _                            = reportE' "1 to 3 arguments requried"
 
-soScope :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soScope e args = first (const e) <$> evalScope e args
+soScope :: [SExpr] -> Lisp SExpr
+soScope = evalScope
 
-soSeq :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soSeq e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+soSeq :: [SExpr] -> Lisp SExpr
+soSeq = evalScopeInterpolated
 
 builtinFunctions = []
 

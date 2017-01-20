@@ -4,6 +4,7 @@ module Lib.Environment (builtinFunctions
 import qualified System.Posix.Env as E
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Monad.State
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad (foldM)
 import Base
@@ -11,57 +12,56 @@ import Evaluator
 
 default (Int)
 
-soEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soEnv e args = do
-  pairs <- mapM (eval e) args
-  let symbols = map snd pairs
-  extracted <- extractEnv e symbols
-  return (e, env extracted)
+soEnv :: [SExpr] -> Lisp SExpr
+soEnv args = do
+  symbols <- mapM eval args
+  env <$> extractEnv symbols
 
-extractEnv :: Env -> [SExpr] -> Lisp (Map String EnvItem)
-extractEnv e = foldM (\acc exp -> do key <- getSymbol exp
-                                     case envLookup key e of
-                                       Just value -> return $ Map.insert key value acc
-                                       Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
-               Map.empty
+extractEnv :: [SExpr] -> Lisp (Map String EnvItem)
+extractEnv = foldM (\acc exp -> do key <- getSymbol exp
+                                   result <- gets $ envLookup key
+                                   case result of
+                                     Just value -> return $ Map.insert key value acc
+                                     Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
+             Map.empty
 
-soImportEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soImportEnv e [arg] = do
-  (_, sexpr) <- eval e arg
-  case sexpr of
-    SAtom _ (AEnv add) -> return (xappend e add, nil)
-    _                  -> reportE (point sexpr) "context expected"
-soImportEnv _ _     = reportE' "just one argument required"
+soImportEnv :: [SExpr] -> Lisp SExpr
+soImportEnv [arg] = do
+  add <- getEnv =<< eval arg
+  modify $ xappend add
+  return nil
+soImportEnv _     = reportE' "just one argument required"
 
-soLoadEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soLoadEnv e [arg] = do
-  (_, sexpr) <- eval e arg
-  case sexpr of
-    SAtom _ (AEnv add) -> return (lappend e add, nil)
-    _                  -> reportE (point arg) "context expected"
-soLoadEnv _ _     = reportE' "just one argument required"
+soLoadEnv :: [SExpr] -> Lisp SExpr
+soLoadEnv [arg] = do
+  add <- getEnv =<< eval arg
+  modify $ lappend add
+  return nil
+soLoadEnv _     = reportE' "just one argument required"
 
-soCurrentEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soCurrentEnv e [] = return (e, env $ envMerge e)
-soCurrentEnv _ _  = reportE' "no arguments required"
+soCurrentEnv :: [SExpr] -> Lisp SExpr
+soCurrentEnv [] = env . envMerge <$> get
+soCurrentEnv _  = reportE' "no arguments required"
 
 biFunctionEnv :: [SExpr] -> Lisp SExpr
 biFunctionEnv [SAtom _ (AProcedure (UserDefined e _ _ _))] = return . env $ envMerge e
-biFunctionEnv [sexpr]                                     = reportE (point sexpr) "function expected"
-biFunctionEnv _                                           = reportE' "just one argument required"
+biFunctionEnv [sexpr]                                      = reportE (point sexpr) "function expected"
+biFunctionEnv _                                            = reportE' "just one argument required"
 
-soGetArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soGetArgs e [] = return (e, list . map toString $ getArgs e)
-soGetArgs _ _  = reportE' "no arguments required"
+soGetArgs :: [SExpr] -> Lisp SExpr
+soGetArgs [] = list . map toString <$> gets getArgs
+soGetArgs _  = reportE' "no arguments required"
 
-soWithArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soWithArgs e (args:sexprs) = do
-  (_, args') <- eval e args
-  args'' <- mapM getString =<< getList args' 
-  let e' = setArgs e args''
-  (_, expr) <- evalScope e' sexprs
-  return (e, expr)
-soWithArgs _ _             = reportE' "at least one argument required"
+soWithArgs :: [SExpr] -> Lisp SExpr
+soWithArgs (args:body) = do
+  args' <- eval args
+  args'' <- mapM getString =<< getList args'
+  previousArgs <- gets getArgs
+  modify $ setArgs args''
+  result <- evalScope body
+  modify $ setArgs previousArgs
+  return result
+soWithArgs _             = reportE' "at least one argument required"
 
 biGetEnv :: [SExpr] -> Lisp SExpr
 biGetEnv [name] = do

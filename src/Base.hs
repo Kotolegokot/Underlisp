@@ -12,8 +12,10 @@ import Data.Vector (Vector)
 import qualified Control.Conditional as C
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 import Control.Applicative ((<|>))
 import Control.Arrow
+import Control.Exception (Exception)
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -343,7 +345,7 @@ instance Show Macro where
 ---- procedure ----
 data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
                | BuiltIn     String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> Lisp (Env, SExpr)) [SExpr]
+               | SpecialOp   String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
@@ -375,14 +377,14 @@ instance Show EnvItem where
 getG :: Env -> Int
 getG (Env g _ _) = g
 
-setG :: Env -> Int -> Env
-setG (Env _ args xs) g = Env g args xs
+setG :: Int -> Env -> Env
+setG g (Env _ args xs) = Env g args xs
 
 getArgs :: Env -> [String]
 getArgs (Env _ args _) = args
 
-setArgs :: Env -> [String] -> Env
-setArgs (Env g _ xs) args = Env g args xs
+setArgs ::  [String] -> Env -> Env
+setArgs args (Env g _ xs) = Env g args xs
 
 instance Show Env where
   show (Env _ _ xs) = foldr (\(level, map) acc -> acc ++ "level " ++ show level ++ ":\n" ++ show map ++ "\n")
@@ -395,8 +397,12 @@ empty = Env 0 [] [Map.empty]
 envFromList :: [(String, EnvItem)] -> Env
 envFromList l = Env 0 [] [Map.fromList l]
 
-pass :: Env -> Env
-pass (Env g args xs) = Env g args (Map.empty : xs)
+passIn :: Env -> Env
+passIn (Env g args xs) = Env g args (Map.empty : xs)
+
+passOut :: Env -> Env
+passOut (Env g args (x:xs)) = Env g args xs
+passOut _                   = undefined
 
 envLookup :: String -> Env -> Maybe EnvItem
 envLookup key (Env g args (x:xs)) = case Map.lookup key x of
@@ -456,25 +462,25 @@ xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
              x
 xinsert _   _     _                   = undefined
 
-lappend :: Env -> Map String EnvItem -> Env
-lappend (Env g args (x:xs)) add = Env g args (x' : xs)
+lappend :: Map String EnvItem -> Env -> Env
+lappend add (Env g args (x:xs)) = Env g args (x' : xs)
   where x' = fmap (\case
                       EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (lappend e add) prototype sexprs
+                        -> EnvMacro $ Macro p (lappend add e) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (lappend e add) prototype sexprs bound
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (lappend add e) prototype sexprs bound
                       EnvSExpr other
                         -> EnvSExpr other)
              (add `Map.union` x)
 lappend _                   _   = undefined
 
-xappend :: Env -> Map String EnvItem -> Env
-xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
+xappend :: Map String EnvItem -> Env -> Env
+xappend add (Env g args (x:xs)) = Env g args (x' : add : xs)
   where x' = fmap (\case
                       EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (xappend e add) prototype sexprs
+                        -> EnvMacro $ Macro p (xappend add e) prototype sexprs
                       EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xappend e add) prototype sexprs bound
+                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xappend add e) prototype sexprs bound
                       EnvSExpr other
                         -> EnvSExpr other)
              x
@@ -491,19 +497,25 @@ external _                = undefined
 ---- environment ----
 
 ---- eval ---
-type Lisp = ExceptT Fail (ReaderT [Call] IO)
+type Lisp = ExceptT Fail (StateT Env (ReaderT [Call] IO))
 
-runLisp :: Lisp a -> IO (Either Fail a)
-runLisp = (flip runReaderT []) . runExceptT
+runLisp :: Env -> Lisp a -> IO (Either Fail a, Env)
+runLisp startEnv = (flip runReaderT []) . flip runStateT startEnv . runExceptT
+
+evalLisp :: Env -> Lisp a -> IO (Either Fail a)
+evalLisp startEnv = (fst <$>) . runLisp startEnv
+
+execLisp :: Env -> Lisp a -> IO Env
+execLisp startEnv = (snd <$>) . runLisp startEnv
 
 forwardExcept :: MonadError Fail m => Except Fail a -> m a
 forwardExcept m = case runExcept m of
   Left fail -> throwError fail
   Right val -> return val
 
-handleLisp :: Lisp a -> IO ()
-handleLisp ev = do
-  result <- runLisp ev
+handleLisp :: Env -> Lisp a -> IO ()
+handleLisp startEnv ev = do
+  result <- evalLisp startEnv ev
   case result of
     Right _ -> return ()
     Left f  -> hPrint stderr f
@@ -531,6 +543,8 @@ data Fail = ReadFail { getPoint :: Point
           | EvalFail { getPoint :: Point
                      , getMsg :: String
                      , getStack :: [Call] }
+
+instance Exception Fail
 
 instance Show Fail where
   show (ReadFail Undefined msg) = msg

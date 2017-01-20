@@ -15,7 +15,7 @@ import Lib.Vector as Vector
 
 import Base
 
-specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> Lisp (Env, SExpr))]
+specialOperators :: [(String, Maybe Int, [SExpr] -> Lisp SExpr)]
 specialOperators = concat [Bool.specialOperators
                           ,Char.specialOperators
                           ,Ctrl.specialOperators
