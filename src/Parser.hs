@@ -5,7 +5,7 @@ import Lexer
 import Point
 
 -- | takes a list of lexemes and generates a complete s-expression
-parse :: [(Lexeme, Point)] -> Eval [SExpr]
+parse :: [(Lexeme, Point)] -> Lisp [SExpr]
 parse [] = return []
 parse ((x,p):xs) = case x of
   Open b -> do
@@ -28,7 +28,7 @@ parse ((x,p):xs) = case x of
     rest' <- parse rest
     return (sexpr : rest')
 
-parseList :: Point -> Char -> [(Lexeme, Point)] -> Eval (SExpr, [(Lexeme, Point)])
+parseList :: Point -> Char -> [(Lexeme, Point)] -> Lisp (SExpr, [(Lexeme, Point)])
 parseList p b pairs = case b of
   '(' -> parseList' p '(' [] pairs
   '{' -> parseList' p '{' [] pairs
@@ -36,7 +36,7 @@ parseList p b pairs = case b of
     (SList p' l, rest) <- parseList' p '[' [] pairs
     return  (SList p' (SAtom p' (ASymbol "bind") : l), rest)
   _   -> undefined
-  where parseList' :: Point -> Char -> [SExpr] -> [(Lexeme, Point)] -> Eval (SExpr, [(Lexeme, Point)])
+  where parseList' :: Point -> Char -> [SExpr] -> [(Lexeme, Point)] -> Lisp (SExpr, [(Lexeme, Point)])
         parseList' p bracket acc ((x,p'):xs) = case x of
           Open      b -> do
             (subl, rest) <- parseList p' b xs
@@ -55,7 +55,7 @@ parseList p b pairs = case b of
         parseList' p _       _   []      = report p "unexpected EOF in the middle of a list"
 
 
-parseSugarCall :: Point -> String -> [(Lexeme, Point)] -> Eval (SExpr, [(Lexeme, Point)])
+parseSugarCall :: Point -> String -> [(Lexeme, Point)] -> Lisp (SExpr, [(Lexeme, Point)])
 parseSugarCall p s ((Closed    _,  p'):_)   = report p' $ "right paren after '" ++ s ++ "' is forbidden"
 parseSugarCall p s ((Open      b,  p'):xs)  = do
   (subl, rest) <- parseList p' b xs
@@ -70,7 +70,7 @@ parseSugarCall p s ((SugarApply s', p'):xs) = do
 parseSugarCall p s ((LString   l,  p'):xs)  = return (SList p [SAtom p (ASymbol s), strToList p l], xs)
 parseSugarCall p s []                       = report p $ "unexpected EOF after '" ++ s ++ "'"
 
-parseSugarApply :: Point -> String -> [(Lexeme, Point)] -> Eval (SExpr, [(Lexeme, Point)])
+parseSugarApply :: Point -> String -> [(Lexeme, Point)] -> Lisp (SExpr, [(Lexeme, Point)])
 parseSugarApply _ _ ((Closed _, p'):_)  = report p' "list expected"
 parseSugarApply p s ((Open   b, p'):xs) = do
   (SList _ ls, rest) <- parseList p' b xs

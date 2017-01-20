@@ -8,19 +8,19 @@ import Base
 
 default (Int)
 
-biFlush :: [SExpr] -> Eval SExpr
+biFlush :: [SExpr] -> Lisp SExpr
 biFlush [] = liftIO (hFlush stdout) >> return nil
 biFlush _  = reportUndef "no arguments required"
 
-biGetLine :: [SExpr] -> Eval SExpr
+biGetLine :: [SExpr] -> Lisp SExpr
 biGetLine [] = toString <$> liftIO getLine
 biGetLine _  = reportUndef "no arguments required"
 
-biToString :: [SExpr] -> Eval SExpr
+biToString :: [SExpr] -> Lisp SExpr
 biToString [arg] = return . toString $ show arg
 biToString _     = reportUndef "just one argument required"
 
-biPutChar :: [SExpr] -> Eval SExpr
+biPutChar :: [SExpr] -> Lisp SExpr
 biPutChar [SAtom _ (AChar c)]    = liftIO (putChar c) >> return nil
 biPutChar [expr]                 = report (point expr) "char expected"
 biPutChar _                      = reportUndef "just one argument required"

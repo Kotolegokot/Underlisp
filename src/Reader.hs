@@ -8,7 +8,7 @@ import Parser
 
 -- | first stage of any lisp interpreter
 -- | takes a string and converts it into an s-expression
-read :: Point -> String -> Eval [SExpr]
+read :: Point -> String -> Lisp [SExpr]
 read point text = do
   lexemes <- tokenize point text
   parse lexemes

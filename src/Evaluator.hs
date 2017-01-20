@@ -10,37 +10,37 @@ import Point
 import Base
 
 -- | evaluates a module with the given environment and returns nothing
-evaluateProgram :: Env -> [String] -> [SExpr] -> Eval ()
-evaluateProgram e args body = void $ expandAndEvalScope (setArgs e args) body
+evaluateProgram :: Env -> [String] -> [SExpr] -> Lisp ()
+evaluateProgram e args body = void $ expandAndLispScope (setArgs e args) body
 
 -- | evaluates a module with the given environment
-evaluateModule :: Env -> [SExpr] -> Eval (Map String EnvItem)
+evaluateModule :: Env -> [SExpr] -> Lisp (Map String EnvItem)
 evaluateModule e body = do
-  (e, _) <- expandAndEvalScope e body
+  (e, _) <- expandAndLispScope e body
   return $ lexical e
 
 -- | expands macros and evaluates a scope
-expandAndEvalScope :: Env -> [SExpr] -> Eval (Env, SExpr)
-expandAndEvalScope e sexprs = do
+expandAndLispScope :: Env -> [SExpr] -> Lisp (Env, SExpr)
+expandAndLispScope e sexprs = do
   (e', sexprs') <- collectMacros (pass e) sexprs
   sexprs'' <- expandMacros e' sexprs'
   foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e', nil) sexprs''
 
 -- | expands macros and evaluates a scope as if
 -- | it is at the same lexical level
-expandAndEvalScopeInterpolated :: Env -> [SExpr] -> Eval (Env, SExpr)
-expandAndEvalScopeInterpolated e sexprs = do
+expandAndLispScopeInterpolated :: Env -> [SExpr] -> Lisp (Env, SExpr)
+expandAndLispScopeInterpolated e sexprs = do
   (e', sexprs') <- collectMacros e sexprs
   sexprs'' <- expandMacros e' sexprs'
   foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e', nil) sexprs''
 
 -- | evaluates a lexical scope
-evalScope :: Env -> [SExpr] -> Eval (Env, SExpr)
+evalScope :: Env -> [SExpr] -> Lisp (Env, SExpr)
 evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
 
 -- | evaluates an s-expression writing into call stack
 -- | if any function is invoked
-eval :: Env -> SExpr -> Eval (Env, SExpr)
+eval :: Env -> SExpr -> Lisp (Env, SExpr)
 eval e l@(SList p (sFirst:args)) = do
   (_, first) <- eval e sFirst
   rethrow (\le -> if lePoint le == Undefined
@@ -49,7 +49,7 @@ eval e l@(SList p (sFirst:args)) = do
     if isProcedure first
     then eval' (fromProcedure first)
     else report (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
-  where eval' :: Procedure -> Eval (Env, SExpr)
+  where eval' :: Procedure -> Lisp (Env, SExpr)
         eval' pr
           | isUserDefined pr || isBuiltIn pr = do
               args' <- mapM (return . snd <=< eval e) args
@@ -64,7 +64,7 @@ eval e other                     = return (e, other)
 
 -- | Create bindings from a function prototype and
 -- | and the actual arguments
-bindArgs :: Prototype -> [SExpr] -> Eval (Map String EnvItem)
+bindArgs :: Prototype -> [SExpr] -> Lisp (Map String EnvItem)
 bindArgs (Prototype argNames optNames Nothing) args
   | length args > l1 + l2 = reportUndef "too many arguments"
   | length args < l1      = reportUndef "too little arguments"
@@ -89,9 +89,9 @@ data PLLStatus = PLLNone | PLLOptional | PLLRest | PLLBody | PLLEnd
 
 -- | Take an s-list of the form (args... [&optional optional-args...] [(&rest|&body) lastArg])
 -- | and constructs a Prototype
-parseLambdaList :: SExpr -> Eval Prototype
+parseLambdaList :: SExpr -> Lisp Prototype
 parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< getList exp
-  where parseLambdaList' :: PLLStatus -> Prototype -> [SExpr] -> Eval Prototype
+  where parseLambdaList' :: PLLStatus -> Prototype -> [SExpr] -> Lisp Prototype
         parseLambdaList' PLLNone prototype (x:xs) = do
           x' <- getSymbol x
           case x' of
@@ -134,15 +134,15 @@ parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< get
         parseLambdaList' PLLEnd _         (x:xs)  = report (point x) "nothing expected at the end of the lambda list"
 
 -- | invokes a macro with the given environment and arguments
-callMacro :: Env -> Macro -> [SExpr] -> Eval SExpr
+callMacro :: Env -> Macro -> [SExpr] -> Lisp SExpr
 callMacro e (Macro p localE prototype sexprs) args = do
   argBindings <- bindArgs prototype args
-  (_, evaluated) <- expandAndEvalScope (lappend (pass localE) argBindings) sexprs
+  (_, evaluated) <- expandAndLispScope (lappend (pass localE) argBindings) sexprs
   return $ setPoint evaluated p
 
 -- | takes a scope and evaluates all top-level
 -- | defmacros in it
-collectMacros :: Env -> [SExpr] -> Eval (Env, [SExpr])
+collectMacros :: Env -> [SExpr] -> Lisp (Env, [SExpr])
 collectMacros e = foldM (\(accE, accSexprs) sexpr -> do
                             defmacro <- parseDefmacro accE sexpr
                             return $ case defmacro of
@@ -151,7 +151,7 @@ collectMacros e = foldM (\(accE, accSexprs) sexpr -> do
                   (e, [])
 
 -- | expands all top-level macros
-expandMacros :: Env -> [SExpr] -> Eval [SExpr]
+expandMacros :: Env -> [SExpr] -> Lisp [SExpr]
 expandMacros e (x:xs) = do
   expr <- expandMacro e x
   rest <- expandMacros e xs
@@ -161,9 +161,9 @@ expandMacros _ []     = return []
 data EMState = Default | Backquote
 
 -- | expands one macro expression recursively
-expandMacro :: Env -> SExpr -> Eval SExpr
+expandMacro :: Env -> SExpr -> Lisp SExpr
 expandMacro = expandMacro' Default
-  where expandMacro' :: EMState -> Env -> SExpr -> Eval SExpr
+  where expandMacro' :: EMState -> Env -> SExpr -> Lisp SExpr
         expandMacro' Default e l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
           | sym == "quote"       = return l
           | sym == "backquote"   = do
@@ -193,7 +193,7 @@ expandMacro = expandMacro' Default
         expandMacro' Backquote _ other = return other
 
 -- | parses a defmacro expression
-parseDefmacro :: Env -> SExpr -> Eval (Maybe (String, Macro))
+parseDefmacro :: Env -> SExpr -> Lisp (Maybe (String, Macro))
 parseDefmacro e (SList p (SAtom defmacroPoint (ASymbol "defmacro"):name:lambdaList:body))
   | not $ isSymbol name = report (point name) "string expected"
   | otherwise           = do
@@ -203,7 +203,7 @@ parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = report p "at least 
 parseDefmacro _ _                                          = return Nothing
 
 -- | binds arguments to a procedure
-bind :: Procedure -> [SExpr] -> Eval Procedure
+bind :: Procedure -> [SExpr] -> Lisp Procedure
 bind (UserDefined scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
   return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (UserDefined scope prototype@(Prototype argNames optNames _) sexprs bound) args
@@ -220,11 +220,11 @@ bind (SpecialOp name (Just argsCount) f bound) args
 bind (SpecialOp name Nothing f bound) args = return $ SpecialOp name Nothing f (bound ++ args)
 
 -- | calls a procedure or special operator
-call :: Point -> Env -> Procedure -> [SExpr] -> Eval (Env, SExpr)
+call :: Point -> Env -> Procedure -> [SExpr] -> Lisp (Env, SExpr)
 call p e c args = do
   (e', exp) <- call' e c args
   return (e', setPoint exp p)
-    where call' :: Env -> Procedure -> [SExpr] -> Eval (Env, SExpr)
+    where call' :: Env -> Procedure -> [SExpr] -> Lisp (Env, SExpr)
           call' e (UserDefined localE prototype sexprs bound) args = do
             argBindings <- bindArgs prototype (bound ++ args)
             (_, expr) <- evalScope (lappend localE argBindings) sexprs

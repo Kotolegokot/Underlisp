@@ -18,14 +18,14 @@ preludePath = "stdlib/prelude.unlisp"
 
 -- | a lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
-interpreteProgram prelude filename args = handleEval $ do
+interpreteProgram prelude filename args = handleLisp $ do
   e <- loadEnv prelude
   text <- liftIO $ readFile filename
   read <- R.read (startPoint filename) text
   E.evaluateProgram e args read
 
 -- | interpretes a module and returns its lexical scope
-interpreteModule :: Bool -> String -> Eval (Map String EnvItem)
+interpreteModule :: Bool -> String -> Lisp (Map String EnvItem)
 interpreteModule prelude filename = do
   e <- loadEnv prelude
   text <- liftIO $ readFile filename
@@ -35,7 +35,7 @@ interpreteModule prelude filename = do
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
-repl prelude = void $ runEval $ do
+repl prelude = void $ runLisp $ do
   e <- loadEnv prelude
   liftIO $ handleLines (startPoint "<repl>") e
     where handleLines :: Point -> Env -> IO ()
@@ -45,9 +45,9 @@ repl prelude = void $ runEval $ do
             case line of
               Just line -> do
                 unless (null line) $ addHistory line
-                result <- runEval $ do
+                result <- runLisp $ do
                   read <- R.read p line
-                  E.expandAndEvalScopeInterpolated e read
+                  E.expandAndLispScopeInterpolated e read
 
                 (e', expr) <- case result of
                   Right val -> return (val :: (Env, SExpr))
@@ -61,16 +61,16 @@ repl prelude = void $ runEval $ do
 
 -- | loads start environment
 -- | no prelude if the first argument is false
-loadEnv :: Bool -> Eval Env 
+loadEnv :: Bool -> Lisp Env 
 loadEnv True  = loadPrelude
 loadEnv False = return startEnv
 
 -- | loads prelude and start environment
-loadPrelude :: Eval Env
+loadPrelude :: Lisp Env
 loadPrelude = do
   text <- liftIO (readFile preludePath)
   read <- R.read (startPoint preludePath) text
-  (e, _) <- E.expandAndEvalScope startEnv read
+  (e, _) <- E.expandAndLispScope startEnv read
   return e
 
 -- | start environment
@@ -87,7 +87,7 @@ startEnv = envFromList $
     [("initial-env", Just 0, biInitialEnv)])
 
 -- | loads environment from a file
-soEnvFromFile :: Env -> [SExpr] -> Eval (Env, SExpr)
+soEnvFromFile :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soEnvFromFile e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
@@ -98,7 +98,7 @@ soEnvFromFile e [sArg] = do
 soEnvFromFile _ _        = reportUndef "just one argument required"
 
 -- | loads environment from a file without prelude loaded
-soEnvFromFileNoPrelude :: Env -> [SExpr] -> Eval (Env, SExpr)
+soEnvFromFileNoPrelude :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soEnvFromFileNoPrelude e [sArg] = do
   (_, arg) <- E.eval e sArg
   if not $ isString arg
@@ -109,7 +109,7 @@ soEnvFromFileNoPrelude e [sArg] = do
 soEnvFromFileNoPrelude _ _       = reportUndef "just one argument required"
 
 -- | returns start environment plus prelude
-biInitialEnv :: [SExpr] -> Eval SExpr
+biInitialEnv :: [SExpr] -> Lisp SExpr
 biInitialEnv [] = do
   prelude <- loadPrelude
   return . env $ envMerge prelude

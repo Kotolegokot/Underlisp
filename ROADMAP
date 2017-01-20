@@ -6,7 +6,6 @@ parallelism and concurrency
 defconstant
 condition system
 full-featured module system
-rename Eval a -> Lisp a
 tokenize, parse, etc should only use Except monad
 
 1. split built-in functions and special operators adequately

@@ -6,7 +6,7 @@ import Base
 
 default (Int)
 
-biVector :: [SExpr] -> Eval SExpr
+biVector :: [SExpr] -> Lisp SExpr
 biVector = return . vector . Vec.fromList
 
 builtinFunctions = [("vector", Nothing,  biVector)]

@@ -9,14 +9,14 @@ default (Int)
 
 -- | special operator lambda
 -- (lambda lambda-list [body])
-soLambda :: Env -> [SExpr] -> Eval (Env, SExpr)
+soLambda :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soLambda e (lambdaList:body) = do
   prototype <- parseLambdaList lambdaList
   return (e, procedure $ UserDefined e prototype body [])
 soLambda _ []                = reportUndef "at least one argument expected"
 
 -- special operator let
-soLet :: Env -> [SExpr] -> Eval (Env, SExpr)
+soLet :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soLet e (SList p pairs : body) = do
   e' <- handlePairs pairs (pass e)
   (_, expr) <- evalScope e' body
@@ -31,20 +31,20 @@ soLet e (SList p pairs : body) = do
 soLet _       [expr]               = report (point expr) "list expected"
 soLet _       _                    = reportUndef "at least one argument expected"
 
-soIsDef :: Env -> [SExpr] -> Eval (Env, SExpr)
+soIsDef :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soIsDef e [sKey] = do
   key <- getSymbol =<< snd <$> eval e sKey
   return (e, bool $ key `memberSExpr` e)
 soIsDef _ _      = reportUndef "just one argument required"
 
-soUndef :: Env -> [SExpr] -> Eval (Env, SExpr)
+soUndef :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soUndef e [sKey] = do
   key <- getSymbol =<< snd <$> eval e sKey
   return (envDelete key e, nil)
 soUndef _ _      = reportUndef "just one argument required"
 
 -- special operator define
-soSet :: Env -> [SExpr] -> Eval (Env, SExpr)
+soSet :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soSet e [sKey, sValue] = do
   key <- getSymbol =<< snd <$> eval e sKey
   case lookupSExpr key e of
@@ -55,7 +55,7 @@ soSet e [sKey, sValue] = do
 soSet _ _              = reportUndef "two arguments required"
 
 -- special operator mutate
-soMutate :: Env -> [SExpr] -> Eval (Env, SExpr)
+soMutate :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soMutate e [sVar, sValue] = do
   key <- getSymbol =<< snd <$> eval e sVar
   case lookupSExpr key e of
@@ -67,11 +67,11 @@ soMutate e [sVar, sValue] = do
 soMutate _ _               = reportUndef "two arguments required"
 
 -- built-in function type
-biType :: [SExpr] -> Eval SExpr
+biType :: [SExpr] -> Lisp SExpr
 biType [exp] = return . symbol . showType $ exp
 biType _     = reportUndef "just one argument required"
 
-soBind :: Env -> [SExpr] -> Eval (Env, SExpr)
+soBind :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soBind e (first:args) = do
   pr <- getProcedure =<< snd <$> eval e first
   case pr of
@@ -85,7 +85,7 @@ soBind e (first:args) = do
 soBind _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
-soApply :: Env -> [SExpr] -> Eval (Env, SExpr)
+soApply :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soApply e (first:args@(_:_)) = do
   pr <- getProcedure =<< snd <$> eval e first
   args' <- mapM ((snd <$>) . eval e) args
@@ -94,7 +94,7 @@ soApply e (first:args@(_:_)) = do
 soApply _ _             = reportUndef "at least two arguments required"
 
 -- built-in function error
-biError :: [SExpr] -> Eval SExpr
+biError :: [SExpr] -> Lisp SExpr
 biError [exp] = reportUndef =<< getString exp
 biError _     = reportUndef "just one argument required"
 

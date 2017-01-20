@@ -5,11 +5,11 @@ import Base
 
 default (Int)
 
-biEQ :: [SExpr] -> Eval SExpr
+biEQ :: [SExpr] -> Lisp SExpr
 biEQ [arg1, arg2] = return . bool $ arg1 == arg2
 biEQ _            = reportUndef "two arguments required"
 
-biLT :: [SExpr] -> Eval SExpr
+biLT :: [SExpr] -> Lisp SExpr
 biLT [arg1, arg2] = return . bool $ arg1 < arg2
 biLT _            = reportUndef "two arguments required"
 

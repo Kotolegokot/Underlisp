@@ -11,21 +11,21 @@ import Evaluator
 
 default (Int)
 
-soEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
+soEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soEnv e args = do
   pairs <- mapM (eval e) args
   let symbols = map snd pairs
   extracted <- extractEnv e symbols
   return (e, env extracted)
 
-extractEnv :: Env -> [SExpr] -> Eval (Map String EnvItem)
+extractEnv :: Env -> [SExpr] -> Lisp (Map String EnvItem)
 extractEnv e = foldM (\acc exp -> do key <- getSymbol exp
                                      case envLookup key e of
                                        Just value -> return $ Map.insert key value acc
                                        Nothing    -> report (point exp) $ "undefined symbol '" ++ key ++ "'")
                Map.empty
 
-soImportEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
+soImportEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soImportEnv e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
@@ -33,7 +33,7 @@ soImportEnv e [arg] = do
     _                  -> report (point sexpr) "context expected"
 soImportEnv _ _     = reportUndef "just one argument required"
 
-soLoadEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
+soLoadEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soLoadEnv e [arg] = do
   (_, sexpr) <- eval e arg
   case sexpr of
@@ -41,20 +41,20 @@ soLoadEnv e [arg] = do
     _                  -> report (point arg) "context expected"
 soLoadEnv _ _     = reportUndef "just one argument required"
 
-soCurrentEnv :: Env -> [SExpr] -> Eval (Env, SExpr)
+soCurrentEnv :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soCurrentEnv e [] = return (e, env $ envMerge e)
 soCurrentEnv _ _  = reportUndef "no arguments required"
 
-biFunctionEnv :: [SExpr] -> Eval SExpr
+biFunctionEnv :: [SExpr] -> Lisp SExpr
 biFunctionEnv [SAtom _ (AProcedure (UserDefined e _ _ _))] = return . env $ envMerge e
 biFunctionEnv [sexpr]                                     = report (point sexpr) "function expected"
 biFunctionEnv _                                           = reportUndef "just one argument required"
 
-soGetArgs :: Env -> [SExpr] -> Eval (Env, SExpr)
+soGetArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soGetArgs e [] = return (e, list . map toString $ getArgs e)
 soGetArgs _ _  = reportUndef "no arguments required"
 
-soWithArgs :: Env -> [SExpr] -> Eval (Env, SExpr)
+soWithArgs :: Env -> [SExpr] -> Lisp (Env, SExpr)
 soWithArgs e (args:sexprs) = do
   (_, args') <- eval e args
   args'' <- mapM getString =<< getList args' 
@@ -63,7 +63,7 @@ soWithArgs e (args:sexprs) = do
   return (e, expr)
 soWithArgs _ _             = reportUndef "at least one argument required"
 
-biGetEnv :: [SExpr] -> Eval SExpr
+biGetEnv :: [SExpr] -> Lisp SExpr
 biGetEnv [name] = do
   name' <- getString name
   result <- liftIO $ E.getEnv name'
@@ -72,7 +72,7 @@ biGetEnv [name] = do
     Nothing    -> nil
 biGetEnv _ = reportUndef "just one argument required"
 
-biSetEnv :: [SExpr] -> Eval SExpr
+biSetEnv :: [SExpr] -> Lisp SExpr
 biSetEnv [name, value, rewrite] = do
   name' <- getString name
   value' <- getString value
@@ -81,20 +81,20 @@ biSetEnv [name, value, rewrite] = do
   return nil
 biSetEnv _ = reportUndef "three arguments required"
 
-biUnsetEnv :: [SExpr] -> Eval SExpr
+biUnsetEnv :: [SExpr] -> Lisp SExpr
 biUnsetEnv [name] = do
   name' <- getString name
   liftIO $ E.unsetEnv name'
   return nil
 biUnsetEnv _ = reportUndef "just one argument required"
 
-biGetEnvironment :: [SExpr] -> Eval SExpr
+biGetEnvironment :: [SExpr] -> Lisp SExpr
 biGetEnvironment [] = do
   environment <- liftIO E.getEnvironment
   return . list $ map (\(name, value) -> list [toString name, toString value]) environment
 biGetEnvironment _  = reportUndef "no arguments required"
 
-biSetEnvironment :: [SExpr] -> Eval SExpr
+biSetEnvironment :: [SExpr] -> Lisp SExpr
 biSetEnvironment [l] = do
   pList <- assurePairList =<< getList l
   liftIO $ E.setEnvironment pList

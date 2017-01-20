@@ -9,18 +9,18 @@ import Base
 
 default (Int)
 
-biIsEmpty :: [SExpr] -> Eval SExpr
+biIsEmpty :: [SExpr] -> Lisp SExpr
 biIsEmpty [exp]
   | isList exp   = bool . null <$> getList exp
   | isVector exp = bool . Vec.null <$> getVector exp
   | otherwise    = report (point exp) "sequence expected"
 biIsEmpty _ = reportUndef "just one argument requried"
 
-biConcat :: [SExpr] -> Eval SExpr
+biConcat :: [SExpr] -> Lisp SExpr
 biConcat (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
 biConcat _            = reportUndef "at least one argument expected"
 
-toSequence :: SExpr -> [SExpr] -> Eval SExpr
+toSequence :: SExpr -> [SExpr] -> Lisp SExpr
 toSequence sType exps = do
   returnType <- getSymbol sType
   case returnType of
@@ -28,7 +28,7 @@ toSequence sType exps = do
     "list"   -> return $ list exps
     other    -> report (point sType) ("undefined type: '" ++ other ++ "'")
 
-biNth :: [SExpr] -> Eval SExpr
+biNth :: [SExpr] -> Lisp SExpr
 biNth [sN, seq] = do
   n <- getInt sN
   when (n < 0) $ report (point sN) "negative index"

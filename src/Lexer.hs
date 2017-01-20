@@ -12,7 +12,7 @@ data State = None | Comment | Char | String | Vector | OtherAtom
   deriving (Eq, Show)
 
 -- | takes a string and splits it into lexems
-tokenize :: Point -> String -> Eval [(Lexeme, Point)]
+tokenize :: Point -> String -> Lisp [(Lexeme, Point)]
 tokenize point = tokenize' point [] None
     where tokenize' point lexemes None xs@(x:rest)
             | isOpen x       = tokenize' (forward x point) ((Open x, point)                     : lexemes) None    rest
@@ -75,7 +75,7 @@ matchingBracket x = case x of
                        '}' -> '{'
                        _   -> undefined
 
-translateChar :: Point -> String -> Eval Lexeme
+translateChar :: Point -> String -> Lisp Lexeme
 translateChar point name = case name of
   "space"   -> return . LAtom . AChar $ ' '
   "newline" -> return . LAtom . AChar $ '\n'

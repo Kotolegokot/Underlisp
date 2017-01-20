@@ -46,10 +46,10 @@ fromAtom :: SExpr -> Atom
 fromAtom (SAtom _ a) = a
 fromAtom _           = undefined
 
-getList :: SExpr -> Eval [SExpr]
+getList :: SExpr -> Lisp [SExpr]
 getList = unpackSExpr fromList "list"
 
-getAtom :: SExpr -> Eval Atom
+getAtom :: SExpr -> Lisp Atom
 getAtom = unpackSExpr fromAtom "atom"
 
 nil :: SExpr
@@ -189,40 +189,40 @@ fromString s = map fromChar $ fromList s
 toString :: String -> SExpr
 toString = list . map char
 
-unpackSExpr :: (SExpr -> a) -> String -> SExpr -> Eval a
+unpackSExpr :: (SExpr -> a) -> String -> SExpr -> Lisp a
 unpackSExpr fromA msg exp = fromFalsumM (report (point exp) (msg ++ " expected")) (fromA exp)
 
-getInt :: SExpr -> Eval Int
+getInt :: SExpr -> Lisp Int
 getInt = unpackSExpr fromInt "int"
 
-getFloat :: SExpr -> Eval Float
+getFloat :: SExpr -> Lisp Float
 getFloat = unpackSExpr fromFloat "float"
 
-getChar :: SExpr -> Eval Char
+getChar :: SExpr -> Lisp Char
 getChar = unpackSExpr fromChar "char"
 
-getBool :: SExpr -> Eval Bool
+getBool :: SExpr -> Lisp Bool
 getBool = unpackSExpr fromBool "bool"
 
-getSymbol :: SExpr -> Eval String
+getSymbol :: SExpr -> Lisp String
 getSymbol = unpackSExpr fromSymbol "symbol"
 
-getVector :: SExpr -> Eval (Vector SExpr)
+getVector :: SExpr -> Lisp (Vector SExpr)
 getVector = unpackSExpr fromVector "vector"
 
-getProcedure :: SExpr -> Eval Procedure
+getProcedure :: SExpr -> Lisp Procedure
 getProcedure = unpackSExpr fromProcedure "procedure"
 
-getEnv :: SExpr -> Eval (Map String EnvItem)
+getEnv :: SExpr -> Lisp (Map String EnvItem)
 getEnv = unpackSExpr fromEnv "env"
 
-getSequence :: SExpr -> Eval [SExpr]
+getSequence :: SExpr -> Lisp [SExpr]
 getSequence = unpackSExpr fromSequence "sequence"
 
-getNumber :: SExpr -> Eval Float
+getNumber :: SExpr -> Lisp Float
 getNumber = unpackSExpr fromNumber "number"
 
-getString :: SExpr -> Eval String
+getString :: SExpr -> Lisp String
 getString = unpackSExpr fromString "string"
 
 int :: Int -> SExpr
@@ -342,8 +342,8 @@ instance Show Macro where
 
 ---- procedure ----
 data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
-               | BuiltIn     String (Maybe Int) ([SExpr] -> Eval SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> Eval (Env, SExpr)) [SExpr]
+               | BuiltIn     String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
+               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> Lisp (Env, SExpr)) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
@@ -491,19 +491,19 @@ external _                = undefined
 ---- environment ----
 
 ---- eval ---
-type Eval = ExceptT Fail (ReaderT [Call] IO)
+type Lisp = ExceptT Fail (ReaderT [Call] IO)
 
-runEval :: Eval a -> IO (Either Fail a)
-runEval = (flip runReaderT []) . runExceptT
+runLisp :: Lisp a -> IO (Either Fail a)
+runLisp = (flip runReaderT []) . runExceptT
 
-handleEval :: Eval a -> IO ()
-handleEval ev = do
-  result <- runEval ev
+handleLisp :: Lisp a -> IO ()
+handleLisp ev = do
+  result <- runLisp ev
   case result of
     Right _ -> return ()
     Left f  -> hPrint stderr f
 
-add :: Call -> Eval a -> Eval a
+add :: Call -> Lisp a -> Lisp a
 add call = local (call:)
 ---- eval ----
 
@@ -529,12 +529,12 @@ instance Show Fail where
   show (Fail Undefined msg stack) = showStack stack ++ msg
   show (Fail point     msg stack) = showStack stack ++ show point ++ ": " ++ msg
 
-report :: Point -> String -> Eval a
+report :: Point -> String -> Lisp a
 report point msg = do
   callstack <- ask
   throwError $ Fail point msg callstack
 
-reportUndef :: String -> Eval a
+reportUndef :: String -> Lisp a
 reportUndef = report Undefined
 
 rethrow :: MonadError e m => (e -> e) -> m a -> m a

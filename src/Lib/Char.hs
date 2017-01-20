@@ -7,11 +7,11 @@ import Base
 
 default (Int)
 
-biCharToInt :: [SExpr] -> Eval SExpr
+biCharToInt :: [SExpr] -> Lisp SExpr
 biCharToInt [exp] = int . ord <$> getChar exp
 biCharToInt _     = reportUndef "just one argument required"
 
-biIntToChar :: [SExpr] -> Eval SExpr
+biIntToChar :: [SExpr] -> Lisp SExpr
 biIntToChar [exp] = char . chr <$> getInt exp
 biIntToChar _     = reportUndef "just one argument required"
 

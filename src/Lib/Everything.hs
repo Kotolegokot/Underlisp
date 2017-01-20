@@ -15,7 +15,7 @@ import Lib.Vector as Vector
 
 import Base
 
-specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> Eval (Env, SExpr))]
+specialOperators :: [(String, Maybe Int, Env -> [SExpr] -> Lisp (Env, SExpr))]
 specialOperators = concat [Bool.specialOperators
                           ,Char.specialOperators
                           ,Ctrl.specialOperators
@@ -29,7 +29,7 @@ specialOperators = concat [Bool.specialOperators
                           ,Sequence.specialOperators
                           ,Vector.specialOperators]
 
-builtinFunctions :: [(String, Maybe Int, [SExpr] -> Eval SExpr)]
+builtinFunctions :: [(String, Maybe Int, [SExpr] -> Lisp SExpr)]
 builtinFunctions = concat [Bool.builtinFunctions
                           ,Char.builtinFunctions
                           ,Ctrl.builtinFunctions
