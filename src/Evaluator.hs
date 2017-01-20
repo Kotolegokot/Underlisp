@@ -222,8 +222,8 @@ bind (SpecialOp name Nothing f bound) args = return $ SpecialOp name Nothing f (
 -- | calls a procedure or special operator
 call :: Point -> Env -> Procedure -> [SExpr] -> Eval (Env, SExpr)
 call p e c args = do
-  (e', expr) <- call' e c args
-  return (e', setPoint expr p)
+  (e', exp) <- call' e c args
+  return (e', setPoint exp p)
     where call' :: Env -> Procedure -> [SExpr] -> Eval (Env, SExpr)
           call' e (UserDefined localE prototype sexprs bound) args = do
             argBindings <- bindArgs prototype (bound ++ args)

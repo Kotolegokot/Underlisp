@@ -1,2 +1,13 @@
-(defmacro test-macro (list)
-  `(write-ln (type ~list)))
+(setq a 0)
+
+(defun inc (f)
+  (set f (+ (eval f) 1)))
+
+(defmacro incq (f)
+  `(inc '~f))
+
+;;(incq a)
+;;(inc 'a)
+
+(print "~a" a)
+(newline)

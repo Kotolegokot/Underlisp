@@ -3,7 +3,6 @@ FFI
 IMPORTANT: fix error rows and columns
 completion in REPL
 parallelism and concurrency
-general map function
 defconstant
 condition system
 full-featured module system

@@ -16,8 +16,8 @@
 
 ;; (flet ([name lambda-list function-body*]*) flet-body*)
 (defmacro flet (list &body body)
-  `(let ~(map (lambda (item)
-		`(~(head item) (lambda @(tail item))))
+  `(let ~(map 'list (lambda (item)
+		      `(~(head item) (lambda @(tail item))))
 	      list)
 	@body))
 
@@ -149,19 +149,29 @@
         xs
       (last (tail xs)))))
 
-(defun map (f xs)
+(defun map (t f xs)
+  (contract f procedure?)
+  (contract xs sequence?)
+  (let ((xs' (->list xs))
+	(map' (lambda (xs)
+		 (if (empty? xs)
+		     ()
+		     (prepend (f (nth 0 xs)) (tail xs))))))
+    (->seq t (map' xs'))))
+
+(defun map-list (f xs)
   (contract f procedure?)
   (contract xs list?)
   (if (empty? xs)
       ()
       (prepend (f (head xs))
-	       (map f (tail xs)))))
+	       (map-list f (tail xs)))))
 
-(defun map-nil (f xs)
-  (contract f procedure?)
-  (contract xs list?)
-  (map f xs)
-  nil)
+;;(defun map-vector (f xs)
+;;  (contract f procedure?)
+;;  (contract xs vector?)
+;;  (let ((map-vector' (lambda (xs i)
+;;		       (if (empty? xs)
 
 (defun foldl (f acc xs)
   (contract f procedure?)
@@ -274,7 +284,8 @@
 
 (defun print-string (str)
   (contract str string?)
-  (map-nil put-char str))
+  (map 'list put-char str)
+  nil)
 
 (defun print-string-ln (str)
   (contract str string?)
@@ -549,3 +560,15 @@
 (defun in-range (a b x)
   (contract x number?)
   (and (<= a x) (<= x b)))
+
+(defun ->list (seq)
+  (contract seq sequence?)
+  (concat 'list seq))
+
+(defun ->vector (seq)
+  (contract seq sequence?)
+  (concat 'vector seq))
+
+(defun ->seq (t seq)
+  (contract seq sequence?)
+  (concat t seq))
