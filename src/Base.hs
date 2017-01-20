@@ -487,13 +487,14 @@ lexical _                = undefined
 external :: Env -> Map String EnvItem
 external (Env _ _ (_:xs)) = Map.unions xs
 external _                = undefined
+
 ---- environment ----
 
 ---- eval ---
 type Eval = ExceptT Fail (ReaderT [Call] IO)
 
 runEval :: Eval a -> IO (Either Fail a)
-runEval = (`runReaderT` []) . runExceptT
+runEval = (flip runReaderT []) . runExceptT
 
 handleEval :: Eval a -> IO ()
 handleEval ev = do

@@ -15,12 +15,12 @@ biNot _                   = reportUndef "just one argument required"
 
 soAnd :: Env -> [SExpr] -> Eval (Env, SExpr)
 soAnd e xs = do
-  result <- foldM (\acc x -> return acc <&&> (getBool =<< snd <$> eval e x)) False xs
+  result <- foldM (\acc x -> return acc <&&> (getBool =<< snd <$> eval e x)) True xs
   return (e, bool result)
 
 soOr :: Env -> [SExpr] -> Eval (Env, SExpr)
 soOr e xs = do
-  result <- foldM (\acc x -> return acc <||> (getBool =<< snd <$> eval e x)) True xs
+  result <- foldM (\acc x -> return acc <||> (getBool =<< snd <$> eval e x)) False xs
   return (e, bool result)
 
 soImpl :: Env -> [SExpr] -> Eval (Env, SExpr)

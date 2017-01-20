@@ -2,7 +2,7 @@ module Evaluator where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.List (elemIndices, delete)
+import Data.Maybe (fromJust)
 import Control.Monad (foldM, void)
 import Control.Monad.Reader
 import Prototype
@@ -62,34 +62,76 @@ eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
   _                 -> report p $ "undefined identificator '" ++ sym ++ "'"
 eval e other                     = return (e, other)
 
--- | creates bindings from a function prototype and
--- | and actual arguments
+-- | Create bindings from a function prototype and
+-- | and the actual arguments
 bindArgs :: Prototype -> [SExpr] -> Eval (Map String EnvItem)
-bindArgs (Prototype argNames False) args
-  | length argNames > length args = reportUndef "too little arguments"
-  | length argNames < length args = reportUndef "too many arguments"
-  | otherwise                     = return $ Map.fromList (zip argNames $ map EnvSExpr args)
-bindArgs (Prototype argNames True) args
-  | length argNames - 1 > length args = reportUndef "too little arguments"
-  | otherwise                         = let (left, right) = splitAt (length argNames - 1) args
-                                            args'         = left ++ [list right]
-                                        in return $ Map.fromList (zip argNames $ map EnvSExpr args')
+bindArgs (Prototype argNames optNames Nothing) args
+  | length args > l1 + l2 = reportUndef "too many arguments"
+  | length args < l1      = reportUndef "too little arguments"
+  | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (map EnvSExpr $ args ++ repeat nil)
+    where l1 = length argNames
+          l2 = length optNames
+bindArgs (Prototype argNames optNames rest) args
+  | l < l1      = reportUndef "too little arguments"
+  | l < l1 + l2 = return . Map.fromList $ zip names (map EnvSExpr $ args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
+  | otherwise   = let (left, right) = splitAt (l1 + l2) args
+                      args'         = left ++ [list right]
+                  in return $ Map.fromList $ zip names (map EnvSExpr args')
+  where restName = case fromJust rest of
+          Rest x -> x
+          Body x -> x
+        names = argNames ++ optNames ++ [restName]
+        l1 = length argNames
+        l2 = length optNames
+        l  = length args
 
--- | takes an s-list of the form (arg1 arg2... [&rst argLast])
+data PLLStatus = PLLNone | PLLOptional | PLLRest | PLLBody | PLLEnd
+
+-- | Take an s-list of the form (args... [&optional optional-args...] [(&rest|&body) lastArg])
 -- | and constructs a Prototype
 parseLambdaList :: SExpr -> Eval Prototype
-parseLambdaList (SList p lambdaList)
-  | not $ all isSymbol lambdaList  = report p "all items in a lambda list must be symbols"
-  | length ixs > 1                 = report p "more than one &rest in a lambda list is forbidden"
-  | rest && ix /= count - 2        = report p "&rest must be last but one"
-  | otherwise                      = return $ if rest
-                                     then Prototype (delete "&rest" . map fromSymbol $ lambdaList) rest
-                                     else Prototype (map fromSymbol lambdaList) rest
-  where ixs   = elemIndices (symbol "&rest") lambdaList
-        ix    = head ixs
-        rest  = length ixs == 1
-        count = length lambdaList
-parseLambdaList _ = reportUndef "lambda list must be a list"
+parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< getList exp
+  where parseLambdaList' :: PLLStatus -> Prototype -> [SExpr] -> Eval Prototype
+        parseLambdaList' PLLNone prototype (x:xs) = do
+          x' <- getSymbol x
+          case x' of
+            "&optional" -> parseLambdaList' PLLOptional prototype xs
+            "&rest"     -> parseLambdaList' PLLRest     prototype xs
+            "&body"     -> parseLambdaList' PLLBody     prototype xs
+            other       -> parseLambdaList' PLLNone     prototype { Prototype.getArgs =
+                                                                      Prototype.getArgs prototype ++ [other] } xs
+        parseLambdaList' PLLNone prototype []     = return prototype
+
+        parseLambdaList' PLLOptional prototype (x:xs) = do
+          x' <- getSymbol x
+          case x' of
+            "&optional" -> report (point x) "more than one &optional in a lambda list"
+            "&rest"     -> parseLambdaList' PLLRest     prototype xs
+            "&body"     -> parseLambdaList' PLLBody     prototype xs
+            other       -> parseLambdaList' PLLOptional prototype { getOptional =
+                                                                      getOptional prototype ++ [other] } xs
+        parseLambdaList' PLLOptional prototype []     = return prototype
+
+        parseLambdaList' PLLRest prototype (x:xs) = do
+          x' <- getSymbol x
+          case x' of
+            "&optional" -> report (point x) "no &optional after &rest expected"
+            "&rest"     -> report (point x) "no &rest after &rest expected"
+            "&body"     -> report (point x) "no &body after &rest expected"
+            other       -> parseLambdaList' PLLEnd prototype { getRest = Just (Rest other) } xs
+        parseLambdaList' PLLRest _         []     = reportUndef "a symbol after &rest expected"
+
+        parseLambdaList' PLLBody prototype (x:xs) = do
+          x' <- getSymbol x
+          case x' of
+            "&optional" -> report (point x) "no &optional after &body expected"
+            "&rest"     -> report (point x) "no &rest after &body expected"
+            "&body"     -> report (point x) "no &body after &body expected"
+            other       -> parseLambdaList' PLLEnd prototype { getRest = Just (Body other) } xs
+        parseLambdaList' PLLBody _         []     = reportUndef "a symbol after &body expected"
+
+        parseLambdaList' PLLEnd prototype []      = return prototype
+        parseLambdaList' PLLEnd _         (x:xs)  = report (point x) "nothing expected at the end of the lambda list"
 
 -- | invokes a macro with the given environment and arguments
 callMacro :: Env -> Macro -> [SExpr] -> Eval SExpr
@@ -162,9 +204,12 @@ parseDefmacro _ _                                          = return Nothing
 
 -- | binds arguments to a procedure
 bind :: Procedure -> [SExpr] -> Eval Procedure
-bind (UserDefined scope prototype@(Prototype argNames rest) sexprs bound) args
-  | rest && length argNames < (length bound + length args) = reportUndef "too many arguments"
-  | otherwise                                              = return $ UserDefined scope prototype sexprs (bound ++ args)
+bind (UserDefined scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
+  return $ UserDefined scope prototype sexprs (bound ++ args)
+bind (UserDefined scope prototype@(Prototype argNames optNames _) sexprs bound) args
+  | length args + length args > length argNames + length optNames = reportUndef "too many arguments"
+  | otherwise                                                     =
+      return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (BuiltIn name (Just argsCount) f bound) args
   | argsCount < (length bound + length args) = reportUndef "too many arguments"
   | otherwise                                = return $ BuiltIn name (Just argsCount) f (bound ++ args)

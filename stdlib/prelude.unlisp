@@ -15,26 +15,26 @@
   `(undef '~name))
 
 ;; (flet ([name lambda-list function-body*]*) flet-body*)
-(defmacro flet (list &rest body)
+(defmacro flet (list &body body)
   `(let ~(map (lambda (item)
 		`(~(head item) (lambda @(tail item))))
 	      list)
 	@body))
 
 ;; (setq name lambda-list body)
-(defmacro defun (name lambda-list &rest body)
+(defmacro defun (name lambda-list &body body)
   `(setq ~name (lambda ~lambda-list @body)))
 
 ;; (when true-condition body)
-(defmacro when (cond &rest body)
+(defmacro when (cond &body body)
   `(if ~cond (seq @body)))
 
 ;; (unless false-condition body)
-(defmacro unless (cond &rest body)
+(defmacro unless (cond &body body)
   `(when (not ~cond) @body))
 
 ;; (cond (condition1 exp1) (condition2 exp2) ...)
-(defmacro cond (&rest pairs)
+(defmacro cond (&body pairs)
   (if (empty? pairs)
       ()
     `(if ~(head (head pairs))
@@ -253,7 +253,7 @@
       (prepend a b)
     (list a b)))
 
-(defmacro case (expr &rest pairs)
+(defmacro case (expr &body pairs)
   (defun handle-pairs (expr-var pairs)
     (if (empty? pairs)
         ()
@@ -319,7 +319,7 @@
                                     (format' 'none (tail template) args))))))))
   (format' 'none template args))
 
-(defun print-format (template &rest args)
+(defun print (template &rest args)
   (contract template string?)
   (print-string (apply format (prepend template args))))
 
