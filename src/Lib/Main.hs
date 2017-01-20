@@ -86,11 +86,12 @@ soBind _ []            = reportUndef "at least one argument required"
 
 -- special operator apply
 soApply :: Env -> [SExpr] -> Eval (Env, SExpr)
-soApply e [first, args] = do
+soApply e (first:args@(_:_)) = do
   pr <- getProcedure =<< snd <$> eval e first
-  l <- getList =<< snd <$> eval e args
-  call (point first) e pr l
-soApply _ _             = reportUndef "two arguments required"
+  args' <- mapM ((snd <$>) . eval e) args
+  l <- getList (last args')
+  call (point first) e pr (init args' ++ l)
+soApply _ _             = reportUndef "at least two arguments required"
 
 -- built-in function error
 biError :: [SExpr] -> Eval SExpr

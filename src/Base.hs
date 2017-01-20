@@ -47,10 +47,10 @@ fromAtom (SAtom _ a) = a
 fromAtom _           = undefined
 
 getList :: SExpr -> Eval [SExpr]
-getList = unpackSExpr fromList "list expected"
+getList = unpackSExpr fromList "list"
 
 getAtom :: SExpr -> Eval Atom
-getAtom = unpackSExpr fromAtom "atom expected"
+getAtom = unpackSExpr fromAtom "atom"
 
 nil :: SExpr
 nil = SAtom Undefined ANil

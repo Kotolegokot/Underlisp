@@ -7,7 +7,6 @@ general map function
 defconstant
 condition system
 full-featured module system
-apply takes arguments like this: apply function [args...] argList
 
 1. split built-in functions and special operators adequately
 2. special operators aren't functions and so aren't first-class objects and objects at all

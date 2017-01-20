@@ -321,7 +321,7 @@
 
 (defun print (template &rest args)
   (contract template string?)
-  (print-string (apply format (prepend template args))))
+  (print-string (apply format template args)))
 
 ;; swap a function's args
 (defun flip (f)
