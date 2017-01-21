@@ -6,6 +6,7 @@ parallelism and concurrency
 defconstant
 condition system
 full-featured module system
+freeze, thaw
 
 1. split built-in functions and special operators adequately
 2. special operators aren't functions and so aren't first-class objects and objects at all
