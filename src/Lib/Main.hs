@@ -56,23 +56,23 @@ soUndef scopeRef [sKey] = do
   return nil
 soUndef _        _      = reportE' "just one argument required"
 
--- special operator define
+-- | Special operator define
+soDefine :: IORef Scope -> [SExpr] -> Lisp SExpr
+soDefine scopeRef [sKey] = do
+  key <- getSymbol =<< evalAlone scopeRef sKey
+  liftIO $ modifyIORef scopeRef (scInsert key $ BSExpr nil)
+  return nil
+soDefine scopeRef [sKey, sValue] = do
+  key <- getSymbol =<< evalAlone scopeRef sKey
+  value <- evalAlone scopeRef sValue
+  liftIO $ modifyIORef scopeRef (scInsert key $ BSExpr value)
+  return nil
+soDefine _        _              = reportE' "two arguments required"
+
+-- | Special operator define
 soSet :: IORef Scope -> [SExpr] -> Lisp SExpr
 soSet scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
-  result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
-  case result of
-    Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
-    _                                        -> do
-      value <- evalAlone scopeRef sValue
-      liftIO $ modifyIORefIO scopeRef (scSet key $ BSExpr value)
-      return nil
-soSet _        _              = reportE' "two arguments required"
-
--- special operator mutate
-soMutate :: IORef Scope -> [SExpr] -> Lisp SExpr
-soMutate scopeRef [sVar, sValue] = do
-  key <- getSymbol =<< evalAlone scopeRef sVar
   result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
@@ -81,7 +81,7 @@ soMutate scopeRef [sVar, sValue] = do
       liftIO $ modifyIORefIO scopeRef (scSet key $ BSExpr value)
       return nil
     Nothing                                  -> reportE' $ "undefined identificator '" ++ key ++ "'"
-soMutate _        _              = reportE' "two arguments required"
+soSet _        _              = reportE' "two arguments required"
 
 -- | Built-in function type
 biType :: IORef Scope -> [SExpr] -> Lisp SExpr
@@ -117,7 +117,7 @@ builtinFunctions = [("type",  Just 1, biType)
 
 specialOperators = [("let",      Nothing, soLet)
                    ,("set",      Just 2,  soSet)
-                   ,("mutate",   Just 2,  soMutate)
+                   ,("define",   Just 2, soDefine)
                    ,("lambda",   Nothing, soLambda)
                    ,("def?",     Just 1,  soIsDef)
                    ,("undef",    Just 1,  soUndef)

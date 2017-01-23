@@ -20,7 +20,9 @@ soScope :: IORef Scope -> [SExpr] -> Lisp SExpr
 soScope = evalBody
 
 soSeq :: IORef Scope -> [SExpr] -> Lisp SExpr
-soSeq scopeRef = fmap last . evalSeq scopeRef
+soSeq scopeRef exps = do
+  result <- evalSeq scopeRef exps
+  return $ if null result then nil else last result
 
 builtinFunctions = []
 

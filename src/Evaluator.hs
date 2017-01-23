@@ -54,7 +54,9 @@ expandEvalBody scope = collectMacros scope >=> expandMacros scope >=> evalBody s
 -- in a new child scope and return
 -- the result of the last expression
 evalBody :: IORef Scope -> [SExpr] -> Lisp SExpr
-evalBody scope = fmap last . evalSeqAlone scope
+evalBody scopeRef exps = do
+  result <- evalSeqAlone scopeRef exps
+  return $ if null result then nil else last result
 
 -- | Evaluate an s-expression in a new child scope
 evalAlone :: IORef Scope -> SExpr -> Lisp SExpr

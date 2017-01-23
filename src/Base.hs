@@ -419,23 +419,23 @@ isChild = isJust . getParent
 scLookup :: String -> Scope -> IO (Maybe Binding)
 scLookup key scope = case Map.lookup key (getBindings scope) of
                        Just value -> return $ Just value
-                       Nothing    -> if isChild scope
-                                     then exploreIORefIO (fromJust $ getParent scope) (scLookup key)
-                                     else return Nothing
+                       Nothing    -> case getParent scope of
+                         Just parent -> exploreIORefIO parent (scLookup key)
+                         Nothing     -> return Nothing
 
 scLookupM :: String -> Scope -> IO (Maybe Macro)
 scLookupM key scope = case Map.lookup key (getBindings scope) of
                             Just (BMacro m) -> return $ Just m
-                            _               -> if isChild scope
-                                               then exploreIORefIO (fromJust $ getParent scope) (scLookupM key)
-                                               else return Nothing
+                            _               -> case getParent scope of
+                              Just parent -> exploreIORefIO parent (scLookupM key)
+                              Nothing     -> return Nothing
 
 scLookupS :: String -> Scope -> IO (Maybe SExpr)
 scLookupS key scope = case Map.lookup key (getBindings scope) of
                             Just (BSExpr exp) -> return $ Just exp
-                            _                 -> if isChild scope
-                                                 then exploreIORefIO (fromJust $ getParent scope) (scLookupS key)
-                                                 else return Nothing
+                            _                 -> case getParent scope of
+                              Just parent -> exploreIORefIO parent (scLookupS key)
+                              Nothing     -> return Nothing
 
 scMember :: String -> Scope -> IO Bool
 scMember key = fmap isJust . scLookup key
@@ -464,9 +464,10 @@ scAppend add scope = scope { getBindings = Map.union add (getBindings scope) }
 scSet :: String -> Binding -> Scope -> IO Scope
 scSet key value scope = case Map.lookup key (getBindings scope) of
   Just  _ -> return $ scInsert key value scope
-  Nothing -> do
-    modifyIORefIO (fromJust $ getParent scope) (scSet key value)
-    return scope
+  Nothing -> case getParent scope of
+    Just parent -> do modifyIORefIO parent (scSet key value)
+                      return scope
+    Nothing     -> return scope
 instance Show Scope where
   show _ = "#<TODO: show Scope>"
 ---- scope ----
