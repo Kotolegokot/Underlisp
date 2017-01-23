@@ -468,8 +468,21 @@ scSet key value scope = case Map.lookup key (getBindings scope) of
     Just parent -> do modifyIORefIO parent (scSet key value)
                       return scope
     Nothing     -> return scope
+
 instance Show Scope where
-  show _ = "#<TODO: show Scope>"
+  show (Scope bindings g cmdArgs parent) = "#<scope: bindings: " ++ showBindings bindings ++
+                                           "\n                g: " ++ show g ++
+                                           "\n          cmdArgs: " ++ show cmdArgs ++ ">"
+    where showBindings = Map.foldMapWithKey (\key value -> "\n(" ++ show key ++ " " ++ show value ++ ")")
+
+showScope :: Scope -> IO String
+showScope scope = case getParent scope of
+  Just parent -> do begin <- showScope =<< readIORef parent
+                    return $ begin ++ "\n" ++ show scope
+  Nothing     -> return $ show scope
+
+printScope :: Scope -> IO ()
+printScope = putStrLn <=< showScope
 ---- scope ----
 
 ---- lisp monad ---

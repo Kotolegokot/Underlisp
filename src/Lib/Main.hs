@@ -117,7 +117,7 @@ builtinFunctions = [("type",  Just 1, biType)
 
 specialOperators = [("let",      Nothing, soLet)
                    ,("set",      Just 2,  soSet)
-                   ,("define",   Just 2, soDefine)
+                   ,("define",   Just 2,  soDefine)
                    ,("lambda",   Nothing, soLambda)
                    ,("def?",     Just 1,  soIsDef)
                    ,("undef",    Just 1,  soUndef)

@@ -156,7 +156,7 @@
 	(map' (lambda (xs)
 		 (if (empty? xs)
 		     ()
-		     (prepend (f (nth 0 xs)) (tail xs))))))
+		     (prepend (f (nth 0 xs)) (map' (tail xs)))))))
     (->seq t (map' xs'))))
 
 (defun map-list (f xs)

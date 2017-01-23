@@ -39,5 +39,5 @@ main = do
   if optHelp opts
     then putStrLn $ usageInfo header options
     else case restArgs of
-           (filename:args) -> interpreteProgram (optPrelude opts) filename args
+           (filename:args) -> interpreteProgram (optPrelude opts) filename restArgs
            []              -> repl (optPrelude opts)

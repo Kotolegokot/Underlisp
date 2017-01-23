@@ -28,12 +28,12 @@ preludePath = "stdlib/prelude.unlisp"
 -- | A lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
 interpreteProgram prelude filename args = do
-  scope <- loadEnv prelude
-  modifyIORef scope (setCmdArgs args)
+  scopeRef <- loadEnv prelude
+  modifyIORef scopeRef (setCmdArgs args)
   text <- readFile filename
   handleLisp $ do
     exps <- forwardExcept $ R.read (startPoint filename) text
-    E.expandEvalBody scope exps
+    E.expandEvalBody scopeRef exps
 
 -- | Interprete a module and returns its lexical scope
 interpreteModule :: Bool -> String -> Lisp (Map String Binding)
@@ -46,7 +46,10 @@ interpreteModule prelude filename = do
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
-repl prelude = handleLines (startPoint "<REPL>") =<< loadEnv prelude
+repl prelude = do
+  scope <- loadEnv prelude
+  childScope <- newLocal scope
+  handleLines (startPoint "<REPL>") childScope
     where handleLines :: Point -> IORef Scope -> IO ()
           handleLines p scopeRef = do
             line <- readline $ "[" ++ show (pRow p) ++ "]> "
@@ -56,7 +59,9 @@ repl prelude = handleLines (startPoint "<REPL>") =<< loadEnv prelude
                 unless (null line) $ addHistory line
                 result <- runLisp $ do
                   exps <- forwardExcept $ R.read p line
-                  E.expandEvalBody scopeRef exps
+                  result <- E.expandEvalSeq scopeRef exps
+                  liftIO $ printScope =<< readIORef scopeRef
+                  return $ if null result then nil else last result
 
                 exp <- case result of
                   Right val -> return val
@@ -82,7 +87,7 @@ loadPrelude = do
   global <- newIORef $ newGlobal' startEnv []
   let result = runExcept $ R.read (startPoint preludePath) text
   case result of
-    Right exps -> handleLisp $ E.expandEvalBody global exps
+    Right exps -> do handleLisp $ E.expandEvalSeq global exps
     Left fail  -> hPrint stderr fail
   return global
 

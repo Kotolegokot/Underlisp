@@ -22,7 +22,7 @@ expandEvalSeq scope = collectMacros scope >=> expandMacros scope >=> evalSeq sco
 
 -- | Evaluate a list of s-expressions
 evalSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
-evalSeq scope = mapM (eval scope)
+evalSeq scopeRef = mapM (eval scopeRef)
 
 -- | Expand macros and evaluate a list of s-expressions
 -- in a new child scope
@@ -40,8 +40,8 @@ expandEvalSeqAlone scope = collectMacros scope >=> expandMacros scope >=> evalSe
 
 -- | Evaluate a list of s-expressions all in a new common child scope
 evalSeqAlone :: IORef Scope -> [SExpr] -> Lisp [SExpr]
-evalSeqAlone scope exps = do
-  childScope <- liftIO $ newLocal scope
+evalSeqAlone scopeRef exps = do
+  childScope <- liftIO $ newLocal scopeRef
   evalSeq childScope exps
 
 -- | Expand macros and evaluate a list of s-expressions
@@ -83,10 +83,12 @@ eval scopeRef l@(SList p (sFirst:args)) = do
               add (Call p $ SList p (procedure pr:args)) $ call scopeRef (point sFirst) pr args
 eval _ (SAtom p (ASymbol "_"))          = reportE p "addressing '_' is forbidden"
 eval scopeRef (SAtom p (ASymbol sym))   = do
-  result <- liftIO $ exploreIORefIO scopeRef (scLookup sym)
+  result <- liftIO $ exploreIORefIO scopeRef (scLookupS sym)
+--  when (sym == "flip") $
+--    liftIO $ printScope =<< readIORef scopeRef
   case result of
-    Just (BSExpr s) -> return $ setPoint p s
-    _               -> reportE p $ "undefined identificator '" ++ sym ++ "'"
+    Just s -> return $ setPoint p s
+    _      -> reportE p $ "undefined identificator '" ++ sym ++ "'"
 eval _ other                            = return other
 
 -- | Create bindings from a function prototype and
