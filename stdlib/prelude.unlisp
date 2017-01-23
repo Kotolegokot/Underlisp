@@ -14,13 +14,6 @@
 (defmacro undefq (name)
   `(undef '~name))
 
-;; (flet ([name lambda-list function-body*]*) flet-body*)
-(defmacro flet (list &body body)
-  `(let ~(map 'list (lambda (item)
-		      `(~(head item) (lambda @(tail item))))
-	      list)
-	@body))
-
 ;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &body body)
   `(defineq ~name (lambda ~lambda-list @body)))
@@ -104,10 +97,10 @@
 (defun nil? (x)
   (= x nil))
 
-;; prints error if ex is false
-(defmacro assert (cond)
-  `(unless ~cond
-     (write '~cond)
+;; prints error if condition is false
+(defmacro assert (condition)
+  `(unless ~condition
+     (write '~condition)
      (put-char #newline)
      (error "assert failed")))
 
@@ -153,10 +146,10 @@
   (contract f procedure?)
   (contract xs sequence?)
   (let ((xs' (->list xs))
-	(map' (lambda (xs)
-		(if (empty? xs)
-		    ()
-		    (prepend (f (head xs)) (map' (tail xs)))))))
+	(map' (xs)
+	  (if (empty? xs)
+	      ()
+	      (prepend (f (head xs)) (map' (tail xs))))))
     (->seq t (map' xs'))))
 
 (defun map-list (f xs)
@@ -395,8 +388,8 @@
           (e2 (nth 1 list)))
       (cons e1 (f e2)))))
 
-(defineq pi  3.14159265359)
-(defineq e   2.71828182845)
+(defineq pi 3.14159265359)
+(defineq e  2.71828182845)
 
 ;; cosecant
 (defun csc (x)

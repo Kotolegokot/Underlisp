@@ -7,9 +7,6 @@ defconstant
 condition system
 full-featured module system
 freeze, thaw
-Lisp -> Eval
-add type Read = Except Fail
-add sugar for lambdas in let, remove flet
 add macrolet
 write lots of tests
 when stable merge to master
