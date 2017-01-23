@@ -1,5 +1,5 @@
 (defun f (x) (* x x))
-(setq outer-env (current-env))
+(defineq outer-env (current-env))
 
 (assert (= (f 3) 9))
 

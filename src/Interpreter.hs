@@ -60,7 +60,6 @@ repl prelude = do
                 result <- runLisp $ do
                   exps <- forwardExcept $ R.read p line
                   result <- E.expandEvalSeq scopeRef exps
-                  liftIO $ printScope =<< readIORef scopeRef
                   return $ if null result then nil else last result
 
                 exp <- case result of

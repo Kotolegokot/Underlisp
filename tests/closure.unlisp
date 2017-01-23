@@ -1,7 +1,7 @@
 ;;; closures
-(setq closure
-      (let ((a 12))
-	(lambda (x) (+ x a))))
+(defineq closure
+    (let ((a 12))
+      (lambda (x) (+ x a))))
 
 (assert (= (closure 1) 13))
 
