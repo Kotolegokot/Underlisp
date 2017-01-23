@@ -3,7 +3,7 @@ module Lib.Main (builtinFunctions
 
 -- map
 import qualified Data.Map as Map
-import Data.Map (Map)
+--import Data.Map (Map)
 
 -- other
 import Control.Monad.IO.Class (liftIO)
@@ -28,18 +28,20 @@ soLambda _        []                = reportE' "at least one argument expected"
 -- | Special operator let
 soLet :: IORef Scope -> [SExpr] -> Lisp SExpr
 soLet scopeRef (SList p pairs : body) = do
-  bindings <- getBindings scopeRef pairs
-  childScope <- liftIO $ newLocal' bindings scopeRef
+  childScope <- liftIO $ newLocal scopeRef
+  putBindings childScope pairs
   evalBody childScope body
-    where getBindings :: IORef Scope -> [SExpr] -> Lisp (Map String Binding)
-          getBindings scopeRef = fmap Map.fromList . mapM (getBinding scopeRef)
+    where putBindings :: IORef Scope -> [SExpr] -> Lisp ()
+          putBindings scopeRef exps = do
+            add <- Map.fromList <$> mapM (putBinding scopeRef) exps
+            liftIO $ modifyIORef scopeRef (scAppend add)
 
-          getBinding :: IORef Scope -> SExpr -> Lisp (String, Binding)
-          getBinding scopeRef (SList _ [SAtom _ (ASymbol var), value]) = do
+          putBinding :: IORef Scope -> SExpr -> Lisp (String, Binding)
+          putBinding scopeRef (SList _ [SAtom _ (ASymbol var), value]) = do
             exp <- evalAlone scopeRef value
             return (var, BSExpr exp)
-          getBinding _        (SList _ [exp1, _]) = reportE (point exp1) "first item in a binding pair must be a keyword"
-          getBinding _        other               = reportE (point other) "(var value) pair expected"
+          putBinding _        (SList _ [exp1, _]) = reportE (point exp1) "first item in a binding pair must be a keyword"
+          putBinding _        other               = reportE (point other) "(var value) pair expected"
 soLet _        [expr]                    = reportE (point expr) "list expected"
 soLet _        _                         = reportE' "at least one argument expected"
 
