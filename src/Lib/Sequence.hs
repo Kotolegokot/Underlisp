@@ -1,24 +1,31 @@
 module Lib.Sequence (builtinFunctions
                     ,specialOperators) where
 
+-- vector
 import qualified Data.Vector as Vec
+--import Data.Vector (Vector)
+
+-- other
 import Control.Monad (mapM, liftM, when)
 import Control.Conditional (cond)
+import Data.IORef
 import Safe (atMay)
+
+-- local modules
 import Base
 
 default (Int)
 
-biIsEmpty :: [SExpr] -> Lisp SExpr
-biIsEmpty [exp]
+biIsEmpty :: IORef Scope -> [SExpr] -> Lisp SExpr
+biIsEmpty _ [exp]
   | isList exp   = bool . null <$> getList exp
   | isVector exp = bool . Vec.null <$> getVector exp
   | otherwise    = reportE (point exp) "sequence expected"
-biIsEmpty _ = reportE' "just one argument requried"
+biIsEmpty _ _ = reportE' "just one argument requried"
 
-biConcat :: [SExpr] -> Lisp SExpr
-biConcat (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
-biConcat _            = reportE' "at least one argument expected"
+biConcat :: IORef Scope -> [SExpr] -> Lisp SExpr
+biConcat _ (sType:seqs) = toSequence sType =<< liftM concat (mapM getSequence seqs)
+biConcat _ _            = reportE' "at least one argument expected"
 
 toSequence :: SExpr -> [SExpr] -> Lisp SExpr
 toSequence sType exps = do
@@ -28,8 +35,8 @@ toSequence sType exps = do
     "list"   -> return $ list exps
     other    -> reportE (point sType) ("undefined type: '" ++ other ++ "'")
 
-biNth :: [SExpr] -> Lisp SExpr
-biNth [sN, seq] = do
+biNth :: IORef Scope -> [SExpr] -> Lisp SExpr
+biNth _ [sN, seq] = do
   n <- getInt sN
   when (n < 0) $ reportE (point sN) "negative index"
   cond [(isList seq, case fromList seq `atMay` n of
@@ -39,7 +46,7 @@ biNth [sN, seq] = do
                          Nothing  -> reportE' $ "index too large: " ++ show n
                          Just val -> return val)
        ,(otherwise, reportE (point seq) "sequence expected")]
-biNth _         = reportE' "two arguments required"
+biNth _ _         = reportE' "two arguments required"
 
 builtinFunctions = [("empty?", Just 1, biIsEmpty)
                    ,("concat", Just 2, biConcat)

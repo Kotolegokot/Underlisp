@@ -4,26 +4,27 @@ module Lib.IO (builtinFunctions
 import Control.Monad.IO.Class (liftIO)
 
 import System.IO (stdout, hFlush)
+import Data.IORef
 import Base
 
 default (Int)
 
-biFlush :: [SExpr] -> Lisp SExpr
-biFlush [] = liftIO (hFlush stdout) >> return nil
-biFlush _  = reportE' "no arguments required"
+biFlush :: IORef Scope -> [SExpr] -> Lisp SExpr
+biFlush _ [] = liftIO (hFlush stdout) >> return nil
+biFlush _ _  = reportE' "no arguments required"
 
-biGetLine :: [SExpr] -> Lisp SExpr
-biGetLine [] = toString <$> liftIO getLine
-biGetLine _  = reportE' "no arguments required"
+biGetLine :: IORef Scope -> [SExpr] -> Lisp SExpr
+biGetLine _ [] = toString <$> liftIO getLine
+biGetLine _ _  = reportE' "no arguments required"
 
-biToString :: [SExpr] -> Lisp SExpr
-biToString [arg] = return . toString $ show arg
-biToString _     = reportE' "just one argument required"
+biToString :: IORef Scope -> [SExpr] -> Lisp SExpr
+biToString _ [arg] = return . toString $ show arg
+biToString _ _     = reportE' "just one argument required"
 
-biPutChar :: [SExpr] -> Lisp SExpr
-biPutChar [SAtom _ (AChar c)]    = liftIO (putChar c) >> return nil
-biPutChar [expr]                 = reportE (point expr) "char expected"
-biPutChar _                      = reportE' "just one argument required"
+biPutChar :: IORef Scope -> [SExpr] -> Lisp SExpr
+biPutChar _ [SAtom _ (AChar c)] = liftIO (putChar c) >> return nil
+biPutChar _ [expr]              = reportE (point expr) "char expected"
+biPutChar _ _                   = reportE' "just one argument required"
 
 builtinFunctions = [("flush",    Just 0, biFlush)
                    ,("get-line", Just 0, biGetLine)

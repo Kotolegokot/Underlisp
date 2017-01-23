@@ -13,9 +13,10 @@ import Lib.Ord as Ord
 import Lib.Sequence as Sequence
 import Lib.Vector as Vector
 
+import Data.IORef
 import Base
 
-specialOperators :: [(String, Maybe Int, [SExpr] -> Lisp SExpr)]
+specialOperators :: [(String, Maybe Int, IORef Scope -> [SExpr] -> Lisp SExpr)]
 specialOperators = concat [Bool.specialOperators
                           ,Char.specialOperators
                           ,Ctrl.specialOperators
@@ -29,7 +30,7 @@ specialOperators = concat [Bool.specialOperators
                           ,Sequence.specialOperators
                           ,Vector.specialOperators]
 
-builtinFunctions :: [(String, Maybe Int, [SExpr] -> Lisp SExpr)]
+builtinFunctions :: [(String, Maybe Int, IORef Scope -> [SExpr] -> Lisp SExpr)]
 builtinFunctions = concat [Bool.builtinFunctions
                           ,Char.builtinFunctions
                           ,Ctrl.builtinFunctions

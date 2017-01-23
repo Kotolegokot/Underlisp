@@ -2,24 +2,25 @@ module Lib.Control (builtinFunctions
                    ,specialOperators) where
 
 import Control.Conditional (if')
+import Data.IORef
 import Base
 import Evaluator
 
 default (Int)
 
-soIf :: [SExpr] -> Lisp SExpr
-soIf [condExp]                    = soIf [condExp, nil,     nil]
-soIf [condExp, trueExp]           = soIf [condExp, trueExp, nil]
-soIf [condExp, trueExp, falseExp] = do
-  cond <- getBool =<< evalAlone condExp
-  eval $ if' cond trueExp falseExp
-soIf _                            = reportE' "1 to 3 arguments requried"
+soIf :: IORef Scope -> [SExpr] -> Lisp SExpr
+soIf scopeRef [condExp]                    = soIf scopeRef [condExp, nil,     nil]
+soIf scopeRef [condExp, trueExp]           = soIf scopeRef [condExp, trueExp, nil]
+soIf scopeRef [condExp, trueExp, falseExp] = do
+  cond <- getBool =<< evalAlone scopeRef condExp
+  eval scopeRef $ if' cond trueExp falseExp
+soIf _ _                                   = reportE' "1 to 3 arguments requried"
 
-soScope :: [SExpr] -> Lisp SExpr
+soScope :: IORef Scope -> [SExpr] -> Lisp SExpr
 soScope = evalBody
 
-soSeq :: [SExpr] -> Lisp SExpr
-soSeq = fmap last . evalSeq
+soSeq :: IORef Scope -> [SExpr] -> Lisp SExpr
+soSeq scopeRef = fmap last . evalSeq scopeRef
 
 builtinFunctions = []
 

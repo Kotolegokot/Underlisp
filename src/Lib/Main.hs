@@ -1,111 +1,116 @@
 module Lib.Main (builtinFunctions
                 ,specialOperators) where
 
-import Control.Monad.State
+-- map
+import qualified Data.Map as Map
+import Data.Map (Map)
+
+-- other
+import Control.Monad.IO.Class (liftIO)
+import Data.IORef
+
+-- local modules
 import Base
 import Evaluator
 import Type
+import Util
 
 default (Int)
 
--- | special operator lambda
+-- | Special operator lambda
 -- (lambda lambda-list [body])
-soLambda :: [SExpr] -> Lisp SExpr
-soLambda (lambdaList:body) = do
+soLambda :: IORef Scope -> [SExpr] -> Lisp SExpr
+soLambda scopeRef (lambdaList:body) = do
   prototype <- parseLambdaList lambdaList
-  current <- get
-  return . procedure $ UserDefined current prototype body []
-soLambda []                = reportE' "at least one argument expected"
+  return . procedure $ UserDefined scopeRef prototype body []
+soLambda _        []                = reportE' "at least one argument expected"
 
--- special operator let
-soLet :: [SExpr] -> Lisp SExpr
-soLet (SList p pairs : body) = do
-  modify passIn
-  putBindings pairs
-  exp <- evalBody body
-  modify passOut
-  return exp
-    where putBindings :: [SExpr] -> Lisp ()
-          putBindings = mapM_ putBinding
+-- | Special operator let
+soLet :: IORef Scope -> [SExpr] -> Lisp SExpr
+soLet scopeRef (SList p pairs : body) = do
+  bindings <- getBindings scopeRef pairs
+  childScope <- liftIO $ newLocal' bindings scopeRef
+  evalBody childScope body
+    where getBindings :: IORef Scope -> [SExpr] -> Lisp (Map String Binding)
+          getBindings scopeRef = fmap Map.fromList . mapM (getBinding scopeRef)
 
-          putBinding :: SExpr -> Lisp ()
-          putBinding (SList _ [SAtom _ (ASymbol var), value]) = do
-            exp <- evalAlone value
-            void . modify $ linsert var (EnvSExpr exp)
-          putBinding (SList _ [exp1, _]) = reportE (point exp1) "first item in a binding pair must be a keyword"
-          putBinding other               = reportE (point other) "(var value) pair expected"
-soLet       [expr]               = reportE (point expr) "list expected"
-soLet       _                    = reportE' "at least one argument expected"
+          getBinding :: IORef Scope -> SExpr -> Lisp (String, Binding)
+          getBinding scopeRef (SList _ [SAtom _ (ASymbol var), value]) = do
+            exp <- evalAlone scopeRef value
+            return (var, BSExpr exp)
+          getBinding _        (SList _ [exp1, _]) = reportE (point exp1) "first item in a binding pair must be a keyword"
+          getBinding _        other               = reportE (point other) "(var value) pair expected"
+soLet _        [expr]                    = reportE (point expr) "list expected"
+soLet _        _                         = reportE' "at least one argument expected"
 
-soIsDef :: [SExpr] -> Lisp SExpr
-soIsDef [sKey] = do
-  key <- getSymbol =<< evalAlone sKey
-  result <- gets $ memberSExpr key
-  return $ bool result
-soIsDef _      = reportE' "just one argument required"
+soIsDef :: IORef Scope -> [SExpr] -> Lisp SExpr
+soIsDef scopeRef [sKey] = do
+  key <- getSymbol =<< evalAlone scopeRef sKey
+  liftIO $ bool <$> exploreIORefIO scopeRef (scMemberS key)
+soIsDef _        _      = reportE' "just one argument required"
 
-soUndef :: [SExpr] -> Lisp SExpr
-soUndef [sKey] = do
-  key <- getSymbol =<< evalAlone sKey
-  modify $ envDelete key
+soUndef :: IORef Scope -> [SExpr] -> Lisp SExpr
+soUndef scopeRef [sKey] = do
+  key <- getSymbol =<< evalAlone scopeRef sKey
+  liftIO $ modifyIORefIO scopeRef (scDelete key)
   return nil
-soUndef _      = reportE' "just one argument required"
+soUndef _        _      = reportE' "just one argument required"
 
 -- special operator define
-soSet :: [SExpr] -> Lisp SExpr
-soSet [sKey, sValue] = do
-  key <- getSymbol =<< evalAlone sKey
-  result <- gets $ lookupSExpr key
+soSet :: IORef Scope -> [SExpr] -> Lisp SExpr
+soSet scopeRef [sKey, sValue] = do
+  key <- getSymbol =<< evalAlone scopeRef sKey
+  result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
     _                                        -> do
-      value <- evalAlone sValue
-      modify $ linsert key (EnvSExpr value)
+      value <- evalAlone scopeRef sValue
+      liftIO $ modifyIORefIO scopeRef (scSet key $ BSExpr value)
       return nil
-soSet _              = reportE' "two arguments required"
+soSet _        _              = reportE' "two arguments required"
 
 -- special operator mutate
-soMutate :: [SExpr] -> Lisp SExpr
-soMutate [sVar, sValue] = do
-  key <- getSymbol =<< evalAlone sVar
-  result <- gets $ lookupSExpr key
+soMutate :: IORef Scope -> [SExpr] -> Lisp SExpr
+soMutate scopeRef [sVar, sValue] = do
+  key <- getSymbol =<< evalAlone scopeRef sVar
+  result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
-    Just _                                          -> do
-      value <- evalAlone sValue
-      modify $ linsert key (EnvSExpr value)
+    Just _                                   -> do
+      value <- evalAlone scopeRef sValue
+      liftIO $ modifyIORefIO scopeRef (scSet key $ BSExpr value)
       return nil
-    Nothing                                         -> reportE' $ "undefined identificator '" ++ key ++ "'"
-soMutate _               = reportE' "two arguments required"
+    Nothing                                  -> reportE' $ "undefined identificator '" ++ key ++ "'"
+soMutate _        _              = reportE' "two arguments required"
 
--- built-in function type
-biType :: [SExpr] -> Lisp SExpr
-biType [exp] = return . symbol . showType $ exp
-biType _     = reportE' "just one argument required"
+-- | Built-in function type
+biType :: IORef Scope -> [SExpr] -> Lisp SExpr
+biType _ [exp] = return . symbol . showType $ exp
+biType _ _     = reportE' "just one argument required"
 
-soBind :: [SExpr] -> Lisp SExpr
-soBind (first:args) = do
-  pr <- getProcedure =<< evalAlone first
+soBind :: IORef Scope -> [SExpr] -> Lisp SExpr
+soBind scopeRef (first:args) = do
+  pr <- getProcedure =<< evalAlone scopeRef first
   case pr of
     so@SpecialOp {} -> procedure <$> bind so args
     other           -> do
-      args' <- mapM evalAlone args
+      args' <- evalAloneSeq scopeRef args
       procedure <$> bind other args'
-soBind []            = reportE' "at least one argument required"
+soBind _        []            = reportE' "at least one argument required"
 
--- special operator apply
-soApply :: [SExpr] -> Lisp SExpr
-soApply (first:args@(_:_)) = do
-  pr <- getProcedure =<< evalAlone first
-  args' <- mapM evalAlone args
+-- | Special operator apply
+soApply :: IORef Scope -> [SExpr] -> Lisp SExpr
+soApply scopeRef (first:args@(_:_)) = do
+  pr <- getProcedure =<< evalAlone scopeRef first
+  args' <- evalAloneSeq scopeRef args
   l <- getList (last args')
-  call (point first) pr (init args' ++ l)
-soApply _             = reportE' "at least two arguments required"
+  call scopeRef (point first) pr (init args' ++ l)
+soApply _        _                  = reportE' "at least two arguments required"
 
--- built-in function error
-biError :: [SExpr] -> Lisp SExpr
-biError [exp] = reportE' =<< getString exp
-biError _     = reportE' "just one argument required"
+-- | Built-in function error
+biError :: IORef Scope -> [SExpr] -> Lisp SExpr
+biError _ [exp] = reportE' =<< getString exp
+biError _ _     = reportE' "just one argument required"
 
 builtinFunctions = [("type",  Just 1, biType)
                    ,("error", Just 1, biError)]

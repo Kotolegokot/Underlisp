@@ -1,46 +1,50 @@
 module Lib.Meta (builtinFunctions
                 ,specialOperators) where
 
-import Control.Monad.State
+import Control.Monad.IO.Class (liftIO)
+import Data.IORef
+
+-- local modules
 import qualified Reader
 import Base
 import Evaluator
+import Util
 
 default (Int)
 
-soMacroExpand :: [SExpr] -> Lisp SExpr
-soMacroExpand [exp] = do
-  exp' <- evalAlone exp
-  expanded <- expandMacros [exp']
+soMacroExpand :: IORef Scope -> [SExpr] -> Lisp SExpr
+soMacroExpand scopeRef [exp] = do
+  exp' <- evalAlone scopeRef exp
+  expanded <- expandMacros scopeRef [exp']
   return $ head expanded
-soMacroExpand _       = reportE' "just one argument required"
+soMacroExpand _        _     = reportE' "just one argument required"
 
-soMacroExpand1 :: [SExpr] -> Lisp SExpr
-soMacroExpand1 [exp] = evalAlone exp >>= soMacroExpand1'
+soMacroExpand1 :: IORef Scope -> [SExpr] -> Lisp SExpr
+soMacroExpand1 scopeRef [exp] = evalAlone scopeRef exp >>= soMacroExpand1'
     where soMacroExpand1' l@(SList _ (SAtom _ (ASymbol sym):args)) = do
-            result <- gets $ lookupMacro sym
+            result <- liftIO $ exploreIORefIO scopeRef (scLookupM sym)
             case result of
               Just m   -> callMacro m args
               Nothing  -> return l
           soMacroExpand1' other                                    = return other
-soMacroExpand1 _       = reportE' "just one argument required"
+soMacroExpand1 _        _     = reportE' "just one argument required"
 
 -- | special operator quote
-soQuote :: [SExpr] -> Lisp SExpr
-soQuote [arg] = return arg
-soQuote _     = reportE' "just one argument requried"
+soQuote :: IORef Scope -> [SExpr] -> Lisp SExpr
+soQuote _ [arg] = return arg
+soQuote _ _     = reportE' "just one argument requried"
 
 -- | special operator backquote
-soBackquote :: [SExpr] -> Lisp SExpr
-soBackquote [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
+soBackquote :: IORef Scope -> [SExpr] -> Lisp SExpr
+soBackquote scopeRef [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = reportE p "just one argument required"
-  | otherwise        = evalAlone $ head rest
-soBackquote [SList _ l] = list <$> mapM' (soBackquote . return) l
+  | otherwise        = evalAlone scopeRef $ head rest
+soBackquote scopeRef [SList _ l] = list <$> mapM' (soBackquote scopeRef . return) l
     where mapM' :: (SExpr -> Lisp SExpr) -> [SExpr] -> Lisp [SExpr]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList _ [SAtom _ (ASymbol "unfold"), arg] -> do
-              exps <- getList =<< evalAlone arg
+              exps <- getList =<< evalAlone scopeRef arg
               rest <- mapM' f xs
               return $ exps ++ rest
             SList _ (SAtom p (ASymbol "unfold"):_)    -> reportE p "just one argument required"
@@ -48,39 +52,40 @@ soBackquote [SList _ l] = list <$> mapM' (soBackquote . return) l
               result <- f other
               rest   <- mapM' f xs
               return $ result : rest
-soBackquote [arg]        = return arg
-soBackquote _            = reportE' "just one argument required"
+soBackquote _ [arg]        = return arg
+soBackquote _ _            = reportE' "just one argument required"
 
--- | special operator interprete
-soInterprete :: [SExpr] -> Lisp SExpr
-soInterprete [arg] = do
-  str <- getString =<< evalAlone arg
+-- | Special operator interprete
+soInterprete :: IORef Scope -> [SExpr] -> Lisp SExpr
+soInterprete scopeRef [arg] = do
+  str <- getString =<< evalAlone scopeRef arg
   read <- forwardExcept $ Reader.read (point arg) str
-  last <$> expandEvalSeq read
-soInterprete _     = reportE' "just one argument required"
+  expandEvalBody scopeRef read
+soInterprete _        _     = reportE' "just one argument required"
 
-soGensym :: [SExpr] -> Lisp SExpr
-soGensym [] = do
-  e <- get
-  let (g, sym) = gensym (getG e) e
-  modify $ setG g
+soGensym :: IORef Scope -> [SExpr] -> Lisp SExpr
+soGensym scopeRef [] = liftIO $ do
+  (g, sym) <- gensym =<< exploreIORef scopeRef getG
+  modifyIORef scopeRef (setG g)
   return sym
-  where gensym :: Int -> Env -> (Int, SExpr)
-        gensym n e = case envLookup ("G-" ++ show n) e of
-          Just _  -> gensym (n + 1) e
-          Nothing -> (n + 1, symbol $ "G-" ++ show n)
-soGensym _  = reportE' "no arguments required"
+  where gensym :: Int -> IO (Int, SExpr)
+        gensym n = do
+          result <- exploreIORefIO scopeRef (scLookup $ "G-" ++ show n)
+          case result of
+            Just _  -> gensym (n + 1)
+            Nothing -> return (n + 1, symbol $ "G-" ++ show n)
+soGensym _        _  = reportE' "no arguments required"
 
--- | special operator eval
-soEval :: [SExpr] -> Lisp SExpr
-soEval args = do
-  args' <- mapM evalAlone args
-  last <$> evalSeq args'
+-- | Special operator eval
+soEval :: IORef Scope -> [SExpr] -> Lisp SExpr
+soEval scopeRef args = do
+  args' <- evalAloneSeq scopeRef args
+  evalBody scopeRef args'
 
 -- | converts a string into a symbol
-biToSymbol :: [SExpr] -> Lisp SExpr
-biToSymbol [exp] = symbol <$> getString exp
-biToSymbol _     = reportE' "just one argument required"
+biToSymbol :: IORef Scope -> [SExpr] -> Lisp SExpr
+biToSymbol _ [exp] = symbol <$> getString exp
+biToSymbol _ _     = reportE' "just one argument required"
 
 builtinFunctions = [("->symbol", Just 1, biToSymbol)]
 

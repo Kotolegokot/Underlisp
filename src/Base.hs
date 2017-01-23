@@ -13,7 +13,6 @@ import qualified Control.Conditional as C
 import Data.IORef
 import Control.Monad.Except
 import Control.Monad.Reader
-import Control.Monad.State
 import Control.Applicative ((<|>))
 import Control.Arrow
 import Control.Exception (Exception)
@@ -68,9 +67,9 @@ point :: SExpr -> Point
 point (SList p _) = p
 point (SAtom p _) = p
 
-setPoint :: SExpr -> Point -> SExpr
-setPoint (SList _ xs) p = SList p xs
-setPoint (SAtom _ a)  p = SAtom p a
+setPoint :: Point -> SExpr -> SExpr
+setPoint p (SList _ xs) = SList p xs
+setPoint p (SAtom _ a)  = SAtom p a
 
 instance Eq SExpr where
   SList _ s == SList _ s' = s == s'
@@ -170,7 +169,7 @@ fromProcedure :: SExpr -> Procedure
 fromProcedure (SAtom _ (AProcedure c)) = c
 fromProcedure _                       = undefined
 
-fromEnv :: SExpr -> Map String EnvItem
+fromEnv :: SExpr -> Map String Binding
 fromEnv (SAtom _ (AEnv e)) = e
 fromEnv _                  = undefined
 
@@ -216,7 +215,7 @@ getVector = unpackSExpr fromVector "vector"
 getProcedure :: SExpr -> Lisp Procedure
 getProcedure = unpackSExpr fromProcedure "procedure"
 
-getEnv :: SExpr -> Lisp (Map String EnvItem)
+getEnv :: SExpr -> Lisp (Map String Binding)
 getEnv = unpackSExpr fromEnv "env"
 
 getSequence :: SExpr -> Lisp [SExpr]
@@ -249,7 +248,7 @@ vector = atom . AVector
 procedure :: Procedure -> SExpr
 procedure = atom . AProcedure
 
-env :: Map String EnvItem -> SExpr
+env :: Map String Binding -> SExpr
 env = atom . AEnv
 ---- s-expression ----
 
@@ -262,7 +261,7 @@ data Atom = ANil
           | ASymbol    String
           | AVector    (Vector SExpr)
           | AProcedure Procedure
-          | AEnv       (Map String EnvItem)
+          | AEnv       (Map String Binding)
 
 instance Eq Atom where
   ANil           == ANil           = True
@@ -334,7 +333,7 @@ strToAtom atom
 ---- atom ----
 
 ---- macro ----
-data Macro = Macro Point Env Prototype [SExpr]
+data Macro = Macro Point (IORef Scope) Prototype [SExpr]
 
 instance Eq Macro where
   (==) = undefined
@@ -344,9 +343,9 @@ instance Show Macro where
 ---- macro ----
 
 ---- procedure ----
-data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
-               | BuiltIn     String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
+data Procedure = UserDefined (IORef Scope) Prototype [SExpr] [SExpr]
+               | BuiltIn     String (Maybe Int) (IORef Scope -> [SExpr] -> Lisp SExpr) [SExpr]
+               | SpecialOp   String (Maybe Int) (IORef Scope -> [SExpr] -> Lisp SExpr) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
@@ -360,7 +359,7 @@ isSpecialOp SpecialOp {} = True
 isSpecialOp _            = False
 
 instance Show Procedure where
-  show UserDefined {}  = "#<procedure>"
+  show UserDefined {}         = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<special operator:" ++ name ++ ">"
 ---- procedure ----
@@ -391,19 +390,25 @@ setParent :: Maybe (IORef Scope) -> Scope -> Scope
 setParent parent scope = scope { getParent = parent }
 
 newGlobal :: [String] -> Scope
-newGlobal args = Scope { getBindings = Map.empty
-                       , getG        = 0
-                       , getCmdArgs  = args
-                       , getParent   = Nothing }
+newGlobal = newGlobal' Map.empty
 
-newLocal :: IORef Scope -> IO Scope
-newLocal parentRef = do
+newGlobal' :: Map String Binding -> [String] -> Scope
+newGlobal' bindings args = Scope { getBindings = bindings
+                                 , getG        = 0
+                                 , getCmdArgs  = args
+                                 , getParent   = Nothing }
+
+newLocal :: IORef Scope -> IO (IORef Scope)
+newLocal = newLocal' Map.empty
+
+newLocal' :: Map String Binding -> IORef Scope -> IO (IORef Scope)
+newLocal' bindings parentRef = do
   g <- exploreIORef parentRef getG
   cmdArgs <- exploreIORef parentRef getCmdArgs
-  return Scope { getBindings = Map.empty
-               , getG        = g
-               , getCmdArgs  = cmdArgs
-               , getParent   = Just parentRef }
+  newIORef Scope { getBindings = bindings
+                 , getG        = g
+                 , getCmdArgs  = cmdArgs
+                 , getParent   = Just parentRef }
 
 isGlobal :: Scope -> Bool
 isGlobal = isNothing . getParent
@@ -462,48 +467,33 @@ scSet key value scope = case Map.lookup key (getBindings scope) of
   Nothing -> do
     modifyIORefIO (fromJust $ getParent scope) (scSet key value)
     return scope
-
 instance Show Scope where
   show _ = "#<TODO: show Scope>"
-
-data Env = Env Env
-  deriving (Eq, Show)
-
-data EnvItem = EnvItem EnvItem
-  deriving (Eq, Show)
 ---- scope ----
 
----- eval ---
-type Lisp = ExceptT Fail (StateT Env (ReaderT [Call] IO))
+---- lisp monad ---
+type Lisp = ExceptT Fail (ReaderT [Call] IO)
 
-runLisp :: Env -> Lisp a -> IO (Either Fail a, Env)
-runLisp startEnv = (flip runReaderT []) . flip runStateT startEnv . runExceptT
-
-evalLisp :: Env -> Lisp a -> IO (Either Fail a)
-evalLisp startEnv = (fst <$>) . runLisp startEnv
-
-execLisp :: Env -> Lisp a -> IO Env
-execLisp startEnv = (snd <$>) . runLisp startEnv
+runLisp :: Lisp a -> IO (Either Fail a)
+runLisp = flip runReaderT [] . runExceptT
 
 forwardExcept :: MonadError Fail m => Except Fail a -> m a
 forwardExcept m = case runExcept m of
   Left fail -> throwError fail
   Right val -> return val
 
-handleLisp :: Env -> Lisp a -> IO ()
-handleLisp startEnv ev = do
-  result <- evalLisp startEnv ev
-  case result of
-    Right _ -> return ()
-    Left f  -> hPrint stderr f
+handleLisp ::  Lisp a -> IO ()
+handleLisp = runLisp >=> \case
+  Right _ -> return ()
+  Left  f -> hPrint stderr f
 
 add :: Call -> Lisp a -> Lisp a
 add call = local (call:)
----- eval ----
+---- lisp monad ----
 
 ---- call ----
-data Call = Call { cPoint  :: Point
-                 , cExpr   :: SExpr }
+data Call = Call { cPoint :: Point
+                 , cExpr  :: SExpr }
 
 instance Show Call where
   show (Call point expr) = show point ++ ": " ++ show expr

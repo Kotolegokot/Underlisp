@@ -1,13 +1,20 @@
 module Lib.Vector (builtinFunctions
               ,specialOperators) where
 
+-- vector
 import qualified Data.Vector as Vec
+--import Data.Vector (Vector)
+
+-- other
+import Data.IORef
+
+-- local modules
 import Base
 
 default (Int)
 
-biVector :: [SExpr] -> Lisp SExpr
-biVector = return . vector . Vec.fromList
+biVector :: IORef Scope -> [SExpr] -> Lisp SExpr
+biVector _ = return . vector . Vec.fromList
 
 builtinFunctions = [("vector", Nothing,  biVector)]
 

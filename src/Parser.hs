@@ -10,9 +10,9 @@ parse :: [(Lexeme, Point)] -> Except Fail [SExpr]
 parse [] = return []
 parse ((x,p):xs) = case x of
   Open b -> do
-    (sexpr, rest) <- parseList p b xs
+    (exp, rest) <- parseList p b xs
     rest' <- parse rest
-    return (setPoint sexpr p : rest')
+    return (setPoint p exp : rest')
   Closed  _ -> reportR p "redundant right bracket"
   LAtom a -> do
     xs' <- parse xs
