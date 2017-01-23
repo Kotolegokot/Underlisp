@@ -40,9 +40,10 @@ interpreteModule :: Bool -> String -> Lisp (Map String Binding)
 interpreteModule prelude filename = do
   scope <- liftIO $ loadEnv prelude
   text <- liftIO $ readFile filename
+  childScope <- liftIO $ newLocal scope
   exps <- forwardExcept $ R.read (startPoint filename) text
-  E.expandEvalBody scope exps
-  liftIO $ exploreIORef scope getBindings
+  E.expandEvalSeq childScope exps
+  liftIO $ exploreIORef childScope getBindings
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
@@ -86,7 +87,7 @@ loadPrelude = do
   global <- newIORef $ newGlobal' startEnv []
   let result = runExcept $ R.read (startPoint preludePath) text
   case result of
-    Right exps -> do handleLisp $ E.expandEvalSeq global exps
+    Right exps -> handleLisp $ E.expandEvalSeq global exps
     Left fail  -> hPrint stderr fail
   return global
 
@@ -103,17 +104,17 @@ startEnv = Map.fromList $
     (builtinFunctions ++
     [("initial-env", Just 0, biInitialEnv)])
 
--- | loads environment from a file
+-- | Load environment from a file
 soEnvFromFile :: IORef Scope -> [SExpr] -> Lisp SExpr
 soEnvFromFile scopeRef [sArg] = do
-  str <- getString =<< E.eval scopeRef sArg
+  str <- getString =<< E.evalAlone scopeRef sArg
   env <$> interpreteModule True str
 soEnvFromFile _        _      = reportE' "just one argument required"
 
 -- | loads environment from a file without prelude loaded
 soEnvFromFileNoPrelude :: IORef Scope -> [SExpr] -> Lisp SExpr
 soEnvFromFileNoPrelude scopeRef [sArg] = do
-  str <- getString =<< E.eval scopeRef sArg
+  str <- getString =<< E.evalAlone scopeRef sArg
   env <$> interpreteModule False str
 soEnvFromFileNoPrelude _        _      = reportE' "just one argument required"
 

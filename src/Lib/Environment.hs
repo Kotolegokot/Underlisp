@@ -52,7 +52,7 @@ soCurrentEnv _        _  = reportE' "no arguments required"
 
 biFunctionEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 biFunctionEnv _ [SAtom _ (AProcedure (UserDefined localScope _ _ _))] = liftIO $ env <$> exploreIORef localScope getBindings
-biFunctionEnv _ [sexpr]                                               = reportE (point sexpr) "function expected"
+biFunctionEnv _ [sexpr]                                               = reportE (point sexpr) "a user-defined function expected"
 biFunctionEnv _ _                                                     = reportE' "just one argument required"
 
 soGetArgs :: IORef Scope -> [SExpr] -> Lisp SExpr

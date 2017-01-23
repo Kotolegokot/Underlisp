@@ -12,7 +12,6 @@ add type Read = Except Fail
 recursion in let
 add sugar for lambdas in let, remove flet
 add macrolet
-fix env-from-file and so on
 write lots of tests
 when stable merge to master
 
