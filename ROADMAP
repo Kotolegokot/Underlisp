@@ -9,7 +9,6 @@ full-featured module system
 freeze, thaw
 Lisp -> Eval
 add type Read = Except Fail
-tokenize -> scan
 recursion in let
 add sugar for lambdas in let, remove flet
 add macrolet
