@@ -8,8 +8,10 @@ condition system
 full-featured module system
 freeze, thaw
 add macrolet
+dynamic variables
 write lots of tests
 when stable merge to master
+fix importing macros
 
 1. split built-in functions and special operators adequately
 2. special operators aren't functions and so aren't first-class objects and objects at all
