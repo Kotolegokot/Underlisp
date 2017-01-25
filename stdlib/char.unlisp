@@ -21,7 +21,7 @@
 
 (defun digit->dec (c)
   (contract c char?)
-  (set dec (- (char->int c) (char->int #0)))
+  (defineq dec (- (char->int c) (char->int #0)))
   (if (in-range 0 9 dec)
       dec
     (error (format "not a decimal digit: '~c'" c))))

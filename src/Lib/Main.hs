@@ -30,7 +30,7 @@ soLet :: IORef Scope -> [SExpr] -> Lisp SExpr
 soLet scopeRef (SList p pairs : body) = do
   childScope <- liftIO $ newLocal scopeRef
   putBindings childScope pairs
-  evalBody childScope body
+  last <$> evalSeq childScope body
     where putBindings :: IORef Scope -> [SExpr] -> Lisp ()
           putBindings scopeRef exps = do
             add <- Map.fromList <$> mapM (putBinding scopeRef) exps

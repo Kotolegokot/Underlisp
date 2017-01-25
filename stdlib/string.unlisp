@@ -40,14 +40,14 @@
   (defun hex->string' (i)
     (if (zero? i)
 	""
-      (let ((div-mod' (div-mod i 16))
-	    (div' (head div-mod'))
-	    (mod' (head (tail div-mod'))))
-	(prepend (hex->digit mod')
-		 (hex->string' div')))))
+	(let* ((div-mod' (div-mod i 16))
+	       (div' (head div-mod'))
+	       (mod' (head (tail div-mod'))))
+	  (prepend (hex->digit mod')
+		   (hex->string' div')))))
 
   (let ((result (reverse (hex->string' (abs i)))))
     (cond
-     ((empty? result) "0")
-     ((neg? i) (prepend #- result))
-     (otherwise result))))
+      ((empty? result) "0")
+      ((neg? i) (prepend #- result))
+      (otherwise result))))

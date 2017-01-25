@@ -1,5 +1,5 @@
 * TODO [#A] Merge mutableEnv to master
-** TODO Fix 'import-module', 'load-module'
+** DONE Fix 'import-module', 'load-module'
 ** TODO Fix incorrect Points in exceptions
 ** TODO Write lots of tests
 *** TODO For built-in functions and special operators

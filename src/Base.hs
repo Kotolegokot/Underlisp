@@ -434,17 +434,17 @@ scLookup key scope = case Map.lookup key (getBindings scope) of
 
 scLookupM :: String -> Scope -> IO (Maybe Macro)
 scLookupM key scope = case Map.lookup key (getBindings scope) of
-                            Just (BMacro m) -> return $ Just m
-                            _               -> let imports = map readIORef $ getImports scope
-                                                   lookups = map (scLookupM key =<<) imports
-                                               in maybeOrM lookups
+                        Just (BMacro m) -> return $ Just m
+                        _               -> let imports = map readIORef $ getImports scope
+                                               lookups = map (scLookupM key =<<) imports
+                                           in maybeOrM lookups
 
 scLookupS :: String -> Scope -> IO (Maybe SExpr)
 scLookupS key scope = case Map.lookup key (getBindings scope) of
-                            Just (BSExpr exp) -> return $ Just exp
-                            _                 -> let imports = map readIORef $ getImports scope
-                                                     lookups = map (scLookupS key =<<) imports
-                                                 in maybeOrM lookups
+                        Just (BSExpr exp) -> return $ Just exp
+                        _                 -> let imports = map readIORef $ getImports scope
+                                                 lookups = map (scLookupS key =<<) imports
+                                             in maybeOrM lookups
 
 scMember :: String -> Scope -> IO Bool
 scMember key = fmap isJust . scLookup key
@@ -479,18 +479,19 @@ scSet key value scope = case Map.lookup key (getBindings scope) of
           scSet' []     = return ()
 
 instance Show Scope where
-  show (Scope bindings g cmdArgs parent) = "#<scope: bindings: " ++ showBindings bindings ++
-                                           "\n                g: " ++ show g ++
-                                           "\n          cmdArgs: " ++ show cmdArgs ++ ">"
+  show (Scope bindings g cmdArgs imports) = "#<scope: bindings: " ++ showBindings bindings ++
+                                            "\n                g: " ++ show g ++
+                                            "\n          cmdArgs: " ++ show cmdArgs ++
+                                            "\n          imports: " ++ show (length imports) ++ ">"
     where showBindings = Map.foldMapWithKey (\key value -> "\n(" ++ show key ++ " " ++ show value ++ ")")
 
 {-showScope :: Scope -> IO String
 showScope scope = case getParent scope of
   Just parent -> do begin <- showScope =<< readIORef parent
                     return $ begin ++ "\n" ++ show scope
-  Nothing     -> return $ show scope-}
+  Nothing     -> return $ show scope
 
-{-printScope :: Scope -> IO ()
+printScope :: Scope -> IO ()
 printScope = putStrLn <=< showScope-}
 ---- scope ----
 
