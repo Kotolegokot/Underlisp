@@ -11,5 +11,5 @@ import Parser
 -- | takes a string and converts it into an s-expression
 read :: Point -> String -> Except Fail [SExpr]
 read point text = do
-  lexemes <- tokenize point text
+  lexemes <- scan point text
   parse lexemes

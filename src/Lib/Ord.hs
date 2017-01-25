@@ -1,17 +1,18 @@
 module Lib.Ord (builtinFunctions
                ,specialOperators) where
 
+import Data.IORef
 import Base
 
 default (Int)
 
-biEQ :: [SExpr] -> Lisp SExpr
-biEQ [arg1, arg2] = return . bool $ arg1 == arg2
-biEQ _            = reportE' "two arguments required"
+biEQ :: IORef Scope -> [SExpr] -> Lisp SExpr
+biEQ _ [arg1, arg2] = return . bool $ arg1 == arg2
+biEQ _ _            = reportE' "two arguments required"
 
-biLT :: [SExpr] -> Lisp SExpr
-biLT [arg1, arg2] = return . bool $ arg1 < arg2
-biLT _            = reportE' "two arguments required"
+biLT :: IORef Scope -> [SExpr] -> Lisp SExpr
+biLT _ [arg1, arg2] = return . bool $ arg1 < arg2
+biLT _ _            = reportE' "two arguments required"
 
 builtinFunctions = [("=", Just 2, biEQ)
                    ,("<", Just 2, biLT)]

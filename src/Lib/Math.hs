@@ -3,39 +3,40 @@ module Lib.Math (builtinFunctions
 
 import Numeric.Special.Trigonometric
 import Control.Monad (liftM2)
+import Data.IORef
 import Base
 
 default (Int)
 
-biSum :: [SExpr] -> Lisp SExpr
-biSum sexprs = do
+biSum :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSum _ sexprs = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int . sum . fmap fromInt $ sexprs
     NTFloat -> return . float . sum . fmap fromNumber $ sexprs
 
-biSubstract :: [SExpr] -> Lisp SExpr
-biSubstract sexprs@[num1, num2] = do
+biSubstract :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSubstract _ sexprs@[num1, num2] = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int $ fromInt num1 - fromInt num2
     NTFloat -> return . float $ fromNumber num1 - fromNumber num2
-biSubstract _                   = reportE' "two arguments required"
+biSubstract _ _                   = reportE' "two arguments required"
 
-biProduct :: [SExpr] -> Lisp SExpr
-biProduct sexprs = do
+biProduct :: IORef Scope -> [SExpr] -> Lisp SExpr
+biProduct _ sexprs = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int . product . fmap fromInt $ sexprs
     NTFloat -> return . float . product . fmap fromNumber $ sexprs
 
-biDivide :: [SExpr] -> Lisp SExpr
-biDivide sexprs@[num1, num2] = do
+biDivide :: IORef Scope -> [SExpr] -> Lisp SExpr
+biDivide _ sexprs@[num1, num2] = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int $ fromInt num1 `div` fromInt num2
     NTFloat -> return . float $ fromNumber num1 / fromNumber num2
-biDivide _                   = reportE' "two arguments required"
+biDivide _ _                   = reportE' "two arguments required"
 
 data NumType = NTInt | NTFloat
 numArgs :: [SExpr] -> Lisp NumType
@@ -49,147 +50,59 @@ numArgs sexprs = numArgs' sexprs NTInt
           | otherwise   = reportE (point x) "float or int expected"
         numArgs' [] return_type = return return_type
 
-biFloat :: [SExpr] -> Lisp SExpr
-biFloat [exp] = float <$> getNumber exp
-biFloat _     = reportE' "just one argument requried"
+biFloat :: IORef Scope -> [SExpr] -> Lisp SExpr
+biFloat _ [exp] = float <$> getNumber exp
+biFloat _ _     = reportE' "just one argument requried"
 
-biExp :: [SExpr] -> Lisp SExpr
-biExp [expr] = float . exp <$> getNumber expr
-biExp _      = reportE' "just one argument required"
+unaryFunction :: (SExpr -> Lisp SExpr) -> IORef Scope -> [SExpr] -> Lisp SExpr
+unaryFunction f _ [exp] = f exp
+unaryFunction _ _ _     = reportE' "just one argument requried"
 
-biLn :: [SExpr] -> Lisp SExpr
-biLn [exp] = float . log <$> getNumber exp
-biLn _ = reportE' "just one argument required"
-
-biPower :: [SExpr] -> Lisp SExpr
-biPower nums@[num1, num2] = do
+biPower :: IORef Scope -> [SExpr] -> Lisp SExpr
+biPower _ nums@[num1, num2] = do
   t <- numArgs nums
   case t of
     NTInt   -> return . int $ fromInt num1 ^ fromInt num2
     NTFloat -> return . float $ fromNumber num1 ** fromNumber num2
-biPower _ = reportE' "two arguments required"
+biPower _ _ = reportE' "two arguments required"
 
-biSin :: [SExpr] -> Lisp SExpr
-biSin [exp] = float . sin <$> getNumber exp
-biSin _     = reportE' "just one argument required"
-
-biCos :: [SExpr] -> Lisp SExpr
-biCos [exp] = float . cos <$> getNumber exp
-biCos _     = reportE' "just one argument required"
-
-biASin :: [SExpr] -> Lisp SExpr
-biASin [exp] = float . asin <$> getNumber exp
-biASin _     = reportE' "just one argument required"
-
-biACos :: [SExpr] -> Lisp SExpr
-biACos [exp] = float . acos <$> getNumber exp
-biACos _     = reportE' "just one argument required"
-
-biATan :: [SExpr] -> Lisp SExpr
-biATan [exp] = float . atan <$> getNumber exp
-biATan _     = reportE' "just one argument required"
-
-biACot :: [SExpr] -> Lisp SExpr
-biACot [exp] = float . acot <$> getNumber exp
-biACot _     = reportE' "just one argument required"
-
-biSinH :: [SExpr] -> Lisp SExpr
-biSinH [exp] = float . sinh <$> getNumber exp
-biSinH _     = reportE' "just one argument required"
-
-biCosH :: [SExpr] -> Lisp SExpr
-biCosH [exp] = float . cosh <$> getNumber exp
-biCosH _     = reportE' "just one argument required"
-
-biASinH :: [SExpr] -> Lisp SExpr
-biASinH [exp] = float . asinh <$> getNumber exp
-biASinH _     = reportE' "just one argument required"
-
-biACosH :: [SExpr] -> Lisp SExpr
-biACosH [exp] = float . acosh <$> getNumber exp
-biACosH _     = reportE' "just one argument required"
-
-biATanH :: [SExpr] -> Lisp SExpr
-biATanH [exp] = float . atanh <$> getNumber exp
-biATanH _     = reportE' "just one argument required"
-
-biACotH :: [SExpr] -> Lisp SExpr
-biACotH [exp] = float . acoth <$> getNumber exp
-biACotH _     = reportE' "just one argument required"
-
-biTruncate :: [SExpr] -> Lisp SExpr
-biTruncate [exp] = int . truncate <$> getNumber exp
-biTruncate _     = reportE' "just one argument required"
-
-biRound :: [SExpr] -> Lisp SExpr
-biRound [exp] = int . round <$> getNumber exp
-biRound _     = reportE' "just one argument required"
-
-biCeiling :: [SExpr] -> Lisp SExpr
-biCeiling [exp] = int . ceiling <$> getNumber exp
-biCeiling _     = reportE' "just one argument required"
-
-biFloor :: [SExpr] -> Lisp SExpr
-biFloor [exp] = int . floor <$> getNumber exp
-biFloor _     = reportE' "just one argument required"
-
-biIsNan :: [SExpr] -> Lisp SExpr
-biIsNan [exp] = bool . isNaN <$> getFloat exp
-biIsNan _     = reportE' "just one argument required"
-
-biIsInfinite :: [SExpr] -> Lisp SExpr
-biIsInfinite [exp] = bool . isInfinite <$> getFloat exp
-biIsInfinite _     = reportE' "just one argument required"
-
-biIsDenormalized :: [SExpr] -> Lisp SExpr
-biIsDenormalized [exp] = bool . isDenormalized <$> getFloat exp
-biIsDenormalized _     = reportE' "just one argument required"
-
-biIsNegativeZero :: [SExpr] -> Lisp SExpr
-biIsNegativeZero [exp] = bool . isNegativeZero <$> getFloat exp
-biIsNegativeZero _     = reportE' "just one argument required"
-
-biIsIEEE :: [SExpr] -> Lisp SExpr
-biIsIEEE [exp] = bool . isIEEE <$> getFloat exp
-biIsIEEE _     = reportE' "just one argument required"
-
-biQuotRem :: [SExpr] -> Lisp SExpr
-biQuotRem [exp1, exp2] = do
+biQuotRem :: IORef Scope -> [SExpr] -> Lisp SExpr
+biQuotRem _ [exp1, exp2] = do
   (quot, rem) <- liftM2 quotRem (getInt exp1) (getInt exp2)
   return $ list [int quot, int rem]
-biQuotRem _            = reportE' "two arguments required"
+biQuotRem _ _            = reportE' "two arguments required"
 
-biDivMod :: [SExpr] -> Lisp SExpr
-biDivMod [exp1, exp2] = do
+biDivMod :: IORef Scope -> [SExpr] -> Lisp SExpr
+biDivMod _ [exp1, exp2] = do
   (div, mod) <- liftM2 divMod (getInt exp1) (getInt exp2)
   return $ list [int div, int mod]
-biDivMod _            = reportE' "two arguments required"
+biDivMod _ _            = reportE' "two arguments required"
 
 builtinFunctions = [("+",              Nothing, biSum)
                    ,("-",              Just 2,  biSubstract)
                    ,("*",              Nothing, biProduct)
                    ,("/",              Just 2,  biDivide)
                    ,("float",          Just 1,  biFloat)
-                   ,("exp",            Just 1,  biExp)
-                   ,("ln",             Just 1,  biLn)
+                   ,("exp",            Just 1,  unaryFunction (fmap (float . exp) . getNumber))
+                   ,("ln",             Just 1,  unaryFunction (fmap (float . log) . getNumber))
                    ,("^",              Just 2,  biPower)
-                   ,("sin",            Just 1,  biSin)
-                   ,("cos",            Just 1,  biCos)
-                   ,("asin",           Just 1,  biASin)
-                   ,("acos",           Just 1,  biACos)
-                   ,("atan",           Just 1,  biATan)
-                   ,("acot",           Just 1,  biACot)
-                   ,("sinh",           Just 1,  biSinH)
-                   ,("cosh",           Just 1,  biCosH)
-                   ,("truncate",       Just 1,  biTruncate)
-                   ,("round",          Just 1,  biRound)
-                   ,("ceiling",        Just 1,  biCeiling)
-                   ,("floor",          Just 1,  biFloor)
-                   ,("nan?",           Just 1,  biIsNan)
-                   ,("infinite?",      Just 1,  biIsInfinite)
-                   ,("denormalized?",  Just 1,  biIsDenormalized)
-                   ,("negative-zero?", Just 1,  biIsNegativeZero)
-                   ,("IEEE?",          Just 1,  biIsIEEE)
+                   ,("sin",            Just 1,  unaryFunction (fmap (float . sin           ) .  getNumber))
+                   ,("cos",            Just 1,  unaryFunction (fmap (float . cos           ) .  getNumber))
+                   ,("asin",           Just 1,  unaryFunction (fmap (float . asin          ) .  getNumber))
+                   ,("acos",           Just 1,  unaryFunction (fmap (float . acos          ) .  getNumber))
+                   ,("atan",           Just 1,  unaryFunction (fmap (float . atan          ) .  getNumber))
+                   ,("acot",           Just 1,  unaryFunction (fmap (float . acot          ) .  getNumber))
+                   ,("sinh",           Just 1,  unaryFunction (fmap (float . sinh          ) .  getNumber))
+                   ,("cosh",           Just 1,  unaryFunction (fmap (float . cosh          ) .  getNumber))
+                   ,("truncate",       Just 1,  unaryFunction (fmap (int   . truncate      ) .  getNumber))
+                   ,("round",          Just 1,  unaryFunction (fmap (int   . round         ) .  getNumber))
+                   ,("ceiling",        Just 1,  unaryFunction (fmap (int   . ceiling       ) .  getNumber))
+                   ,("floor",          Just 1,  unaryFunction (fmap (int   . floor         ) .  getNumber))
+                   ,("nan?",           Just 1,  unaryFunction (fmap (bool  . isNaN         ) .  getFloat))
+                   ,("infinite?",      Just 1,  unaryFunction (fmap (bool  . isInfinite    ) .  getFloat))
+                   ,("denormalized?",  Just 1,  unaryFunction (fmap (bool  . isDenormalized) .  getFloat))
+                   ,("negative-zero?", Just 1,  unaryFunction (fmap (bool  . isNegativeZero) .  getFloat))
+                   ,("IEEE?",          Just 1,  unaryFunction (fmap (bool  . isIEEE        ) .  getFloat))
                    ,("quot-rem",       Just 1,  biQuotRem)
                    ,("div-mod",        Just 1,  biDivMod)]
 

@@ -1,82 +1,111 @@
 module Evaluator where
 
+-- map
 import qualified Data.Map as Map
 import Data.Map (Map)
+
+-- other
 import Data.Maybe (fromJust)
-import Control.Monad (foldM, void)
+import Data.IORef
+import Control.Monad (foldM)
 import Control.Monad.Reader
+
+-- local modules
 import Prototype
 import Point
 import Base
+import Util
 
--- | evaluates a module with the given environment and returns nothing
-evaluateProgram :: Env -> [String] -> [SExpr] -> Lisp ()
-evaluateProgram e args body = void $ expandAndLispScope (setArgs e args) body
+-- | Expand macros and evaluate a list of s-expressions
+expandEvalSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+expandEvalSeq scope = collectMacros scope >=> expandMacros scope >=> evalSeq scope
 
--- | evaluates a module with the given environment
-evaluateModule :: Env -> [SExpr] -> Lisp (Map String EnvItem)
-evaluateModule e body = do
-  (e, _) <- expandAndLispScope e body
-  return $ lexical e
+-- | Evaluate a list of s-expressions
+evalSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+evalSeq scopeRef = mapM (eval scopeRef)
 
--- | expands macros and evaluates a scope
-expandAndLispScope :: Env -> [SExpr] -> Lisp (Env, SExpr)
-expandAndLispScope e sexprs = do
-  (e', sexprs') <- collectMacros (pass e) sexprs
-  sexprs'' <- expandMacros e' sexprs'
-  foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e', nil) sexprs''
+-- | Expand macros and evaluate a list of s-expressions
+-- in a new child scope
+expandEvalAloneSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+expandEvalAloneSeq scope = collectMacros scope >=> expandMacros scope >=> evalAloneSeq scope
 
--- | expands macros and evaluates a scope as if
--- | it is at the same lexical level
-expandAndLispScopeInterpolated :: Env -> [SExpr] -> Lisp (Env, SExpr)
-expandAndLispScopeInterpolated e sexprs = do
-  (e', sexprs') <- collectMacros e sexprs
-  sexprs'' <- expandMacros e' sexprs'
-  foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e', nil) sexprs''
+-- | Evaluate a list of s-expressions, each in a new child scope
+evalAloneSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+evalAloneSeq scope = mapM (evalAlone scope)
 
--- | evaluates a lexical scope
-evalScope :: Env -> [SExpr] -> Lisp (Env, SExpr)
-evalScope e = foldM (\(prevE, _) sexpr -> eval prevE sexpr) (e, nil)
+-- | Expand macros and evaluate a list of s-expressions
+-- all in a new common child scope 
+expandEvalSeqAlone :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+expandEvalSeqAlone scope = collectMacros scope >=> expandMacros scope >=> evalSeqAlone scope
 
--- | evaluates an s-expression writing into call stack
--- | if any function is invoked
-eval :: Env -> SExpr -> Lisp (Env, SExpr)
-eval e l@(SList p (sFirst:args)) = do
-  (_, first) <- eval e sFirst
+-- | Evaluate a list of s-expressions all in a new common child scope
+evalSeqAlone :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+evalSeqAlone scopeRef exps = do
+  childScope <- liftIO $ newLocal scopeRef
+  evalSeq childScope exps
+
+-- | Expand macros and evaluate a list of s-expressions
+-- in a new child scope and return the result of the
+-- last expression
+expandEvalBody :: IORef Scope -> [SExpr] -> Lisp SExpr
+expandEvalBody scope = collectMacros scope >=> expandMacros scope >=> evalBody scope
+
+-- | Evaluate a list of s-expressions
+-- in a new child scope and return
+-- the result of the last expression
+evalBody :: IORef Scope -> [SExpr] -> Lisp SExpr
+evalBody scopeRef exps = do
+  result <- evalSeqAlone scopeRef exps
+  return $ if null result then nil else last result
+
+-- | Evaluate an s-expression in a new child scope
+evalAlone :: IORef Scope -> SExpr -> Lisp SExpr
+evalAlone scope exp = do
+  childScope <- liftIO $ newLocal scope
+  eval childScope exp
+
+-- | Evaluate an s-expression
+eval :: IORef Scope -> SExpr -> Lisp SExpr
+eval scopeRef l@(SList p (sFirst:args)) = do
+  first <- evalAlone scopeRef sFirst
   rethrow (\fail -> if getPoint fail == Undefined
                     then fail { getPoint = point sFirst }
                     else fail) $
     if isProcedure first
     then eval' (fromProcedure first)
     else reportE (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
-  where eval' :: Procedure -> Lisp (Env, SExpr)
+  where eval' :: Procedure -> Lisp SExpr
         eval' pr
           | isUserDefined pr || isBuiltIn pr = do
-              args' <- mapM (return . snd <=< eval e) args
-              add (Call p $ SList p (procedure pr:args')) $ call (point sFirst) e pr args'
+              args' <- evalAloneSeq scopeRef args
+              add (Call p $ SList p (procedure pr:args')) $ call scopeRef (point sFirst) pr args'
           | otherwise                        = -- isSpecialOp
-              add (Call p $ SList p (procedure pr:args)) $ call (point sFirst) e pr args
-eval e (SAtom p (ASymbol "_"))   = reportE p "addressing '_' is forbidden"
-eval e (SAtom p (ASymbol sym))   = case envLookup sym e of
-  Just (EnvSExpr s) -> return (e, setPoint s p)
-  _                 -> reportE p $ "undefined identificator '" ++ sym ++ "'"
-eval e other                     = return (e, other)
+              add (Call p $ SList p (procedure pr:args)) $ call scopeRef (point sFirst) pr args
+eval _ (SAtom p (ASymbol "_"))          = reportE p "addressing '_' is forbidden"
+eval scopeRef (SAtom p (ASymbol sym))   = do
+  result <- liftIO $ exploreIORefIO scopeRef (scLookupS sym)
+--  when (sym == "flip") $
+--    liftIO $ printScope =<< readIORef scopeRef
+  case result of
+    Just s -> return $ setPoint p s
+    _      -> reportE p $ "undefined identificator '" ++ sym ++ "'"
+eval _ other                            = return other
 
 -- | Create bindings from a function prototype and
 -- | and the actual arguments
-bindArgs :: Prototype -> [SExpr] -> Lisp (Map String EnvItem)
+bindArgs :: Prototype -> [SExpr] -> Lisp (Map String Binding)
 bindArgs (Prototype argNames optNames Nothing) args
   | length args > l1 + l2 = reportE' "too many arguments"
   | length args < l1      = reportE' "too little arguments"
-  | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (map EnvSExpr $ args ++ repeat nil)
+  | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (map BSExpr $ args ++ repeat nil)
     where l1 = length argNames
           l2 = length optNames
 bindArgs (Prototype argNames optNames rest) args
   | l < l1      = reportE' "too little arguments"
-  | l < l1 + l2 = return . Map.fromList $ zip names (map EnvSExpr $ args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
+  | l < l1 + l2 = return . Map.fromList $ zip names (map BSExpr $ args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
   | otherwise   = let (left, right) = splitAt (l1 + l2) args
                       args'         = left ++ [list right]
-                  in return $ Map.fromList $ zip names (map EnvSExpr args')
+                  in return $ Map.fromList $ zip names (map BSExpr args')
   where restName = case fromJust rest of
           Rest x -> x
           Body x -> x
@@ -134,75 +163,73 @@ parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< get
         parseLambdaList' PLLEnd _         (x:xs)  = reportE (point x) "nothing expected at the end of the lambda list"
 
 -- | invokes a macro with the given environment and arguments
-callMacro :: Env -> Macro -> [SExpr] -> Lisp SExpr
-callMacro e (Macro p localE prototype sexprs) args = do
-  argBindings <- bindArgs prototype args
-  (_, evaluated) <- expandAndLispScope (lappend (pass localE) argBindings) sexprs
-  return $ setPoint evaluated p
+callMacro :: Macro -> [SExpr] -> Lisp SExpr
+callMacro (Macro p localScope prototype exps) args = do
+  bindings <- bindArgs prototype args
+  childScope <- liftIO $ newLocal' bindings localScope
+  setPoint p <$> expandEvalBody childScope exps
 
--- | takes a scope and evaluates all top-level
--- | defmacros in it
-collectMacros :: Env -> [SExpr] -> Lisp (Env, [SExpr])
-collectMacros e = foldM (\(accE, accSexprs) sexpr -> do
-                            defmacro <- parseDefmacro accE sexpr
-                            return $ case defmacro of
-                              Just (name, macro) -> (linsert name (EnvMacro macro) accE, accSexprs)
-                              Nothing            -> (accE, accSexprs ++ [sexpr]))
-                  (e, [])
+-- | Take a scope and evaluate all top-level
+-- defmacros in it, return the remaining s-expressions
+collectMacros :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+collectMacros scopeRef = foldM (\acc sexpr -> do
+                                   defmacro <- parseDefmacro scopeRef sexpr
+                                   case defmacro of
+                                     Just (name, macro) -> do liftIO $ modifyIORef scopeRef $ scInsert name (BMacro macro)
+                                                              return acc
+                                     Nothing            -> return $ acc ++ [sexpr])
+                         []
 
--- | expands all top-level macros
-expandMacros :: Env -> [SExpr] -> Lisp [SExpr]
-expandMacros e (x:xs) = do
-  expr <- expandMacro e x
-  rest <- expandMacros e xs
-  return (expr : rest)
-expandMacros _ []     = return []
+-- | Expand all macros in a scope
+expandMacros :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+expandMacros scope = mapM (expandMacro scope)
 
 data EMState = Default | Backquote
 
--- | expands one macro expression recursively
-expandMacro :: Env -> SExpr -> Lisp SExpr
-expandMacro = expandMacro' Default
-  where expandMacro' :: EMState -> Env -> SExpr -> Lisp SExpr
-        expandMacro' Default e l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
+-- | Expand one macro expression recursively
+expandMacro :: IORef Scope -> SExpr -> Lisp SExpr
+expandMacro scopeRef = expandMacro' Default
+  where expandMacro' :: EMState -> SExpr -> Lisp SExpr
+        expandMacro' Default l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
           | sym == "quote"       = return l
           | sym == "backquote"   = do
-              rest' <- mapM (expandMacro' Backquote e) rest
+              rest' <- mapM (expandMacro' Backquote) rest
               return $ SList p (first:rest')
-          | sym == "interpolate" = reportE p "calling out of backquote"
-          | otherwise = case lookupMacro (fromSymbol first) e of
-              Just m  -> do
-                expr <- callMacro e m rest
-                expandMacro' Default e expr
-              Nothing -> do
-                list' <- mapM (expandMacro' Default e) (first:rest)
-                return $ SList p list'
-        expandMacro' Default e l@(SList p (first:rest)) = do
-          first' <- expandMacro' Default e first
+          | sym == "interpolate" = reportE p "calling 'interpolate' out of backquote"
+          | otherwise = do
+              result <- liftIO $ exploreIORefIO scopeRef (scLookupM sym)
+              case result of
+                Just m  -> do
+                  expr <- callMacro m rest
+                  expandMacro' Default expr
+                Nothing -> do
+                  list' <- mapM (expandMacro' Default) (first:rest)
+                  return $ SList p list'
+        expandMacro' Default l@(SList p (first:rest)) = do
+          first' <- expandMacro' Default first
           if isSymbol first'
-            then expandMacro' Default e $ SList p (first':rest)
+            then expandMacro' Default $ SList p (first':rest)
             else do
-              rest' <- mapM (expandMacro' Default e) rest
+              rest' <- mapM (expandMacro' Default) rest
               return $ SList p (first':rest')
-        expandMacro' Default _ other                    = return other
-        expandMacro' Backquote e l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
+        expandMacro' Default other                    = return other
+        expandMacro' Backquote l@(SList p (first@(SAtom _ (ASymbol sym)):rest))
           | sym == "interpolate" = do
-              rest' <- mapM (expandMacro' Default e) rest
+              rest' <- mapM (expandMacro' Default) rest
               return $ SList p (first:rest')
           | otherwise            = return l
-        expandMacro' Backquote _ other = return other
+        expandMacro' Backquote other = return other
 
--- | parses a defmacro expression
-parseDefmacro :: Env -> SExpr -> Lisp (Maybe (String, Macro))
-parseDefmacro e (SList p (SAtom defmacroPoint (ASymbol "defmacro"):name:lambdaList:body))
-  | not $ isSymbol name = reportE (point name) "string expected"
-  | otherwise           = do
-      prototype <- parseLambdaList lambdaList
-      return $ Just (fromSymbol name, Macro p e prototype body)
+-- | Parse a defmacro expression
+parseDefmacro :: IORef Scope -> SExpr -> Lisp (Maybe (String, Macro))
+parseDefmacro scopeRef (SList p (SAtom defmacroPoint (ASymbol "defmacro"):sName:lambdaList:body)) = do
+  name <- getSymbol sName
+  prototype <- parseLambdaList lambdaList
+  return $ Just (name, Macro p scopeRef prototype body)
 parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = reportE p "at least two arguments required"
 parseDefmacro _ _                                          = return Nothing
 
--- | binds arguments to a procedure
+-- | Bind arguments to a procedure or special operator
 bind :: Procedure -> [SExpr] -> Lisp Procedure
 bind (UserDefined scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
   return $ UserDefined scope prototype sexprs (bound ++ args)
@@ -219,19 +246,12 @@ bind (SpecialOp name (Just argsCount) f bound) args
   | otherwise                                 = return $ SpecialOp name (Just argsCount) f (bound ++ args)
 bind (SpecialOp name Nothing f bound) args = return $ SpecialOp name Nothing f (bound ++ args)
 
--- | calls a procedure or special operator
-call :: Point -> Env -> Procedure -> [SExpr] -> Lisp (Env, SExpr)
-call p e c args = do
-  (e', exp) <- call' e c args
-  return (e', setPoint exp p)
-    where call' :: Env -> Procedure -> [SExpr] -> Lisp (Env, SExpr)
-          call' e (UserDefined localE prototype sexprs bound) args = do
-            argBindings <- bindArgs prototype (bound ++ args)
-            (_, expr) <- evalScope (lappend localE argBindings) sexprs
-            return (e, expr)
-          call' e (BuiltIn name _ f bound) args = do
-            result <- f (bound ++ args)
-            return (e, result)
-          call' e (SpecialOp name _ f bound) args = do
-            (e', expr) <- f e (bound ++ args)
-            return (e', expr)
+-- | Call a procedure or special operator
+call :: IORef Scope -> Point -> Procedure -> [SExpr] -> Lisp SExpr
+call scopeRef p pr args = fmap (setPoint p) $ case pr of
+  UserDefined localScope prototype exps bound -> do
+    bindings <- bindArgs prototype (bound ++ args)
+    childScope <- liftIO $ newLocal' bindings localScope
+    evalBody childScope exps
+  BuiltIn _ _ f bound                         -> f scopeRef (bound ++ args)
+  SpecialOp _ _ f bound                       -> f scopeRef (bound ++ args)

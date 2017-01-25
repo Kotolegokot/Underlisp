@@ -1,10 +1,10 @@
+;; (defineq name [value])
+(defmacro defineq (name &optional value)
+  `(define '~name ~value))
+
 ;; (setq name value)
 (defmacro setq (name value)
   `(set '~name ~value))
-
-;; (mutateq name value)
-(defmacro mutateq (name value)
-  `(mutate '~name ~value))
 
 ;; (defq? name)
 (defmacro defq? (name)
@@ -14,16 +14,9 @@
 (defmacro undefq (name)
   `(undef '~name))
 
-;; (flet ([name lambda-list function-body*]*) flet-body*)
-(defmacro flet (list &body body)
-  `(let ~(map 'list (lambda (item)
-		      `(~(head item) (lambda @(tail item))))
-	      list)
-	@body))
-
 ;; (setq name lambda-list body)
 (defmacro defun (name lambda-list &body body)
-  `(setq ~name (lambda ~lambda-list @body)))
+  `(defineq ~name (lambda ~lambda-list @body)))
 
 ;; (when true-condition body)
 (defmacro when (cond &body body)
@@ -36,26 +29,13 @@
 ;; (cond (condition1 exp1) (condition2 exp2) ...)
 (defmacro cond (&body pairs)
   (if (empty? pairs)
-      ()
+      nil
     `(if ~(head (head pairs))
        ~(head (tail (head pairs)))
        (cond @(tail pairs)))))
 
-;; (import-module module-name)
-(defmacro import-module (filename)
-  `(import-env (env-from-file ~filename)))
-
-;; (load-module module-name)
-(defmacro load-module (filename)
-  `(load-env (env-from-file ~filename)))
-
-;; (load-module-no-prelude module-name)
-(defmacro load-module-no-prelude (filename)
-  `(load-env
-    (env-from-file-no-prelude ~filename)))
-
 ;; otherwise is used with `cond` macro
-(setq otherwise true)
+(defineq otherwise true)
 
 ;; not equal
 (defun /= (x y)
@@ -104,10 +84,10 @@
 (defun nil? (x)
   (= x nil))
 
-;; prints error if ex is false
-(defmacro assert (cond)
-  `(unless ~cond
-     (write '~cond)
+;; prints error if condition is false
+(defmacro assert (condition)
+  `(unless ~condition
+     (write '~condition)
      (put-char #newline)
      (error "assert failed")))
 
@@ -121,9 +101,9 @@
 (defun reverse (xs)
   (contract xs list?)
   (if (empty? xs)
-      '()
-    (append (reverse (tail xs))
-            (list (head xs)))))
+      ()
+      (append (reverse (tail xs))
+	      (list (head xs)))))
 
 (defun length (xs)
   (contract xs list?)
@@ -138,8 +118,8 @@
   (if (empty? xs)
       (error "init: empty list")
     (if (= 1 (length xs))
-            '()
-      (prepend (head xs) (init (tail xs))))))
+	()
+	(prepend (head xs) (init (tail xs))))))
 
 (defun last (xs)
   (contract xs list?)
@@ -153,10 +133,10 @@
   (contract f procedure?)
   (contract xs sequence?)
   (let ((xs' (->list xs))
-	(map' (lambda (xs)
-		 (if (empty? xs)
-		     ()
-		     (prepend (f (nth 0 xs)) (tail xs))))))
+	(map' (xs)
+	  (if (empty? xs)
+	      ()
+	      (prepend (f (head xs)) (map' (tail xs))))))
     (->seq t (map' xs'))))
 
 (defun map-list (f xs)
@@ -193,18 +173,18 @@
   (contract xs list?)
   (contract ys list?)
   (if (or (empty? xs) (empty? ys))
-      '()
-    (prepend (list (head xs) (head ys))
-             (zip (tail xs) (tail ys)))))
+      ()
+      (prepend (list (head xs) (head ys))
+	       (zip (tail xs) (tail ys)))))
 
 (defun zip-with (f xs ys)
   (contract f procedure?)
   (contract xs list?)
   (contract ys list?)
   (if (or (empty? xs) (empty? ys))
-      '()
-    (prepend (f (head xs) (head ys))
-             (zip-with f (tail xs) (tail ys)))))
+      ()
+      (prepend (f (head xs) (head ys))
+	       (zip-with f (tail xs) (tail ys)))))
 
 (defun elem (y xs)
   (contract xs list?)
@@ -214,10 +194,10 @@
   (contract p procedure?)
   (contract xs list?)
   (if (empty? xs)
-      '()
-    (if (p (head xs))
-        (prepend (head xs) (filter p (tail xs)))
-      (filter p (tail xs)))))
+      ()
+      (if (p (head xs))
+	  (prepend (head xs) (filter p (tail xs)))
+	  (filter p (tail xs)))))
 
 (defun all (p xs)
   (contract p procedure?)
@@ -233,10 +213,10 @@
   (contract p procedure?)
   (contactt xs list?)
   (if (empty? xs)
-      ()
+      nil
     (if (p (head xs))
         (head xs)
-      (find (p (tail xs))))))
+	(find (p (tail xs))))))
 
 (defun take (n xs)
   (contract n int?)
@@ -245,8 +225,8 @@
         ((< n 0)           (error "take: negative number"))
         (otherwise
          (if (= n 0)
-             '()
-           (prepend (head xs) (take (- n 1) (tail xs)))))))
+             ()
+	     (prepend (head xs) (take (- n 1) (tail xs)))))))
 
 (defun drop (n xs)
   (contract n int?)
@@ -264,20 +244,31 @@
     (list a b)))
 
 (defmacro case (expr &body pairs)
-  (defun handle-pairs (expr-var pairs)
-    (if (empty? pairs)
-        ()
-      (let ((first (head pairs)))
-        (append
-         (list (if (empty? (tail first))
-		   `(true ~(head first))
-		   `((= ~expr-var ~(head first))
-		     (seq @(tail first)))))
-         (handle-pairs expr-var (tail pairs))))))
-
-  (let ((expr-var (gensym)))
+  (let ((handle-pairs (expr-var pairs)
+	  (if (empty? pairs)
+	      ()
+	      (let ((first (head pairs)))
+		(append
+		 (list (if (empty? (tail first))
+			   `(true ~(head first))
+			   `((= ~expr-var ~(head first))
+			     (seq @(tail first)))))
+		 (handle-pairs expr-var (tail pairs))))))
+	(expr-var (gensym)))
     `(let ((~expr-var ~expr))
        (cond @(handle-pairs expr-var pairs)))))
+
+(defmacro let* (pairs &body body)
+  (let ((let*' (pairs &body body)
+	  (cond ((empty? pairs)
+		 `(scope @body))
+		((empty? (tail pairs))
+		 `(let (~(head pairs))
+		    @body))
+		(true
+		 `(let (~(head pairs))
+		    ~(apply let*' (tail pairs) body))))))
+    (apply let*' pairs body)))
 
 (defun newline ()
   (put-char #newline))
@@ -395,8 +386,8 @@
           (e2 (nth 1 list)))
       (cons e1 (f e2)))))
 
-(setq pi  3.14159265359)
-(setq e   2.71828182845)
+(defineq pi 3.14159265359)
+(defineq e  2.71828182845)
 
 ;; cosecant
 (defun csc (x)
@@ -548,8 +539,8 @@
 	('LT -1)
 	('GT 1)))
 
-(setq succ [+ 1])
-(setq pred [(flip -) 1])
+(defineq succ [+ 1])
+(defineq pred [(flip -) 1])
 
 (defun abs (x)
   (contract x number?)

@@ -10,10 +10,12 @@ import Data.Vector (Vector)
 
 -- other
 import qualified Control.Conditional as C
+import Data.IORef
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Applicative ((<|>))
 import Control.Arrow
+import Control.Exception (Exception)
 import System.IO (hPrint, stderr)
 import Data.Maybe
 import Text.Read (readMaybe)
@@ -65,9 +67,9 @@ point :: SExpr -> Point
 point (SList p _) = p
 point (SAtom p _) = p
 
-setPoint :: SExpr -> Point -> SExpr
-setPoint (SList _ xs) p = SList p xs
-setPoint (SAtom _ a)  p = SAtom p a
+setPoint :: Point -> SExpr -> SExpr
+setPoint p (SList _ xs) = SList p xs
+setPoint p (SAtom _ a)  = SAtom p a
 
 instance Eq SExpr where
   SList _ s == SList _ s' = s == s'
@@ -167,7 +169,7 @@ fromProcedure :: SExpr -> Procedure
 fromProcedure (SAtom _ (AProcedure c)) = c
 fromProcedure _                       = undefined
 
-fromEnv :: SExpr -> Map String EnvItem
+fromEnv :: SExpr -> Map String Binding
 fromEnv (SAtom _ (AEnv e)) = e
 fromEnv _                  = undefined
 
@@ -213,7 +215,7 @@ getVector = unpackSExpr fromVector "vector"
 getProcedure :: SExpr -> Lisp Procedure
 getProcedure = unpackSExpr fromProcedure "procedure"
 
-getEnv :: SExpr -> Lisp (Map String EnvItem)
+getEnv :: SExpr -> Lisp (Map String Binding)
 getEnv = unpackSExpr fromEnv "env"
 
 getSequence :: SExpr -> Lisp [SExpr]
@@ -246,7 +248,7 @@ vector = atom . AVector
 procedure :: Procedure -> SExpr
 procedure = atom . AProcedure
 
-env :: Map String EnvItem -> SExpr
+env :: Map String Binding -> SExpr
 env = atom . AEnv
 ---- s-expression ----
 
@@ -259,7 +261,7 @@ data Atom = ANil
           | ASymbol    String
           | AVector    (Vector SExpr)
           | AProcedure Procedure
-          | AEnv       (Map String EnvItem)
+          | AEnv       (Map String Binding)
 
 instance Eq Atom where
   ANil           == ANil           = True
@@ -331,7 +333,7 @@ strToAtom atom
 ---- atom ----
 
 ---- macro ----
-data Macro = Macro Point Env Prototype [SExpr]
+data Macro = Macro Point (IORef Scope) Prototype [SExpr]
 
 instance Eq Macro where
   (==) = undefined
@@ -341,9 +343,9 @@ instance Show Macro where
 ---- macro ----
 
 ---- procedure ----
-data Procedure = UserDefined Env Prototype [SExpr] [SExpr]
-               | BuiltIn     String (Maybe Int) ([SExpr] -> Lisp SExpr) [SExpr]
-               | SpecialOp   String (Maybe Int) (Env -> [SExpr] -> Lisp (Env, SExpr)) [SExpr]
+data Procedure = UserDefined (IORef Scope) Prototype [SExpr] [SExpr]
+               | BuiltIn     String (Maybe Int) (IORef Scope -> [SExpr] -> Lisp SExpr) [SExpr]
+               | SpecialOp   String (Maybe Int) (IORef Scope -> [SExpr] -> Lisp SExpr) [SExpr]
 
 isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
 
@@ -357,164 +359,165 @@ isSpecialOp SpecialOp {} = True
 isSpecialOp _            = False
 
 instance Show Procedure where
-  show UserDefined {}  = "#<procedure>"
+  show UserDefined {}         = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<special operator:" ++ name ++ ">"
 ---- procedure ----
 
----- environment ----
-data Env = Env Int [String] [Map String EnvItem]
+---- scope ----
+data Scope = Scope { getBindings :: Map String Binding
+                   , getG        :: Int
+                   , getCmdArgs  :: [String]
+                   , getImports  :: [IORef Scope] }
 
-data EnvItem = EnvSExpr SExpr | EnvMacro Macro
+data Binding = BSExpr SExpr | BMacro Macro
   deriving Eq
 
-instance Show EnvItem where
-  show (EnvSExpr sexpr) = show sexpr
-  show (EnvMacro macro) = show macro
+instance Show Binding where
+  show (BSExpr exp)   = show exp
+  show (BMacro macro) = show macro
 
-getG :: Env -> Int
-getG (Env g _ _) = g
+modifyBindings :: (Map String Binding -> Map String Binding) -> Scope -> Scope
+modifyBindings f scope = scope { getBindings = f $ getBindings scope }
 
-setG :: Env -> Int -> Env
-setG (Env _ args xs) g = Env g args xs
+modifyG :: (Int -> Int) -> Scope -> Scope
+modifyG f scope = scope { getG = f $ getG scope }
 
-getArgs :: Env -> [String]
-getArgs (Env _ args _) = args
+modifyCmdArgs :: ([String] -> [String]) -> Scope -> Scope
+modifyCmdArgs f scope = scope { getCmdArgs = f $ getCmdArgs scope }
 
-setArgs :: Env -> [String] -> Env
-setArgs (Env g _ xs) args = Env g args xs
+modifyImports :: ([IORef Scope] -> [IORef Scope]) -> Scope -> Scope
+modifyImports f scope = scope { getImports = f $ getImports scope }
 
-instance Show Env where
-  show (Env _ _ xs) = foldr (\(level, map) acc -> acc ++ "level " ++ show level ++ ":\n" ++ show map ++ "\n")
-                      ""
-                      (zip [1..] xs)
+newGlobal :: [String] -> Scope
+newGlobal = newGlobal' Map.empty
 
-empty :: Env
-empty = Env 0 [] [Map.empty]
+newGlobal' :: Map String Binding -> [String] -> Scope
+newGlobal' bindings args = Scope { getBindings = bindings
+                                 , getG        = 0
+                                 , getCmdArgs  = args
+                                 , getImports  = [] }
 
-envFromList :: [(String, EnvItem)] -> Env
-envFromList l = Env 0 [] [Map.fromList l]
+newLocal :: IORef Scope -> IO (IORef Scope)
+newLocal = newLocal' Map.empty
 
-pass :: Env -> Env
-pass (Env g args xs) = Env g args (Map.empty : xs)
+newLocal' :: Map String Binding -> IORef Scope -> IO (IORef Scope)
+newLocal' bindings parentRef = do
+  g <- exploreIORef parentRef getG
+  cmdArgs <- exploreIORef parentRef getCmdArgs
+  newIORef Scope { getBindings = bindings
+                 , getG        = g
+                 , getCmdArgs  = cmdArgs
+                 , getImports  = [parentRef] }
 
-envLookup :: String -> Env -> Maybe EnvItem
-envLookup key (Env g args (x:xs)) = case Map.lookup key x of
-  Just value -> Just value
-  _          -> envLookup key (Env g args xs)
-envLookup _   (Env _ _    [])     = Nothing
+isGlobal :: Scope -> Bool
+isGlobal = null . getImports
 
-lookupMacro :: String -> Env -> Maybe Macro
-lookupMacro key (Env g args (x:xs)) = case Map.lookup key x of
-  Just (EnvMacro m) -> Just m
-  _                 -> lookupMacro key (Env g args xs)
-lookupMacro _   (Env _ _    [])     = Nothing
+isChild :: Scope -> Bool
+isChild = not . isGlobal
 
-lookupSExpr :: String -> Env -> Maybe SExpr
-lookupSExpr key (Env g args (x:xs)) = case Map.lookup key x of
-  Just (EnvSExpr s) -> Just s
-  _                 -> lookupSExpr key (Env g args xs)
-lookupSExpr _   (Env _ _    [])     = Nothing
+-- | Return the first encountered (Just _), never touch the rest.
+maybeOrM :: [IO (Maybe a)] -> IO (Maybe a)
+maybeOrM (x:xs) = do
+  x' <- x
+  if isJust x'
+    then return x'
+    else maybeOrM xs
+maybeOrM []     = return Nothing
 
-memberMacro :: String -> Env -> Bool
-memberMacro key e = isJust $ lookupMacro key e
+scLookup :: String -> Scope -> IO (Maybe Binding)
+scLookup key scope = case Map.lookup key (getBindings scope) of
+                       Just value -> return $ Just value
+                       Nothing    -> let imports = map readIORef $ getImports scope
+                                         lookups = map (scLookup key =<<) imports
+                                     in maybeOrM lookups
 
-memberSExpr :: String -> Env -> Bool
-memberSExpr key e = isJust $ lookupSExpr key e
+scLookupM :: String -> Scope -> IO (Maybe Macro)
+scLookupM key scope = case Map.lookup key (getBindings scope) of
+                        Just (BMacro m) -> return $ Just m
+                        _               -> let imports = map readIORef $ getImports scope
+                                               lookups = map (scLookupM key =<<) imports
+                                           in maybeOrM lookups
 
-envMember :: String -> Env -> Bool
-envMember key (Env _ _ xs) = key `Map.member` Map.unions xs
+scLookupS :: String -> Scope -> IO (Maybe SExpr)
+scLookupS key scope = case Map.lookup key (getBindings scope) of
+                        Just (BSExpr exp) -> return $ Just exp
+                        _                 -> let imports = map readIORef $ getImports scope
+                                                 lookups = map (scLookupS key =<<) imports
+                                             in maybeOrM lookups
 
-envDelete :: String -> Env -> Env
-envDelete key (Env g args xs) = Env g args $ map (Map.delete key) xs
+scMember :: String -> Scope -> IO Bool
+scMember key = fmap isJust . scLookup key
 
-envMerge :: Env -> Map String EnvItem
-envMerge (Env _ _ xs) = Map.unions xs
+scMemberM :: String -> Scope -> IO Bool
+scMemberM key = fmap isJust . scLookupM key
 
-linsert :: String -> EnvItem -> Env -> Env
-linsert key value (Env g args (x:xs)) = Env g args (x' : xs)
-  where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (linsert key value e) prototype sexprs
-                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (linsert key value e) prototype sexprs bound
-                      EnvSExpr other
-                        -> EnvSExpr other)
-             (Map.insert key value x)
-linsert _  _      _                   = undefined
+scMemberS :: String -> Scope -> IO Bool
+scMemberS key = fmap isJust . scLookupS key
 
-xinsert :: String -> EnvItem -> Env -> Env
-xinsert key value (Env g args (x:xs)) = Env g args (x' : ext : xs)
-  where ext = Map.fromList [(key, value)]
-        x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (xinsert key value e) prototype sexprs
-                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xinsert key value e) prototype sexprs bound
-                      EnvSExpr other
-                        -> EnvSExpr other)
-             x
-xinsert _   _     _                   = undefined
+scDelete :: String -> Scope -> IO Scope
+scDelete key scope = do
+  mapM_ (scDelete key <=< readIORef) $ getImports scope
+  return scope { getBindings = Map.delete key (getBindings scope) }
 
-lappend :: Env -> Map String EnvItem -> Env
-lappend (Env g args (x:xs)) add = Env g args (x' : xs)
-  where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (lappend e add) prototype sexprs
-                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (lappend e add) prototype sexprs bound
-                      EnvSExpr other
-                        -> EnvSExpr other)
-             (add `Map.union` x)
-lappend _                   _   = undefined
+scInsert :: String -> Binding -> Scope -> Scope
+scInsert key value scope = scope { getBindings = Map.insert key value (getBindings scope) }
 
-xappend :: Env -> Map String EnvItem -> Env
-xappend (Env g args (x:xs)) add = Env g args (x' : add : xs)
-  where x' = fmap (\case
-                      EnvMacro (Macro p e prototype sexprs)
-                        -> EnvMacro $ Macro p (xappend e add) prototype sexprs
-                      EnvSExpr (SAtom p (AProcedure (UserDefined e prototype sexprs bound)))
-                        -> EnvSExpr . SAtom p . AProcedure $ UserDefined (xappend e add) prototype sexprs bound
-                      EnvSExpr other
-                        -> EnvSExpr other)
-             x
-xappend _                   _   = undefined
+scAppend :: Map String Binding -> Scope -> Scope
+scAppend add scope = scope { getBindings = Map.union add (getBindings scope) }
 
-lexical :: Env -> Map String EnvItem
-lexical (Env _ _ (x:_ )) = x
-lexical _                = undefined
+-- TODO: fix it, because it barely works
+scSet :: String -> Binding -> Scope -> IO Scope
+scSet key value scope = case Map.lookup key (getBindings scope) of
+  Just  _ -> return $ scInsert key value scope
+  Nothing -> scSet' (getImports scope) >> return scope
+    where scSet' (x:xs) = do
+            scope <- readIORef x
+            case Map.lookup key (getBindings scope) of
+              Just _  -> void $ scSet key value scope
+              Nothing -> scSet' xs
+          scSet' []     = return ()
 
-external :: Env -> Map String EnvItem
-external (Env _ _ (_:xs)) = Map.unions xs
-external _                = undefined
+instance Show Scope where
+  show (Scope bindings g cmdArgs imports) = "#<scope: bindings: " ++ showBindings bindings ++
+                                            "\n                g: " ++ show g ++
+                                            "\n          cmdArgs: " ++ show cmdArgs ++
+                                            "\n          imports: " ++ show (length imports) ++ ">"
+    where showBindings = Map.foldMapWithKey (\key value -> "\n(" ++ show key ++ " " ++ show value ++ ")")
 
----- environment ----
+{-showScope :: Scope -> IO String
+showScope scope = case getParent scope of
+  Just parent -> do begin <- showScope =<< readIORef parent
+                    return $ begin ++ "\n" ++ show scope
+  Nothing     -> return $ show scope
 
----- eval ---
+printScope :: Scope -> IO ()
+printScope = putStrLn <=< showScope-}
+---- scope ----
+
+---- lisp monad ---
 type Lisp = ExceptT Fail (ReaderT [Call] IO)
 
 runLisp :: Lisp a -> IO (Either Fail a)
-runLisp = (flip runReaderT []) . runExceptT
+runLisp = flip runReaderT [] . runExceptT
 
 forwardExcept :: MonadError Fail m => Except Fail a -> m a
 forwardExcept m = case runExcept m of
   Left fail -> throwError fail
   Right val -> return val
 
-handleLisp :: Lisp a -> IO ()
-handleLisp ev = do
-  result <- runLisp ev
-  case result of
-    Right _ -> return ()
-    Left f  -> hPrint stderr f
+handleLisp ::  Lisp a -> IO ()
+handleLisp = runLisp >=> \case
+  Right _ -> return ()
+  Left  f -> hPrint stderr f
 
 add :: Call -> Lisp a -> Lisp a
 add call = local (call:)
----- eval ----
+---- lisp monad ----
 
 ---- call ----
-data Call = Call { cPoint  :: Point
-                 , cExpr   :: SExpr }
+data Call = Call { cPoint :: Point
+                 , cExpr  :: SExpr }
 
 instance Show Call where
   show (Call point expr) = show point ++ ": " ++ show expr
@@ -531,6 +534,8 @@ data Fail = ReadFail { getPoint :: Point
           | EvalFail { getPoint :: Point
                      , getMsg :: String
                      , getStack :: [Call] }
+
+instance Exception Fail
 
 instance Show Fail where
   show (ReadFail Undefined msg) = msg

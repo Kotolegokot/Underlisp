@@ -3,10 +3,10 @@ module Prototype where
 data Rest = Rest String | Body String
   deriving (Show, Eq)
 
--- | arguments, body|rest|nothing, optional|nothing
-data Prototype = Prototype { getArgs :: [String]
+-- | Ordinary arguments, optional arguments, &rest/&body
+data Prototype = Prototype { getArgs     :: [String]
                            , getOptional :: [String]
-                           , getRest :: Maybe Rest }
+                           , getRest     :: Maybe Rest }
   deriving Eq
 
 instance Show Prototype where

@@ -1,0 +1,20 @@
+(defun report-result (result form)
+  "Report the result of a single test."
+  (print "~s ... ~a~%" (if result "pass" "FAIL") form)
+  result)
+
+(defmacro combine-results (&body forms)
+  "Combine the results of evaluating 'forms' in order."
+  (let ((result-var (gensym)))
+    `(let ((~result-var true))
+       @(map-list (lambda (form)
+		    `(unless ~form (setq ~result-var false)))
+		  forms)
+       ~result-var)))
+
+(defmacro check (&body forms)
+  "Run each expression in 'forms' as a test case."
+  `(combine-results
+    @(map-list (lambda (form)
+		 `(report-result ~form '~form))
+	       forms)))

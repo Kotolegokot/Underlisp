@@ -2,115 +2,116 @@ module Interpreter (interpreteProgram
                    ,interpreteModule
                    ,repl) where
 
+-- map
+import qualified Data.Map as Map
+import Data.Map (Map)
+
+-- other
+import Data.IORef
+import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad (unless, void)
+import Control.Monad (unless)
 import System.Console.Readline
 import System.IO
-import Data.Map (Map)
+
+-- locale modules
 import qualified Reader as R
 import qualified Evaluator as E
 import Lib.Everything
 import Base
 import Point
+import Util
 
 preludePath :: String
 preludePath = "stdlib/prelude.unlisp"
 
--- | a lisp interpretator is just a reader and evaluator joined together
+-- | A lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
-interpreteProgram prelude filename args = handleLisp $ do
-  e <- loadEnv prelude
-  text <- liftIO $ readFile filename
-  read <- forwardExcept $ R.read (startPoint filename) text
-  E.evaluateProgram e args read
+interpreteProgram prelude filename args = do
+  scopeRef <- loadEnv prelude
+  modifyIORef scopeRef (modifyCmdArgs $ const args)
+  text <- readFile filename
+  handleLisp $ do
+    exps <- forwardExcept $ R.read (startPoint filename) text
+    E.expandEvalBody scopeRef exps
 
--- | interpretes a module and returns its lexical scope
-interpreteModule :: Bool -> String -> Lisp (Map String EnvItem)
+-- | Interprete a module and returns its lexical scope
+interpreteModule :: Bool -> String -> Lisp (IORef Scope)
 interpreteModule prelude filename = do
-  e <- loadEnv prelude
+  scope <- liftIO $ loadEnv prelude
   text <- liftIO $ readFile filename
-  read <- forwardExcept $ R.read (startPoint filename) text
-  E.evaluateModule e read
-
+  childScope <- liftIO $ newLocal scope
+  exps <- forwardExcept $ R.read (startPoint filename) text
+  E.expandEvalSeq childScope exps
+  return childScope
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
-repl prelude = void $ runLisp $ do
-  e <- loadEnv prelude
-  liftIO $ handleLines (startPoint "<repl>") e
-    where handleLines :: Point -> Env -> IO ()
-          handleLines p e = do
+repl prelude = do
+  scope <- loadEnv prelude
+  childScope <- newLocal scope
+  handleLines (startPoint "<REPL>") childScope
+    where handleLines :: Point -> IORef Scope -> IO ()
+          handleLines p scopeRef = do
             line <- readline $ "[" ++ show (pRow p) ++ "]> "
 
             case line of
               Just line -> do
                 unless (null line) $ addHistory line
                 result <- runLisp $ do
-                  read <- forwardExcept $ R.read p line
-                  E.expandAndLispScopeInterpolated e read
+                  exps <- forwardExcept $ R.read p line
+                  result <- E.expandEvalSeq scopeRef exps
+                  return $ if null result then nil else last result
 
-                (e', expr) <- case result of
-                  Right val -> return (val :: (Env, SExpr))
+                exp <- case result of
+                  Right val -> return val
                   Left  f   -> do
                     hPrint stderr f
-                    return (e, nil)
+                    return nil
 
-                unless (isNil expr) (putStrLn $ "=> " ++ show expr)
-                handleLines (forwardRow p) (linsert "it" (EnvSExpr expr) e')
+                unless (isNil exp) (putStrLn $ "=> " ++ show exp)
+                modifyIORef scopeRef (scInsert "it" $ BSExpr exp)
+                handleLines (forwardRow p) scopeRef
               Nothing   -> putStrLn "Bye!"
 
--- | loads start environment
--- | no prelude if the first argument is false
-loadEnv :: Bool -> Lisp Env 
+-- | Load start environment.
+-- No prelude if the first argument is false
+loadEnv :: Bool -> IO (IORef Scope)
 loadEnv True  = loadPrelude
-loadEnv False = return startEnv
+loadEnv False = newIORef $ newGlobal' startEnv []
 
 -- | loads prelude and start environment
-loadPrelude :: Lisp Env
+loadPrelude :: IO (IORef Scope)
 loadPrelude = do
-  text <- liftIO (readFile preludePath)
-  read <- forwardExcept $ R.read (startPoint preludePath) text
-  (e, _) <- E.expandAndLispScope startEnv read
-  return e
+  text <- readFile preludePath
+  global <- newIORef $ newGlobal' startEnv []
+  let result = runExcept $ R.read (startPoint preludePath) text
+  case result of
+    Right exps -> handleLisp $ E.expandEvalSeq global exps
+    Left fail  -> hPrint stderr fail
+  return global
 
 -- | start environment
 -- | contains built-in functions and special operators
-startEnv :: Env
-startEnv = envFromList $
-  fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ SpecialOp name args f []))
-    (specialOperators ++
-    [("env-from-file", Just 1, soEnvFromFile)
-    ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)])
-  ++
-  fmap (\(name, args, f) -> (name, EnvSExpr . procedure $ BuiltIn name args f []))
-    (builtinFunctions ++
-    [("initial-env", Just 0, biInitialEnv)])
+startEnv :: Map String Binding
+startEnv = Map.fromList $
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) (specialOperators ++
+     [("import", Just 1, soImport)]) ++
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))  (builtinFunctions ++
+     [("initial-env", Just 0, biInitialEnv)])
 
--- | loads environment from a file
-soEnvFromFile :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soEnvFromFile e [sArg] = do
-  (_, arg) <- E.eval e sArg
-  if not $ isString arg
-    then reportE (point sArg) "string expected"
-    else do
-      e' <- interpreteModule True $ fromString arg
-      return (e, env e')
-soEnvFromFile _ _        = reportE' "just one argument required"
-
--- | loads environment from a file without prelude loaded
-soEnvFromFileNoPrelude :: Env -> [SExpr] -> Lisp (Env, SExpr)
-soEnvFromFileNoPrelude e [sArg] = do
-  (_, arg) <- E.eval e sArg
-  if not $ isString arg
-    then reportE (point sArg) "string expected"
-    else do
-      e' <- interpreteModule False $ fromString arg
-      return (e, env e')
-soEnvFromFileNoPrelude _ _       = reportE' "just one argument required"
+-- | Special operator import.
+soImport :: IORef Scope -> [SExpr] -> Lisp SExpr
+soImport scopeRef [sFilename] = do
+  filename <- getString =<< E.evalAlone scopeRef sFilename
+  moduleScope <- interpreteModule True filename
+  liftIO $ modifyIORef scopeRef $ modifyImports (moduleScope:)
+  return nil
+soImport _        _           = reportE' "just one argument required"
 
 -- | returns start environment plus prelude
-biInitialEnv :: [SExpr] -> Lisp SExpr
-biInitialEnv [] = do
-  prelude <- loadPrelude
-  return . env $ envMerge prelude
-biInitialEnv _  = reportE' "no arguments requried"
+biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+biInitialEnv _ [] = liftIO $ do
+  scope <- loadPrelude
+  env <$> exploreIORef scope getBindings
+biInitialEnv _ _  = reportE' "no arguments requried"
