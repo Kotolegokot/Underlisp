@@ -1,4 +1,4 @@
-(import-module "stdlib/char.unlisp")
+(import "stdlib/char.unlisp")
 
 (defun string->dec (str)
   (contract str string?)

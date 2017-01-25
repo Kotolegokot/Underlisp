@@ -39,3 +39,4 @@
 ** TODO _macrolet_ special operator
 ** TODO Dynamic variables
 ** TODO _read_ function
+** TODO Fix the problem with _write_. It does not print the stuff right away.

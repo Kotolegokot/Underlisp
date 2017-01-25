@@ -34,19 +34,6 @@
        ~(head (tail (head pairs)))
        (cond @(tail pairs)))))
 
-;; (import-module module-name)
-(defmacro import-module (filename)
-  `(import-env (env-from-file ~filename)))
-
-;; (load-module module-name)
-(defmacro load-module (filename)
-  `(load-env (env-from-file ~filename)))
-
-;; (load-module-no-prelude module-name)
-(defmacro load-module-no-prelude (filename)
-  `(load-env
-    (env-from-file-no-prelude ~filename)))
-
 ;; otherwise is used with `cond` macro
 (defineq otherwise true)
 

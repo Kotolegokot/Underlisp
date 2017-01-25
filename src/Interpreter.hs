@@ -95,11 +95,19 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Map String Binding
 startEnv = Map.fromList $
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) specialOperators ++
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) (specialOperators ++
+     [("import", Just 1, soImport)]) ++
   fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))  (builtinFunctions ++
      [("initial-env", Just 0, biInitialEnv)])
 
---soImport
+-- | Special operator import.
+soImport :: IORef Scope -> [SExpr] -> Lisp SExpr
+soImport scopeRef [sFilename] = do
+  filename <- getString =<< E.evalAlone scopeRef sFilename
+  moduleScope <- interpreteModule True filename
+  liftIO $ modifyIORef scopeRef $ modifyImports (moduleScope:)
+  return nil
+soImport _        _           = reportE' "just one argument required"
 
 -- | returns start environment plus prelude
 biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr

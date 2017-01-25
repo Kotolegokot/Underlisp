@@ -1,4 +1,4 @@
-(import-module "examples/dfa.unlisp")
+(import "examples/dfa.unlisp")
 
 (defineq dfa-1
       (dfa 0 '(1) (lambda (state symbol)
