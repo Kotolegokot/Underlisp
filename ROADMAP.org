@@ -1,17 +1,3 @@
-* TODO [#A] Merge mutableEnv to master
-** DONE Fix 'import-module', 'load-module'
-** TODO Fix incorrect Points in exceptions
-** TODO Write lots of tests
-*** TODO For built-in functions and special operators
-*** TODO For _stdlib/prelude.unlisp_
-*** TODO For _stdlib/string.unlisp_
-*** TODO For _stdlib/char.unlisp_
-** TODO Write some documentation on wiki
-*** TODO For built-in functions and special operators
-*** TODO For _stdlib/prelude.unlisp_
-*** TODO For _stdlib/string.unlisp_
-*** TODO For _stdlib/char.unlisp_
-
 * TODO [#C] Built-in data types
 ** TODO Fractional
 ** TODO Bignum
@@ -26,6 +12,18 @@
 * TODO [#A] Fundamental
 ** TODO Split built-in functions and special operators adequately
 ** TODO Special operators aren't first-class objects
+** DONE Fix 'import-module', 'load-module'
+** TODO Fix incorrect Points in exceptions
+** TODO Write lots of tests
+*** TODO For built-in functions and special operators
+*** TODO For _stdlib/prelude.unlisp_
+*** TODO For _stdlib/string.unlisp_
+*** TODO For _stdlib/char.unlisp_
+** TODO Write some documentation on wiki
+*** TODO For built-in functions and special operators
+*** TODO For _stdlib/prelude.unlisp_
+*** TODO For _stdlib/string.unlisp_
+*** TODO For _stdlib/char.unlisp_
 
 * TODO [#C] Other
 ** TODO Algebraic data types
