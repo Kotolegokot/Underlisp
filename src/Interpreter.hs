@@ -36,14 +36,14 @@ interpreteProgram prelude filename args = do
     E.expandEvalBody scopeRef exps
 
 -- | Interprete a module and returns its lexical scope
-interpreteModule :: Bool -> String -> Lisp (Map String Binding)
+interpreteModule :: Bool -> String -> Lisp (IORef Scope)
 interpreteModule prelude filename = do
   scope <- liftIO $ loadEnv prelude
   text <- liftIO $ readFile filename
   childScope <- liftIO $ newLocal scope
   exps <- forwardExcept $ R.read (startPoint filename) text
   E.expandEvalSeq childScope exps
-  liftIO $ exploreIORef childScope getBindings
+  return childScope
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
@@ -95,28 +95,11 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Map String Binding
 startEnv = Map.fromList $
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f []))
-    (specialOperators ++
-    [("env-from-file", Just 1, soEnvFromFile)
-    ,("env-from-file-no-prelude", Just 1, soEnvFromFileNoPrelude)])
-  ++
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))
-    (builtinFunctions ++
-    [("initial-env", Just 0, biInitialEnv)])
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) specialOperators ++
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))  (builtinFunctions ++
+     [("initial-env", Just 0, biInitialEnv)])
 
--- | Load environment from a file
-soEnvFromFile :: IORef Scope -> [SExpr] -> Lisp SExpr
-soEnvFromFile scopeRef [sArg] = do
-  str <- getString =<< E.evalAlone scopeRef sArg
-  env <$> interpreteModule True str
-soEnvFromFile _        _      = reportE' "just one argument required"
-
--- | loads environment from a file without prelude loaded
-soEnvFromFileNoPrelude :: IORef Scope -> [SExpr] -> Lisp SExpr
-soEnvFromFileNoPrelude scopeRef [sArg] = do
-  str <- getString =<< E.evalAlone scopeRef sArg
-  env <$> interpreteModule False str
-soEnvFromFileNoPrelude _        _      = reportE' "just one argument required"
+--soImport
 
 -- | returns start environment plus prelude
 biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
