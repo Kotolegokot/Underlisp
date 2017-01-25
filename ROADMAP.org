@@ -3,14 +3,14 @@
 ** TODO Fix incorrect Points in exceptions
 ** TODO Write lots of tests
 *** TODO For built-in functions and special operators
-*** TODO For stdlib/prelude.unlisp
-*** TODO For stdlib/string.unlisp
-*** TODO For stdlib/char.unlisp
+*** TODO For _stdlib/prelude.unlisp_
+*** TODO For _stdlib/string.unlisp_
+*** TODO For _stdlib/char.unlisp_
 ** TODO Write some documentation on wiki
 *** TODO For built-in functions and special operators
-*** TODO For stdlib/prelude.unlisp
-*** TODO For stdlib/string.unlisp
-*** TODO For stdlib/char.unlisp
+*** TODO For _stdlib/prelude.unlisp_
+*** TODO For _stdlib/string.unlisp_
+*** TODO For _stdlib/char.unlisp_
 
 * TODO [#C] Built-in data types
 ** TODO Fractional
@@ -21,7 +21,7 @@
 
 * TODO [#B] Extend stdlib
 ** TODO IO operations
-** TODO quicksort
+** TODO _quicksort_
 
 * TODO [#A] Fundamental
 ** TODO Split built-in functions and special operators adequately
@@ -32,10 +32,10 @@
 ** TODO Foreign function interface
 ** TODO Completion in REPL
 ** TODO Parallelism and concurrency
-** TODO 'defconstant' function
+** TODO _defconstant_ function
 ** TODO Condition system
 ** TODO Adequate module system
 ** TODO Optional lazy evaluation
-** TODO 'macrolet' special operator
+** TODO _macrolet_ special operator
 ** TODO Dynamic variables
-** TODO 'read' function
+** TODO _read_ function
