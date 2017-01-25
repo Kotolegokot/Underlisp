@@ -1,0 +1,41 @@
+* TODO [#A] Merge mutableEnv to master
+** TODO Fix 'import-module', 'load-module'
+** TODO Fix incorrect Points in exceptions
+** TODO Write lots of tests
+*** TODO For built-in functions and special operators
+*** TODO For stdlib/prelude.unlisp
+*** TODO For stdlib/string.unlisp
+*** TODO For stdlib/char.unlisp
+** TODO Write some documentation on wiki
+*** TODO For built-in functions and special operators
+*** TODO For stdlib/prelude.unlisp
+*** TODO For stdlib/string.unlisp
+*** TODO For stdlib/char.unlisp
+
+* TODO [#C] Built-in data types
+** TODO Fractional
+** TODO Bignum
+** TODO Complex numbers
+** TODO Maps
+** TODO Sets
+
+* TODO [#B] Extend stdlib
+** TODO IO operations
+** TODO quicksort
+
+* TODO [#A] Fundamental
+** TODO Split built-in functions and special operators adequately
+** TODO Special operators aren't first-class objects
+
+* TODO [#C] Other
+** TODO Algebraic data types
+** TODO Foreign function interface
+** TODO Completion in REPL
+** TODO Parallelism and concurrency
+** TODO 'defconstant' function
+** TODO Condition system
+** TODO Adequate module system
+** TODO Optional lazy evaluation
+** TODO 'macrolet' special operator
+** TODO Dynamic variables
+** TODO 'read' function
