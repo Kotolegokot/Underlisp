@@ -29,7 +29,7 @@ preludePath = "stdlib/prelude.unlisp"
 interpreteProgram :: Bool -> String -> [String] -> IO ()
 interpreteProgram prelude filename args = do
   scopeRef <- loadEnv prelude
-  modifyIORef scopeRef (setCmdArgs args)
+  modifyIORef scopeRef (modifyCmdArgs $ const args)
   text <- readFile filename
   handleLisp $ do
     exps <- forwardExcept $ R.read (startPoint filename) text

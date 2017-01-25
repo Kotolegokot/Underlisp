@@ -368,7 +368,7 @@ instance Show Procedure where
 data Scope = Scope { getBindings :: Map String Binding
                    , getG        :: Int
                    , getCmdArgs  :: [String]
-                   , getParent   :: Maybe (IORef Scope) }
+                   , getImports  :: [IORef Scope] }
 
 data Binding = BSExpr SExpr | BMacro Macro
   deriving Eq
@@ -377,17 +377,17 @@ instance Show Binding where
   show (BSExpr exp)   = show exp
   show (BMacro macro) = show macro
 
-setBindings :: Map String Binding -> Scope -> Scope
-setBindings bindings scope = scope { getBindings = bindings }
+modifyBindings :: (Map String Binding -> Map String Binding) -> Scope -> Scope
+modifyBindings f scope = scope { getBindings = f $ getBindings scope }
 
-setG :: Int -> Scope -> Scope
-setG g scope = scope { getG = g }
+modifyG :: (Int -> Int) -> Scope -> Scope
+modifyG f scope = scope { getG = f $ getG scope }
 
-setCmdArgs :: [String] -> Scope -> Scope
-setCmdArgs args scope = scope { getCmdArgs = args }
+modifyCmdArgs :: ([String] -> [String]) -> Scope -> Scope
+modifyCmdArgs f scope = scope { getCmdArgs = f $ getCmdArgs scope }
 
-setParent :: Maybe (IORef Scope) -> Scope -> Scope
-setParent parent scope = scope { getParent = parent }
+modifyImports :: ([IORef Scope] -> [IORef Scope]) -> Scope -> Scope
+modifyImports f scope = scope { getImports = f $ getImports scope }
 
 newGlobal :: [String] -> Scope
 newGlobal = newGlobal' Map.empty
@@ -396,7 +396,7 @@ newGlobal' :: Map String Binding -> [String] -> Scope
 newGlobal' bindings args = Scope { getBindings = bindings
                                  , getG        = 0
                                  , getCmdArgs  = args
-                                 , getParent   = Nothing }
+                                 , getImports  = [] }
 
 newLocal :: IORef Scope -> IO (IORef Scope)
 newLocal = newLocal' Map.empty
@@ -408,34 +408,43 @@ newLocal' bindings parentRef = do
   newIORef Scope { getBindings = bindings
                  , getG        = g
                  , getCmdArgs  = cmdArgs
-                 , getParent   = Just parentRef }
+                 , getImports  = [parentRef] }
 
 isGlobal :: Scope -> Bool
-isGlobal = isNothing . getParent
+isGlobal = null . getImports
 
 isChild :: Scope -> Bool
-isChild = isJust . getParent
+isChild = not . isGlobal
+
+-- | Return the first encountered (Just _), never touch the rest.
+maybeOrM :: [IO (Maybe a)] -> IO (Maybe a)
+maybeOrM (x:xs) = do
+  x' <- x
+  if isJust x'
+    then return x'
+    else maybeOrM xs
+maybeOrM []     = return Nothing
 
 scLookup :: String -> Scope -> IO (Maybe Binding)
 scLookup key scope = case Map.lookup key (getBindings scope) of
                        Just value -> return $ Just value
-                       Nothing    -> case getParent scope of
-                         Just parent -> exploreIORefIO parent (scLookup key)
-                         Nothing     -> return Nothing
+                       Nothing    -> let imports = map readIORef $ getImports scope
+                                         lookups = map (scLookup key =<<) imports
+                                     in maybeOrM lookups
 
 scLookupM :: String -> Scope -> IO (Maybe Macro)
 scLookupM key scope = case Map.lookup key (getBindings scope) of
                             Just (BMacro m) -> return $ Just m
-                            _               -> case getParent scope of
-                              Just parent -> exploreIORefIO parent (scLookupM key)
-                              Nothing     -> return Nothing
+                            _               -> let imports = map readIORef $ getImports scope
+                                                   lookups = map (scLookupM key =<<) imports
+                                               in maybeOrM lookups
 
 scLookupS :: String -> Scope -> IO (Maybe SExpr)
 scLookupS key scope = case Map.lookup key (getBindings scope) of
                             Just (BSExpr exp) -> return $ Just exp
-                            _                 -> case getParent scope of
-                              Just parent -> exploreIORefIO parent (scLookupS key)
-                              Nothing     -> return Nothing
+                            _                 -> let imports = map readIORef $ getImports scope
+                                                     lookups = map (scLookupS key =<<) imports
+                                                 in maybeOrM lookups
 
 scMember :: String -> Scope -> IO Bool
 scMember key = fmap isJust . scLookup key
@@ -447,13 +456,9 @@ scMemberS :: String -> Scope -> IO Bool
 scMemberS key = fmap isJust . scLookupS key
 
 scDelete :: String -> Scope -> IO Scope
-scDelete key scope
-  | isGlobal scope = return scope'
-  | otherwise      = do
-      modifyIORefIO parentRef (scDelete key)
-      return scope'
-  where scope'    = scope { getBindings = Map.delete key (getBindings scope) }
-        parentRef = fromJust $ getParent scope
+scDelete key scope = do
+  mapM_ (scDelete key <=< readIORef) $ getImports scope
+  return scope { getBindings = Map.delete key (getBindings scope) }
 
 scInsert :: String -> Binding -> Scope -> Scope
 scInsert key value scope = scope { getBindings = Map.insert key value (getBindings scope) }
@@ -461,13 +466,17 @@ scInsert key value scope = scope { getBindings = Map.insert key value (getBindin
 scAppend :: Map String Binding -> Scope -> Scope
 scAppend add scope = scope { getBindings = Map.union add (getBindings scope) }
 
+-- TODO: fix it, because it barely works
 scSet :: String -> Binding -> Scope -> IO Scope
 scSet key value scope = case Map.lookup key (getBindings scope) of
   Just  _ -> return $ scInsert key value scope
-  Nothing -> case getParent scope of
-    Just parent -> do modifyIORefIO parent (scSet key value)
-                      return scope
-    Nothing     -> return scope
+  Nothing -> scSet' (getImports scope) >> return scope
+    where scSet' (x:xs) = do
+            scope <- readIORef x
+            case Map.lookup key (getBindings scope) of
+              Just _  -> void $ scSet key value scope
+              Nothing -> scSet' xs
+          scSet' []     = return ()
 
 instance Show Scope where
   show (Scope bindings g cmdArgs parent) = "#<scope: bindings: " ++ showBindings bindings ++
@@ -475,14 +484,14 @@ instance Show Scope where
                                            "\n          cmdArgs: " ++ show cmdArgs ++ ">"
     where showBindings = Map.foldMapWithKey (\key value -> "\n(" ++ show key ++ " " ++ show value ++ ")")
 
-showScope :: Scope -> IO String
+{-showScope :: Scope -> IO String
 showScope scope = case getParent scope of
   Just parent -> do begin <- showScope =<< readIORef parent
                     return $ begin ++ "\n" ++ show scope
-  Nothing     -> return $ show scope
+  Nothing     -> return $ show scope-}
 
-printScope :: Scope -> IO ()
-printScope = putStrLn <=< showScope
+{-printScope :: Scope -> IO ()
+printScope = putStrLn <=< showScope-}
 ---- scope ----
 
 ---- lisp monad ---

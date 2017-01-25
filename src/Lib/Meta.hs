@@ -66,7 +66,7 @@ soInterprete _        _     = reportE' "just one argument required"
 soGensym :: IORef Scope -> [SExpr] -> Lisp SExpr
 soGensym scopeRef [] = liftIO $ do
   (g, sym) <- gensym =<< exploreIORef scopeRef getG
-  modifyIORef scopeRef (setG g)
+  modifyIORef scopeRef (modifyG $ const g)
   return sym
   where gensym :: Int -> IO (Int, SExpr)
         gensym n = do
