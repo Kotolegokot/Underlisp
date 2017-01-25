@@ -31,20 +31,12 @@ extractEnv scopeRef = foldM (\acc exp -> do key <- getSymbol exp
                                               Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
                       Map.empty
 
--- TODO: there must be a difference between import-env and load-env, probably
 soImportEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 soImportEnv scopeRef [arg] = do
   add <- getEnv =<< evalAlone scopeRef arg
   liftIO $ modifyIORef scopeRef (scAppend add)
   return nil
 soImportEnv _        _     = reportE' "just one argument required"
-
-soLoadEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
-soLoadEnv scopeRef [arg] = do
-  add <- getEnv =<< evalAlone scopeRef arg
-  liftIO $ modifyIORef scopeRef (scAppend add)
-  return nil
-soLoadEnv _        _     = reportE' "just one argument required"
 
 soCurrentEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 soCurrentEnv scopeRef [] = liftIO $ env <$> exploreIORef scopeRef getBindings
@@ -121,7 +113,6 @@ builtinFunctions = [("function-env",    Just 1, biFunctionEnv)
                    ,("set-environment", Just 1, biSetEnvironment)]
 
 specialOperators = [("env",          Nothing, soEnv)
-                   ,("load-env",     Just 1,  soLoadEnv)
                    ,("import-env",   Just 1,  soImportEnv)
                    ,("current-env",  Just 0,  soCurrentEnv)
                    ,("get-args",     Just 0,  soGetArgs)
