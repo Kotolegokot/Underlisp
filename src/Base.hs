@@ -470,13 +470,9 @@ scAppend add scope = scope { getBindings = Map.union add (getBindings scope) }
 scSet :: String -> Binding -> Scope -> IO Scope
 scSet key value scope = case Map.lookup key (getBindings scope) of
   Just  _ -> return $ scInsert key value scope
-  Nothing -> scSet' (getImports scope) >> return scope
-    where scSet' (x:xs) = do
-            scope <- readIORef x
-            case Map.lookup key (getBindings scope) of
-              Just _  -> void $ scSet key value scope
-              Nothing -> scSet' xs
-          scSet' []     = return ()
+  Nothing -> do
+    mapM (flip modifyIORefIO $ scSet key value) $ getImports scope
+    return scope
 
 instance Show Scope where
   show (Scope bindings g cmdArgs imports) = "#<scope: bindings: " ++ showBindings bindings ++

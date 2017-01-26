@@ -74,7 +74,7 @@ soDefine scopeRef [sKey, sValue] = do
   return nil
 soDefine _        _              = reportE' "two arguments required"
 
--- | Special operator define
+-- | Special operator set
 soSet :: IORef Scope -> [SExpr] -> Lisp SExpr
 soSet scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey

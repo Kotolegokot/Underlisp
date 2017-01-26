@@ -1,28 +1,9 @@
-(setq a 12)
-(setq map (lambda (f xs)
-	    (if (empty? xs)
-		()
-		(append (list (f (head xs)))
-			(map f (tail xs))))))
-(setq print (lambda (x)
-	      (map put-char (->string x))))
+(defineq foo
+    (scope
+     (defineq count 0)
+     (lambda ()
+       (setq count (succ count))
+       count)))
 
-(setq print-ln (lambda (x)
-		 (print x)
-		 (newline)))
-
-(setq newline (lambda () (put-char #newline)))
-
-(print-ln a)
-
-(defmacro setq (var value)
-  `(set '~var ~value))
-
-(setq inc (lambda (x)
-	    (set x (+ 1 (eval x)))))
-
-(defmacro incq (var)
-  `(inc '~var))
-
-(incq a)
-(print-ln a)
+(write-ln (foo))
+(write-ln (foo))
