@@ -10,6 +10,9 @@
 ** TODO _quicksort_
 
 * TODO [#A] Fundamental
+** TODO [#A] Importing defmacros
+   So 'import' must not be just a special operator or function,
+   but rather something that's processed before expanding macros.
 ** TODO Split built-in functions and special operators adequately
 ** TODO Special operators aren't first-class objects
 ** DONE Fix 'import-module', 'load-module'
