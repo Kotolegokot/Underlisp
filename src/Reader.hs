@@ -7,8 +7,8 @@ import Point
 import Lexer
 import Parser
 
--- | first stage of any lisp interpreter
--- | takes a string and converts it into an s-expression
+-- | First stage of any lisp interpreter.
+-- Takes a string and convert it into an s-expression.
 read :: Point -> String -> Except Fail [SExpr]
 read point text = do
   lexemes <- scan point text

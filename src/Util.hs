@@ -23,11 +23,11 @@ empty = do
   put xs
   return $ null xs
 
--- | like teaspoon, but returns default value in the case of Nothing
+-- | Like teaspoon, but return default value in the case of Nothing
 fromFalsum :: a -> a -> a
 fromFalsum def exp = fromMaybe def (teaspoon exp)
 
--- | monadic variant of 'fromFalsum'
+-- | Monadic variant of 'fromFaalsum'
 fromFalsumM :: Monad m => m a -> a -> m a
 fromFalsumM def exp = case teaspoon exp of
   Just val -> return val

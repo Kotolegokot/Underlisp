@@ -23,10 +23,6 @@
 	   (print-string-ln "SUCCESS")
 	   (print-string-ln "PIZDETZ")))))
 
-(let ((a (n) (if (<= n 1)
-		 "A"
-		 (b (pred n))))
-      (b (n) (if (<= n 1)
-		 "B"
-		 (a (pred n)))))
+(let ((a (n) (if (<= n 1) "A" (b (pred n))))
+      (b (n) (if (<= n 1) "B" (a (pred n)))))
   (print "~s~%" (b 5)))

@@ -18,7 +18,7 @@ import Util
 
 -- | Expand macros and evaluate a list of s-expressions
 expandEvalSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
-expandEvalSeq scope = collectMacros scope >=> expandMacros scope >=> evalSeq scope
+expandEvalSeq scope = processMacros scope >=> evalSeq scope
 
 -- | Evaluate a list of s-expressions
 evalSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
@@ -27,7 +27,7 @@ evalSeq scopeRef = mapM (eval scopeRef)
 -- | Expand macros and evaluate a list of s-expressions
 -- in a new child scope
 expandEvalAloneSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
-expandEvalAloneSeq scope = collectMacros scope >=> expandMacros scope >=> evalAloneSeq scope
+expandEvalAloneSeq scope = processMacros scope >=> evalAloneSeq scope
 
 -- | Evaluate a list of s-expressions, each in a new child scope
 evalAloneSeq :: IORef Scope -> [SExpr] -> Lisp [SExpr]
@@ -36,7 +36,7 @@ evalAloneSeq scope = mapM (evalAlone scope)
 -- | Expand macros and evaluate a list of s-expressions
 -- all in a new common child scope 
 expandEvalSeqAlone :: IORef Scope -> [SExpr] -> Lisp [SExpr]
-expandEvalSeqAlone scope = collectMacros scope >=> expandMacros scope >=> evalSeqAlone scope
+expandEvalSeqAlone scope = processMacros scope >=> evalSeqAlone scope
 
 -- | Evaluate a list of s-expressions all in a new common child scope
 evalSeqAlone :: IORef Scope -> [SExpr] -> Lisp [SExpr]
@@ -169,6 +169,10 @@ callMacro (Macro p localScope prototype exps) args = do
   childScope <- liftIO $ newLocal' bindings localScope
   setPoint p <$> expandEvalBody childScope exps
 
+-- | Collect macro definitions and expand them
+processMacros :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+processMacros scopeRef = collectMacros scopeRef >=> expandMacros scopeRef
+
 -- | Take a scope and evaluate all top-level
 -- defmacros in it, return the remaining s-expressions
 collectMacros :: IORef Scope -> [SExpr] -> Lisp [SExpr]
@@ -222,7 +226,7 @@ expandMacro scopeRef = expandMacro' Default
 
 -- | Parse a defmacro expression
 parseDefmacro :: IORef Scope -> SExpr -> Lisp (Maybe (String, Macro))
-parseDefmacro scopeRef (SList p (SAtom defmacroPoint (ASymbol "defmacro"):sName:lambdaList:body)) = do
+parseDefmacro scopeRef (SList p (SAtom _ (ASymbol "defmacro"):sName:lambdaList:body)) = do
   name <- getSymbol sName
   prototype <- parseLambdaList lambdaList
   return $ Just (name, Macro p scopeRef prototype body)

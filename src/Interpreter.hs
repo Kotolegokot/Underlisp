@@ -14,7 +14,7 @@ import Control.Monad (unless)
 import System.Console.Readline
 import System.IO
 
--- locale modules
+-- local modules
 import qualified Reader as R
 import qualified Evaluator as E
 import Lib.Everything
@@ -25,6 +25,17 @@ import Util
 preludePath :: String
 preludePath = "stdlib/prelude.unlisp"
 
+-- | Interprete a module and returns its scope
+interpreteModule :: Bool -> String -> Lisp (IORef Scope)
+interpreteModule prelude filename = do
+  scope <- liftIO $ loadEnv prelude
+  text <- liftIO $ readFile filename
+  childScope <- liftIO $ newLocal scope
+  exps <- forwardExcept $ R.read (startPoint filename) text
+  exps' <- preprocess childScope exps
+  E.expandEvalSeq childScope exps'
+  return childScope
+
 -- | A lisp interpretator is just a reader and evaluator joined together
 interpreteProgram :: Bool -> String -> [String] -> IO ()
 interpreteProgram prelude filename args = do
@@ -33,17 +44,8 @@ interpreteProgram prelude filename args = do
   text <- readFile filename
   handleLisp $ do
     exps <- forwardExcept $ R.read (startPoint filename) text
-    E.expandEvalBody scopeRef exps
-
--- | Interprete a module and returns its lexical scope
-interpreteModule :: Bool -> String -> Lisp (IORef Scope)
-interpreteModule prelude filename = do
-  scope <- liftIO $ loadEnv prelude
-  text <- liftIO $ readFile filename
-  childScope <- liftIO $ newLocal scope
-  exps <- forwardExcept $ R.read (startPoint filename) text
-  E.expandEvalSeq childScope exps
-  return childScope
+    exps' <- preprocess scopeRef exps
+    E.expandEvalBody scopeRef exps'
 
 -- | REPL (read-eval-print-loop) environment
 repl :: Bool -> IO ()
@@ -60,7 +62,8 @@ repl prelude = do
                 unless (null line) $ addHistory line
                 result <- runLisp $ do
                   exps <- forwardExcept $ R.read p line
-                  result <- E.expandEvalSeq scopeRef exps
+                  exps' <- preprocess scopeRef exps
+                  result <- E.expandEvalSeq scopeRef exps'
                   return $ if null result then nil else last result
 
                 exp <- case result of
@@ -73,6 +76,13 @@ repl prelude = do
                 modifyIORef scopeRef (scInsert "it" $ BSExpr exp)
                 handleLines (forwardRow p) scopeRef
               Nothing   -> putStrLn "Bye!"
+
+-- | returns start environment plus prelude
+biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+biInitialEnv _ [] = liftIO $ do
+  scope <- loadPrelude
+  env <$> exploreIORef scope getBindings
+biInitialEnv _ _  = reportE' "no arguments requried"
 
 -- | Load start environment.
 -- No prelude if the first argument is false
@@ -95,23 +105,31 @@ loadPrelude = do
 -- | contains built-in functions and special operators
 startEnv :: Map String Binding
 startEnv = Map.fromList $
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) (specialOperators ++
-     [("import", Just 1, soImport)]) ++
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) specialOperators ++
   fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))  (builtinFunctions ++
      [("initial-env", Just 0, biInitialEnv)])
 
--- | Special operator import.
-soImport :: IORef Scope -> [SExpr] -> Lisp SExpr
-soImport scopeRef [sFilename] = do
-  filename <- getString =<< E.evalAlone scopeRef sFilename
-  moduleScope <- interpreteModule True filename
-  liftIO $ modifyIORef scopeRef $ modifyImports (moduleScope:)
-  return nil
-soImport _        _           = reportE' "just one argument required"
+-- | Do all preprocessing.
+-- For now it's just importing modules.
+preprocess :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+preprocess = collectImports
 
--- | returns start environment plus prelude
-biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
-biInitialEnv _ [] = liftIO $ do
-  scope <- loadPrelude
-  env <$> exploreIORef scope getBindings
-biInitialEnv _ _  = reportE' "no arguments requried"
+-- | Collect imports in the scope
+collectImports :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+collectImports scopeRef = foldM (\acc exp -> do
+                                    import' <- parseImport exp
+                                    case import' of
+                                      Just filename -> do moduleScope <- interpreteModule True filename
+                                                          liftIO $ modifyIORef scopeRef $ modifyImports (moduleScope:)
+                                                          return acc
+                                      Nothing       -> return $ acc ++ [exp])
+                          []
+
+-- | Parse an import expression
+parseImport :: SExpr -> Lisp (Maybe String)
+parseImport (SList p [SAtom _ (ASymbol "import"), filename])
+  | not $ isList filename    = reportE p "string expected"
+  | null $ fromList filename = reportE p "module name cannot be empty"
+  | otherwise                = Just <$> (mapM Base.getChar . tail $ fromList filename)
+parseImport (SList p (SAtom _ (ASymbol "import"):_))         = reportE p "just one argument required"
+parseImport _                                                = return Nothing
