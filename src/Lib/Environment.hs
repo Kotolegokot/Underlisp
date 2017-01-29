@@ -13,12 +13,12 @@ import Util
 
 default (Int)
 
-{-soEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-soEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 soEnv scopeRef args = do
   symbols <- evalAloneSeq scopeRef args
   env <$> extractEnv scopeRef symbols-}
 
-{-extractEnv :: IORef Scope -> [SExpr] -> Lisp (Map String Binding)
+{-extractEnv :: IORef Scope -> [SExpr] -> EvalM (Map String Binding)
 extractEnv scopeRef = foldM (\acc exp -> do key <- getSymbol exp
                                             result <- liftIO $ exploreIORefIO scopeRef $ scLookup key
                                             case result of
@@ -26,20 +26,20 @@ extractEnv scopeRef = foldM (\acc exp -> do key <- getSymbol exp
                                               Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
                       Map.empty-}
 
-{-soCurrentEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-soCurrentEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 soCurrentEnv scopeRef [] = liftIO $ env <$> exploreIORef scopeRef getBindings
 soCurrentEnv _        _  = reportE' "no arguments required"-}
 
-{-biFunctionEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-biFunctionEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 biFunctionEnv _ [SAtom _ (AProcedure (UserDefined localScope _ _ _))] = liftIO $ env <$> exploreIORef localScope getBindings
 biFunctionEnv _ [sexpr]                                               = reportE (point sexpr) "a user-defined function expected"
 biFunctionEnv _ _                                                     = reportE' "just one argument required"-}
 
-soGetArgs :: IORef Scope -> [SExpr] -> Lisp SExpr
+soGetArgs :: IORef Scope -> [SExpr] -> EvalM SExpr
 soGetArgs scopeRef [] = liftIO $ list . map toString <$> exploreIORef scopeRef getCmdArgs
 soGetArgs _        _  = reportE' "no arguments required"
 
-soWithArgs :: IORef Scope -> [SExpr] -> Lisp SExpr
+soWithArgs :: IORef Scope -> [SExpr] -> EvalM SExpr
 soWithArgs scopeRef (args:body) = do
   args' <- mapM getString =<< getList =<< evalAlone scopeRef args
   childScope <- liftIO $ newLocal scopeRef
@@ -47,7 +47,7 @@ soWithArgs scopeRef (args:body) = do
   evalBody childScope body
 soWithArgs _        _           = reportE' "at least one argument required"
 
-biGetEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+biGetEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 biGetEnv _ [name] = do
   name' <- getString name
   result <- liftIO $ E.getEnv name'
@@ -56,7 +56,7 @@ biGetEnv _ [name] = do
     Nothing    -> nil
 biGetEnv _ _ = reportE' "just one argument required"
 
-biSetEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSetEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 biSetEnv _ [name, value, rewrite] = do
   name' <- getString name
   value' <- getString value
@@ -65,20 +65,20 @@ biSetEnv _ [name, value, rewrite] = do
   return nil
 biSetEnv _ _ = reportE' "three arguments required"
 
-biUnsetEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+biUnsetEnv :: IORef Scope -> [SExpr] -> EvalM SExpr
 biUnsetEnv _ [name] = do
   name' <- getString name
   liftIO $ E.unsetEnv name'
   return nil
 biUnsetEnv _ _      = reportE' "just one argument required"
 
-biGetEnvironment :: IORef Scope -> [SExpr] -> Lisp SExpr
+biGetEnvironment :: IORef Scope -> [SExpr] -> EvalM SExpr
 biGetEnvironment _ [] = do
   environment <- liftIO E.getEnvironment
   return . list $ map (\(name, value) -> list [toString name, toString value]) environment
 biGetEnvironment _ _  = reportE' "no arguments required"
 
-biSetEnvironment :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSetEnvironment :: IORef Scope -> [SExpr] -> EvalM SExpr
 biSetEnvironment _ [l] = do
   pList <- assurePairList =<< getList l
   liftIO $ E.setEnvironment pList

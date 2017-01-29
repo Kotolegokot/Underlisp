@@ -25,7 +25,7 @@ preludePath :: String
 preludePath = "stdlib/prelude.unlisp"
 
 -- | Interprete a module and returns its scope
-interpreteModule :: Bool -> String -> Lisp (IORef Scope)
+interpreteModule :: Bool -> String -> EvalM (IORef Scope)
 interpreteModule prelude filename = do
   scope <- liftIO $ loadEnv prelude
   text <- liftIO $ readFile filename
@@ -41,7 +41,7 @@ interpreteProgram prelude filename args = do
   scopeRef <- loadEnv prelude
   modifyIORef scopeRef (modifyCmdArgs $ const args)
   text <- readFile filename
-  handleLisp $ do
+  handleEvalM $ do
     exps <- forwardExcept $ R.read (startPoint filename) text
     exps' <- preprocess scopeRef exps
     E.expandEvalBody scopeRef exps'
@@ -59,7 +59,7 @@ repl prelude = do
             case line of
               Just line -> do
                 unless (null line) $ addHistory line
-                result <- runLisp $ do
+                result <- runEvalM $ do
                   exps <- forwardExcept $ R.read p line
                   exps' <- preprocess scopeRef exps
                   result <- E.expandEvalSeq scopeRef exps'
@@ -89,7 +89,7 @@ loadPrelude = do
   global <- newIORef $ newGlobal' startEnv []
   let result = runExcept $ R.read (startPoint preludePath) text
   case result of
-    Right exps -> handleLisp $ E.expandEvalSeq global exps
+    Right exps -> handleEvalM $ E.expandEvalSeq global exps
     Left fail  -> hPrint stderr fail
   return global
 
@@ -102,11 +102,11 @@ startEnv = Map.fromList $
 
 -- | Do all preprocessing.
 -- For now it's just importing modules.
-preprocess :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+preprocess :: IORef Scope -> [SExpr] -> EvalM [SExpr]
 preprocess = collectImports
 
 -- | Collect imports in the scope
-collectImports :: IORef Scope -> [SExpr] -> Lisp [SExpr]
+collectImports :: IORef Scope -> [SExpr] -> EvalM [SExpr]
 collectImports scopeRef = foldM (\acc exp -> do
                                     import' <- parseImport exp
                                     case import' of
@@ -117,7 +117,7 @@ collectImports scopeRef = foldM (\acc exp -> do
                           []
 
 -- | Parse an import expression
-parseImport :: SExpr -> Lisp (Maybe String)
+parseImport :: SExpr -> EvalM (Maybe String)
 parseImport (SList p [SAtom _ (ASymbol "import"), filename])
   | not $ isList filename    = reportE p "string expected"
   | null $ fromList filename = reportE p "module name cannot be empty"

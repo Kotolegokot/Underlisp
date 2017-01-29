@@ -12,14 +12,14 @@ import Util
 
 default (Int)
 
-soMacroExpand :: IORef Scope -> [SExpr] -> Lisp SExpr
+soMacroExpand :: IORef Scope -> [SExpr] -> EvalM SExpr
 soMacroExpand scopeRef [exp] = do
   exp' <- evalAlone scopeRef exp
   expanded <- expandMacros scopeRef [exp']
   return $ head expanded
 soMacroExpand _        _     = reportE' "just one argument required"
 
-soMacroExpand1 :: IORef Scope -> [SExpr] -> Lisp SExpr
+soMacroExpand1 :: IORef Scope -> [SExpr] -> EvalM SExpr
 soMacroExpand1 scopeRef [exp] = evalAlone scopeRef exp >>= soMacroExpand1'
     where soMacroExpand1' l@(SList _ (SAtom _ (ASymbol sym):args)) = do
             result <- liftIO $ exploreIORefIO scopeRef (scLookupM sym)
@@ -30,17 +30,17 @@ soMacroExpand1 scopeRef [exp] = evalAlone scopeRef exp >>= soMacroExpand1'
 soMacroExpand1 _        _     = reportE' "just one argument required"
 
 -- | special operator quote
-soQuote :: IORef Scope -> [SExpr] -> Lisp SExpr
+soQuote :: IORef Scope -> [SExpr] -> EvalM SExpr
 soQuote _ [arg] = return arg
 soQuote _ _     = reportE' "just one argument requried"
 
 -- | special operator backquote
-soBackquote :: IORef Scope -> [SExpr] -> Lisp SExpr
+soBackquote :: IORef Scope -> [SExpr] -> EvalM SExpr
 soBackquote scopeRef [SList _ (SAtom p (ASymbol  "interpolate") : rest)]
   | length rest /= 1 = reportE p "just one argument required"
   | otherwise        = evalAlone scopeRef $ head rest
 soBackquote scopeRef [SList _ l] = list <$> mapM' (soBackquote scopeRef . return) l
-    where mapM' :: (SExpr -> Lisp SExpr) -> [SExpr] -> Lisp [SExpr]
+    where mapM' :: (SExpr -> EvalM SExpr) -> [SExpr] -> EvalM [SExpr]
           mapM' f []     = return []
           mapM' f (x:xs) = case x of
             SList _ [SAtom _ (ASymbol "unfold"), arg] -> do
@@ -56,14 +56,14 @@ soBackquote _ [arg]        = return arg
 soBackquote _ _            = reportE' "just one argument required"
 
 -- | Special operator interprete
-soInterprete :: IORef Scope -> [SExpr] -> Lisp SExpr
+soInterprete :: IORef Scope -> [SExpr] -> EvalM SExpr
 soInterprete scopeRef [arg] = do
   str <- getString =<< evalAlone scopeRef arg
   read <- forwardExcept $ Reader.read (point arg) str
   expandEvalBody scopeRef read
 soInterprete _        _     = reportE' "just one argument required"
 
-soGensym :: IORef Scope -> [SExpr] -> Lisp SExpr
+soGensym :: IORef Scope -> [SExpr] -> EvalM SExpr
 soGensym scopeRef [] = liftIO $ do
   (g, sym) <- gensym =<< exploreIORef scopeRef getG
   modifyIORef scopeRef (modifyG $ const g)
@@ -77,13 +77,13 @@ soGensym scopeRef [] = liftIO $ do
 soGensym _        _  = reportE' "no arguments required"
 
 -- | Special operator eval
-soEval :: IORef Scope -> [SExpr] -> Lisp SExpr
+soEval :: IORef Scope -> [SExpr] -> EvalM SExpr
 soEval scopeRef args = do
   args' <- evalAloneSeq scopeRef args
   evalBody scopeRef args'
 
 -- | converts a string into a symbol
-biToSymbol :: IORef Scope -> [SExpr] -> Lisp SExpr
+biToSymbol :: IORef Scope -> [SExpr] -> EvalM SExpr
 biToSymbol _ [exp] = symbol <$> getString exp
 biToSymbol _ _     = reportE' "just one argument required"
 

@@ -8,7 +8,7 @@ import Evaluator
 
 default (Int)
 
-soIf :: IORef Scope -> [SExpr] -> Lisp SExpr
+soIf :: IORef Scope -> [SExpr] -> EvalM SExpr
 soIf scopeRef [condExp]                    = soIf scopeRef [condExp, nil,     nil]
 soIf scopeRef [condExp, trueExp]           = soIf scopeRef [condExp, trueExp, nil]
 soIf scopeRef [condExp, trueExp, falseExp] = do
@@ -16,10 +16,10 @@ soIf scopeRef [condExp, trueExp, falseExp] = do
   eval scopeRef $ if' cond trueExp falseExp
 soIf _ _                                   = reportE' "1 to 3 arguments requried"
 
-soScope :: IORef Scope -> [SExpr] -> Lisp SExpr
+soScope :: IORef Scope -> [SExpr] -> EvalM SExpr
 soScope = evalBody
 
-soSeq :: IORef Scope -> [SExpr] -> Lisp SExpr
+soSeq :: IORef Scope -> [SExpr] -> EvalM SExpr
 soSeq scopeRef exps = do
   result <- evalSeq scopeRef exps
   return $ if null result then nil else last result

@@ -13,7 +13,7 @@ import Base
 
 default (Int)
 
-biVector :: IORef Scope -> [SExpr] -> Lisp SExpr
+biVector :: IORef Scope -> [SExpr] -> EvalM SExpr
 biVector _ = return . vector . Vec.fromList
 
 builtinFunctions = [("vector", Nothing,  biVector)]

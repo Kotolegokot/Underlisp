@@ -8,14 +8,14 @@ import Base
 
 default (Int)
 
-biSum :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSum :: IORef Scope -> [SExpr] -> EvalM SExpr
 biSum _ sexprs = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int . sum . fmap fromInt $ sexprs
     NTFloat -> return . float . sum . fmap fromNumber $ sexprs
 
-biSubstract :: IORef Scope -> [SExpr] -> Lisp SExpr
+biSubstract :: IORef Scope -> [SExpr] -> EvalM SExpr
 biSubstract _ sexprs@[num1, num2] = do
   t <- numArgs sexprs
   case t of
@@ -23,14 +23,14 @@ biSubstract _ sexprs@[num1, num2] = do
     NTFloat -> return . float $ fromNumber num1 - fromNumber num2
 biSubstract _ _                   = reportE' "two arguments required"
 
-biProduct :: IORef Scope -> [SExpr] -> Lisp SExpr
+biProduct :: IORef Scope -> [SExpr] -> EvalM SExpr
 biProduct _ sexprs = do
   t <- numArgs sexprs
   case t of
     NTInt   -> return . int . product . fmap fromInt $ sexprs
     NTFloat -> return . float . product . fmap fromNumber $ sexprs
 
-biDivide :: IORef Scope -> [SExpr] -> Lisp SExpr
+biDivide :: IORef Scope -> [SExpr] -> EvalM SExpr
 biDivide _ sexprs@[num1, num2] = do
   t <- numArgs sexprs
   case t of
@@ -39,7 +39,7 @@ biDivide _ sexprs@[num1, num2] = do
 biDivide _ _                   = reportE' "two arguments required"
 
 data NumType = NTInt | NTFloat
-numArgs :: [SExpr] -> Lisp NumType
+numArgs :: [SExpr] -> EvalM NumType
 numArgs sexprs = numArgs' sexprs NTInt
   where numArgs' (x:xs) NTInt
           | isInt x    = numArgs' xs NTInt
@@ -50,15 +50,15 @@ numArgs sexprs = numArgs' sexprs NTInt
           | otherwise   = reportE (point x) "float or int expected"
         numArgs' [] return_type = return return_type
 
-biFloat :: IORef Scope -> [SExpr] -> Lisp SExpr
+biFloat :: IORef Scope -> [SExpr] -> EvalM SExpr
 biFloat _ [exp] = float <$> getNumber exp
 biFloat _ _     = reportE' "just one argument requried"
 
-unaryFunction :: (SExpr -> Lisp SExpr) -> IORef Scope -> [SExpr] -> Lisp SExpr
+unaryFunction :: (SExpr -> EvalM SExpr) -> IORef Scope -> [SExpr] -> EvalM SExpr
 unaryFunction f _ [exp] = f exp
 unaryFunction _ _ _     = reportE' "just one argument requried"
 
-biPower :: IORef Scope -> [SExpr] -> Lisp SExpr
+biPower :: IORef Scope -> [SExpr] -> EvalM SExpr
 biPower _ nums@[num1, num2] = do
   t <- numArgs nums
   case t of
@@ -66,13 +66,13 @@ biPower _ nums@[num1, num2] = do
     NTFloat -> return . float $ fromNumber num1 ** fromNumber num2
 biPower _ _ = reportE' "two arguments required"
 
-biQuotRem :: IORef Scope -> [SExpr] -> Lisp SExpr
+biQuotRem :: IORef Scope -> [SExpr] -> EvalM SExpr
 biQuotRem _ [exp1, exp2] = do
   (quot, rem) <- liftM2 quotRem (getInt exp1) (getInt exp2)
   return $ list [int quot, int rem]
 biQuotRem _ _            = reportE' "two arguments required"
 
-biDivMod :: IORef Scope -> [SExpr] -> Lisp SExpr
+biDivMod :: IORef Scope -> [SExpr] -> EvalM SExpr
 biDivMod _ [exp1, exp2] = do
   (div, mod) <- liftM2 divMod (getInt exp1) (getInt exp2)
   return $ list [int div, int mod]

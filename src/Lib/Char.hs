@@ -8,11 +8,11 @@ import Base
 
 default (Int)
 
-biCharToInt :: IORef Scope -> [SExpr] -> Lisp SExpr
+biCharToInt :: IORef Scope -> [SExpr] -> EvalM SExpr
 biCharToInt _ [exp] = int . ord <$> getChar exp
 biCharToInt _ _     = reportE' "just one argument required"
 
-biIntToChar :: IORef Scope -> [SExpr] -> Lisp SExpr
+biIntToChar :: IORef Scope -> [SExpr] -> EvalM SExpr
 biIntToChar _ [exp] = char . chr <$> getInt exp
 biIntToChar _ _     = reportE' "just one argument required"
 

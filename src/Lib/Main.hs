@@ -19,24 +19,24 @@ default (Int)
 
 -- | Special operator lambda
 -- (lambda lambda-list [body])
-soLambda :: IORef Scope -> [SExpr] -> Lisp SExpr
+soLambda :: IORef Scope -> [SExpr] -> EvalM SExpr
 soLambda scopeRef (lambdaList:body) = do
   prototype <- parseLambdaList lambdaList
   return . procedure $ UserDefined scopeRef prototype body []
 soLambda _        []                = reportE' "at least one argument expected"
 
 -- | Special operator let
-soLet :: IORef Scope -> [SExpr] -> Lisp SExpr
+soLet :: IORef Scope -> [SExpr] -> EvalM SExpr
 soLet scopeRef (SList p pairs : body) = do
   childScope <- liftIO $ newLocal scopeRef
   putBindings childScope pairs
   last <$> evalSeq childScope body
-    where putBindings :: IORef Scope -> [SExpr] -> Lisp ()
+    where putBindings :: IORef Scope -> [SExpr] -> EvalM ()
           putBindings scopeRef exps = do
             add <- Map.fromList <$> mapM (putBinding scopeRef) exps
             liftIO $ modifyIORef scopeRef (scAppend add)
 
-          putBinding :: IORef Scope -> SExpr -> Lisp (String, Binding)
+          putBinding :: IORef Scope -> SExpr -> EvalM (String, Binding)
           putBinding scopeRef (SList _ [SAtom _ (ASymbol var), lambdaList, body]) = do
             value <- soLambda scopeRef [lambdaList, body]
             return (var, BSExpr value)
@@ -48,13 +48,13 @@ soLet scopeRef (SList p pairs : body) = do
 soLet _        [expr]                    = reportE (point expr) "list expected"
 soLet _        _                         = reportE' "at least one argument expected"
 
-soIsDef :: IORef Scope -> [SExpr] -> Lisp SExpr
+soIsDef :: IORef Scope -> [SExpr] -> EvalM SExpr
 soIsDef scopeRef [sKey] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   liftIO $ bool <$> exploreIORefIO scopeRef (scMemberS key)
 soIsDef _        _      = reportE' "just one argument required"
 
-soUndef :: IORef Scope -> [SExpr] -> Lisp SExpr
+soUndef :: IORef Scope -> [SExpr] -> EvalM SExpr
 soUndef scopeRef [sKey] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   liftIO $ modifyIORefIO scopeRef (scDelete key)
@@ -62,7 +62,7 @@ soUndef scopeRef [sKey] = do
 soUndef _        _      = reportE' "just one argument required"
 
 -- | Special operator define
-soDefine :: IORef Scope -> [SExpr] -> Lisp SExpr
+soDefine :: IORef Scope -> [SExpr] -> EvalM SExpr
 soDefine scopeRef [sKey] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   liftIO $ modifyIORef scopeRef (scInsert key $ BSExpr nil)
@@ -75,7 +75,7 @@ soDefine scopeRef [sKey, sValue] = do
 soDefine _        _              = reportE' "two arguments required"
 
 -- | Special operator set
-soSet :: IORef Scope -> [SExpr] -> Lisp SExpr
+soSet :: IORef Scope -> [SExpr] -> EvalM SExpr
 soSet scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
@@ -89,11 +89,11 @@ soSet scopeRef [sKey, sValue] = do
 soSet _        _              = reportE' "two arguments required"
 
 -- | Built-in function type
-biType :: IORef Scope -> [SExpr] -> Lisp SExpr
+biType :: IORef Scope -> [SExpr] -> EvalM SExpr
 biType _ [exp] = return . symbol . showType $ exp
 biType _ _     = reportE' "just one argument required"
 
-soBind :: IORef Scope -> [SExpr] -> Lisp SExpr
+soBind :: IORef Scope -> [SExpr] -> EvalM SExpr
 soBind scopeRef (first:args) = do
   pr <- getProcedure =<< evalAlone scopeRef first
   case pr of
@@ -104,7 +104,7 @@ soBind scopeRef (first:args) = do
 soBind _        []            = reportE' "at least one argument required"
 
 -- | Special operator apply
-soApply :: IORef Scope -> [SExpr] -> Lisp SExpr
+soApply :: IORef Scope -> [SExpr] -> EvalM SExpr
 soApply scopeRef (first:args@(_:_)) = do
   pr <- getProcedure =<< evalAlone scopeRef first
   args' <- evalAloneSeq scopeRef args
@@ -113,7 +113,7 @@ soApply scopeRef (first:args@(_:_)) = do
 soApply _        _                  = reportE' "at least two arguments required"
 
 -- | Built-in function error
-biError :: IORef Scope -> [SExpr] -> Lisp SExpr
+biError :: IORef Scope -> [SExpr] -> EvalM SExpr
 biError _ [exp] = reportE' =<< getString exp
 biError _ _     = reportE' "just one argument required"
 
