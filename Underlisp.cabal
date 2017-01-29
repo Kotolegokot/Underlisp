@@ -10,6 +10,7 @@ copyright:           Copyright: (c) 2016-2017 Kotik Andreev gkotolegokot@gmail.c
 category:            Language
 stability:           alpha
 build-type:          Simple
+bug-reports:         https://github.com/Kotolegokot/Underlisp/issues
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 source-repository head

@@ -1,15 +1,10 @@
 module Lib.Environment (builtinFunctions
                        ,specialOperators) where
 
--- map
-import qualified Data.Map as Map
-import Data.Map (Map)
-
 -- other
 import qualified System.Posix.Env as E
 import Data.IORef
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad (foldM)
 
 -- local modules
 import Base
@@ -18,34 +13,27 @@ import Util
 
 default (Int)
 
-soEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-soEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 soEnv scopeRef args = do
   symbols <- evalAloneSeq scopeRef args
-  env <$> extractEnv scopeRef symbols
+  env <$> extractEnv scopeRef symbols-}
 
-extractEnv :: IORef Scope -> [SExpr] -> Lisp (Map String Binding)
+{-extractEnv :: IORef Scope -> [SExpr] -> Lisp (Map String Binding)
 extractEnv scopeRef = foldM (\acc exp -> do key <- getSymbol exp
                                             result <- liftIO $ exploreIORefIO scopeRef $ scLookup key
                                             case result of
                                               Just value -> return $ Map.insert key value acc
                                               Nothing    -> reportE (point exp) $ "undefined symbol '" ++ key ++ "'")
-                      Map.empty
+                      Map.empty-}
 
-soImportEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
-soImportEnv scopeRef [arg] = do
-  add <- getEnv =<< evalAlone scopeRef arg
-  liftIO $ modifyIORef scopeRef (scAppend add)
-  return nil
-soImportEnv _        _     = reportE' "just one argument required"
-
-soCurrentEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-soCurrentEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 soCurrentEnv scopeRef [] = liftIO $ env <$> exploreIORef scopeRef getBindings
-soCurrentEnv _        _  = reportE' "no arguments required"
+soCurrentEnv _        _  = reportE' "no arguments required"-}
 
-biFunctionEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
+{-biFunctionEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
 biFunctionEnv _ [SAtom _ (AProcedure (UserDefined localScope _ _ _))] = liftIO $ env <$> exploreIORef localScope getBindings
 biFunctionEnv _ [sexpr]                                               = reportE (point sexpr) "a user-defined function expected"
-biFunctionEnv _ _                                                     = reportE' "just one argument required"
+biFunctionEnv _ _                                                     = reportE' "just one argument required"-}
 
 soGetArgs :: IORef Scope -> [SExpr] -> Lisp SExpr
 soGetArgs scopeRef [] = liftIO $ list . map toString <$> exploreIORef scopeRef getCmdArgs
@@ -105,15 +93,11 @@ biSetEnvironment _ [l] = do
         assurePairList (x:_)         = reportE (point x) "list expected"
 biSetEnvironment _ _   = reportE' "just one argument required"
 
-builtinFunctions = [("function-env",    Just 1, biFunctionEnv)
-                   ,("get-env",         Just 1, biGetEnv)
+builtinFunctions = [("get-env",         Just 1, biGetEnv)
                    ,("set-env",         Just 3, biSetEnv)
                    ,("unset-env",       Just 1, biUnsetEnv)
                    ,("get-environment", Just 0, biGetEnvironment)
                    ,("set-environment", Just 1, biSetEnvironment)]
 
-specialOperators = [("env",          Nothing, soEnv)
-                   ,("import-env",   Just 1,  soImportEnv)
-                   ,("current-env",  Just 0,  soCurrentEnv)
-                   ,("get-args",     Just 0,  soGetArgs)
+specialOperators = [("get-args",     Just 0,  soGetArgs)
                    ,("with-args",    Nothing, soWithArgs)]

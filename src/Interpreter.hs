@@ -20,7 +20,6 @@ import qualified Evaluator as E
 import Lib.Everything
 import Base
 import Point
-import Util
 
 preludePath :: String
 preludePath = "stdlib/prelude.unlisp"
@@ -77,13 +76,6 @@ repl prelude = do
                 handleLines (forwardRow p) scopeRef
               Nothing   -> putStrLn "Bye!"
 
--- | returns start environment plus prelude
-biInitialEnv :: IORef Scope -> [SExpr] -> Lisp SExpr
-biInitialEnv _ [] = liftIO $ do
-  scope <- loadPrelude
-  env <$> exploreIORef scope getBindings
-biInitialEnv _ _  = reportE' "no arguments requried"
-
 -- | Load start environment.
 -- No prelude if the first argument is false
 loadEnv :: Bool -> IO (IORef Scope)
@@ -106,8 +98,7 @@ loadPrelude = do
 startEnv :: Map String Binding
 startEnv = Map.fromList $
   fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) specialOperators ++
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f []))  (builtinFunctions ++
-     [("initial-env", Just 0, biInitialEnv)])
+  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f [])) builtinFunctions
 
 -- | Do all preprocessing.
 -- For now it's just importing modules.

@@ -106,7 +106,7 @@ instance Type SExpr where
     | isList sexpr = "list"
     | otherwise    = showType $ fromAtom sexpr -- isAtom
 
-isNil, isInt, isFloat, isChar, isBool, isSymbol, isVector, isProcedure, isEnv, isSequence, isNumber, isString :: SExpr -> Bool
+isNil, isInt, isFloat, isChar, isBool, isSymbol, isVector, isProcedure, isSequence, isNumber, isString :: SExpr -> Bool
 
 isNil (SAtom _ ANil) = True
 isNil _              = False
@@ -131,9 +131,6 @@ isVector _                     = False
 
 isProcedure (SAtom _ (AProcedure _)) = True
 isProcedure _                       = False
-
-isEnv (SAtom _ (AEnv _)) = True
-isEnv _                  = False
 
 isSequence = isList &&& isVector >>> uncurry (||)
 
@@ -168,10 +165,6 @@ fromVector _                     = undefined
 fromProcedure :: SExpr -> Procedure
 fromProcedure (SAtom _ (AProcedure c)) = c
 fromProcedure _                       = undefined
-
-fromEnv :: SExpr -> Map String Binding
-fromEnv (SAtom _ (AEnv e)) = e
-fromEnv _                  = undefined
 
 fromSequence :: SExpr -> [SExpr]
 fromSequence s
@@ -215,9 +208,6 @@ getVector = unpackSExpr fromVector "vector"
 getProcedure :: SExpr -> Lisp Procedure
 getProcedure = unpackSExpr fromProcedure "procedure"
 
-getEnv :: SExpr -> Lisp (Map String Binding)
-getEnv = unpackSExpr fromEnv "env"
-
 getSequence :: SExpr -> Lisp [SExpr]
 getSequence = unpackSExpr fromSequence "sequence"
 
@@ -247,9 +237,6 @@ vector = atom . AVector
 
 procedure :: Procedure -> SExpr
 procedure = atom . AProcedure
-
-env :: Map String Binding -> SExpr
-env = atom . AEnv
 ---- s-expression ----
 
 ---- atom ----
@@ -261,7 +248,6 @@ data Atom = ANil
           | ASymbol    String
           | AVector    (Vector SExpr)
           | AProcedure Procedure
-          | AEnv       (Map String Binding)
 
 instance Eq Atom where
   ANil           == ANil           = True
@@ -274,7 +260,6 @@ instance Eq Atom where
   (ASymbol s)    == (ASymbol s')   = s == s'
   (AVector v)    == (AVector v')   = v == v'
   (AProcedure _) == (AProcedure _) = undefined
-  (AEnv e)       == (AEnv e')      = e == e'
   _              == _              = False
 
 instance Ord Atom where
@@ -288,7 +273,6 @@ instance Ord Atom where
   compare (ASymbol s)    (ASymbol s')     = compare s s'
   compare (AVector v)    (AVector v')     = compare v v'
   compare (AProcedure _) (AProcedure _')  = undefined
-  compare (AEnv e)       (AEnv e')        = undefined
   compare _              _                = undefined
 
 instance Show Atom where
@@ -308,7 +292,6 @@ instance Show Atom where
             | i == Vec.length v - 1 = show (v Vec.! i)
             | otherwise             = show (v Vec.! i) ++ " " ++ showVector (i + 1)
   show (AProcedure c) = show c
-  show (AEnv e)       = show e
 
 instance Type Atom where
   showType a = case a of
@@ -320,7 +303,6 @@ instance Type Atom where
     ASymbol    _ -> "symbol"
     AVector    _ -> "vector"
     AProcedure _ -> "procedure"
-    AEnv       _ -> "env"
 
 strToAtom :: String -> Atom
 strToAtom atom

@@ -84,8 +84,6 @@ eval scopeRef l@(SList p (sFirst:args)) = do
 eval _ (SAtom p (ASymbol "_"))          = reportE p "addressing '_' is forbidden"
 eval scopeRef (SAtom p (ASymbol sym))   = do
   result <- liftIO $ exploreIORefIO scopeRef (scLookupS sym)
---  when (sym == "flip") $
---    liftIO $ printScope =<< readIORef scopeRef
   case result of
     Just s -> return $ setPoint p s
     _      -> reportE p $ "undefined identificator '" ++ sym ++ "'"
