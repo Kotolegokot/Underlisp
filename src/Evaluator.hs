@@ -79,11 +79,14 @@ eval scopeRef l@(SList p (sFirst:args)) = do
           | isUserDefined pr || isBuiltIn pr = do
               args' <- evalAloneSeq scopeRef args
               add (Call p $ SList p (procedure pr:args')) $ call scopeRef (point sFirst) pr args'
-          | otherwise                        = -- isSpecialOp
+          | isMacro pr                       = do
+              exp <- call scopeRef (point sFirst) pr args
+              add (Call p $ SList p (procedure pr:args)) $ eval scopeRef exp
+          | otherwise                        = -- isSpecialOp pr
               add (Call p $ SList p (procedure pr:args)) $ call scopeRef (point sFirst) pr args
 eval _ (SAtom p (ASymbol "_"))          = reportE p "addressing '_' is forbidden"
 eval scopeRef (SAtom p (ASymbol sym))   = do
-  result <- liftIO $ exploreIORefIO scopeRef (scLookupS sym)
+  result <- liftIO $ exploreIORefIO scopeRef (scLookup sym)
   case result of
     Just s -> return $ setPoint p s
     _      -> reportE p $ "undefined identificator '" ++ sym ++ "'"
@@ -91,19 +94,19 @@ eval _ other                            = return other
 
 -- | Create bindings from a function prototype and
 -- | and the actual arguments
-bindArgs :: Prototype -> [SExpr] -> EvalM (Map String Binding)
+bindArgs :: Prototype -> [SExpr] -> EvalM (Map String SExpr)
 bindArgs (Prototype argNames optNames Nothing) args
   | length args > l1 + l2 = reportE' "too many arguments"
   | length args < l1      = reportE' "too little arguments"
-  | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (map BSExpr $ args ++ repeat nil)
+  | otherwise             = return $ Map.fromList $ zip (argNames ++ optNames) (args ++ repeat nil)
     where l1 = length argNames
           l2 = length optNames
 bindArgs (Prototype argNames optNames rest) args
   | l < l1      = reportE' "too little arguments"
-  | l < l1 + l2 = return . Map.fromList $ zip names (map BSExpr $ args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
+  | l < l1 + l2 = return . Map.fromList $ zip names (args ++ take (l1 + l2 - l) (repeat nil) ++ [list []])
   | otherwise   = let (left, right) = splitAt (l1 + l2) args
                       args'         = left ++ [list right]
-                  in return $ Map.fromList $ zip names (map BSExpr args')
+                  in return $ Map.fromList $ zip names args'
   where restName = case fromJust rest of
           Rest x -> x
           Body x -> x
@@ -160,13 +163,6 @@ parseLambdaList exp = parseLambdaList' PLLNone (Prototype [] [] Nothing) =<< get
         parseLambdaList' PLLEnd prototype []      = return prototype
         parseLambdaList' PLLEnd _         (x:xs)  = reportE (point x) "nothing expected at the end of the lambda list"
 
--- | invokes a macro with the given environment and arguments
-callMacro :: Macro -> [SExpr] -> EvalM SExpr
-callMacro (Macro p localScope prototype exps) args = do
-  bindings <- bindArgs prototype args
-  childScope <- liftIO $ newLocal' bindings localScope
-  setPoint p <$> expandEvalBody childScope exps
-
 -- | Collect macro definitions and expand them
 processMacros :: IORef Scope -> [SExpr] -> EvalM [SExpr]
 processMacros scopeRef = collectMacros scopeRef >=> expandMacros scopeRef
@@ -177,7 +173,7 @@ collectMacros :: IORef Scope -> [SExpr] -> EvalM [SExpr]
 collectMacros scopeRef = foldM (\acc sexpr -> do
                                    defmacro <- parseDefmacro scopeRef sexpr
                                    case defmacro of
-                                     Just (name, macro) -> do liftIO $ modifyIORef scopeRef $ scInsert name (BMacro macro)
+                                     Just (name, macro) -> do liftIO $ modifyIORef scopeRef $ scInsert name $ procedure macro
                                                               return acc
                                      Nothing            -> return $ acc ++ [sexpr])
                          []
@@ -199,12 +195,12 @@ expandMacro scopeRef = expandMacro' Default
               return $ SList p (first:rest')
           | sym == "interpolate" = reportE p "calling 'interpolate' out of backquote"
           | otherwise = do
-              result <- liftIO $ exploreIORefIO scopeRef (scLookupM sym)
+              result <- liftIO $ exploreIORefIO scopeRef (scLookup sym)
               case result of
-                Just m  -> do
-                  expr <- callMacro m rest
+                Just (SAtom p (AProcedure m@(Macro _ _ _ _)))  -> do
+                  expr <- call scopeRef p m rest
                   expandMacro' Default expr
-                Nothing -> do
+                _                       -> do
                   list' <- mapM (expandMacro' Default) (first:rest)
                   return $ SList p list'
         expandMacro' Default l@(SList p (first:rest)) = do
@@ -223,11 +219,11 @@ expandMacro scopeRef = expandMacro' Default
         expandMacro' Backquote other = return other
 
 -- | Parse a defmacro expression
-parseDefmacro :: IORef Scope -> SExpr -> EvalM (Maybe (String, Macro))
+parseDefmacro :: IORef Scope -> SExpr -> EvalM (Maybe (String, Procedure))
 parseDefmacro scopeRef (SList p (SAtom _ (ASymbol "defmacro"):sName:lambdaList:body)) = do
   name <- getSymbol sName
   prototype <- parseLambdaList lambdaList
-  return $ Just (name, Macro p scopeRef prototype body)
+  return $ Just (name, Macro scopeRef prototype body [])
 parseDefmacro _ (SList p (SAtom _ (ASymbol "defmacro"):_)) = reportE p "at least two arguments required"
 parseDefmacro _ _                                          = return Nothing
 
@@ -236,6 +232,12 @@ bind :: Procedure -> [SExpr] -> EvalM Procedure
 bind (UserDefined scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
   return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (UserDefined scope prototype@(Prototype argNames optNames _) sexprs bound) args
+  | length args + length args > length argNames + length optNames = reportE' "too many arguments"
+  | otherwise                                                     =
+      return $ UserDefined scope prototype sexprs (bound ++ args)
+bind (Macro scope prototype@(Prototype _ _ Nothing) sexprs bound) args =
+  return $ UserDefined scope prototype sexprs (bound ++ args)
+bind (Macro scope prototype@(Prototype argNames optNames _) sexprs bound) args
   | length args + length args > length argNames + length optNames = reportE' "too many arguments"
   | otherwise                                                     =
       return $ UserDefined scope prototype sexprs (bound ++ args)
@@ -255,5 +257,9 @@ call scopeRef p pr args = fmap (setPoint p) $ case pr of
     bindings <- bindArgs prototype (bound ++ args)
     childScope <- liftIO $ newLocal' bindings localScope
     evalBody childScope exps
+  Macro localScope prototype exps bound       -> do
+    bindings <- bindArgs prototype args
+    childScope <- liftIO $ newLocal' bindings localScope
+    setPoint p <$> expandEvalBody childScope exps
   BuiltIn _ _ f bound                         -> f scopeRef (bound ++ args)
   SpecialOp _ _ f bound                       -> f scopeRef (bound ++ args)

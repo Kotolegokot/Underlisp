@@ -314,22 +314,13 @@ strToAtom atom
         float = AFloat <$> (readMaybe atom :: Maybe Float)
 ---- atom ----
 
----- macro ----
-data Macro = Macro Point (IORef Scope) Prototype [SExpr]
-
-instance Eq Macro where
-  (==) = undefined
-
-instance Show Macro where
-  show = const "#<macro>"
----- macro ----
-
 ---- procedure ----
 data Procedure = UserDefined (IORef Scope) Prototype [SExpr] [SExpr]
                | BuiltIn     String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
                | SpecialOp   String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
+               | Macro       (IORef Scope) Prototype [SExpr] [SExpr]
 
-isUserDefined, isBuiltIn, isSpecialOp :: Procedure -> Bool
+isUserDefined, isBuiltIn, isSpecialOp, isMacro :: Procedure -> Bool
 
 isUserDefined UserDefined {} = True
 isUserDefined _              = False
@@ -340,26 +331,23 @@ isBuiltIn _          = False
 isSpecialOp SpecialOp {} = True
 isSpecialOp _            = False
 
+isMacro Macro {} = True
+isMacro _        = False
+
 instance Show Procedure where
   show UserDefined {}         = "#<procedure>"
   show (BuiltIn name _ _ _)   = "#<procedure:" ++ name ++ ">"
   show (SpecialOp name _ _ _) = "#<special operator:" ++ name ++ ">"
+  show (Macro name _ _ _)     = "#<macro>"
 ---- procedure ----
 
 ---- scope ----
-data Scope = Scope { getBindings :: Map String Binding
+data Scope = Scope { getBindings :: Map String SExpr
                    , getG        :: Int
                    , getCmdArgs  :: [String]
                    , getImports  :: [IORef Scope] }
 
-data Binding = BSExpr SExpr | BMacro Macro
-  deriving Eq
-
-instance Show Binding where
-  show (BSExpr exp)   = show exp
-  show (BMacro macro) = show macro
-
-modifyBindings :: (Map String Binding -> Map String Binding) -> Scope -> Scope
+modifyBindings :: (Map String SExpr -> Map String SExpr) -> Scope -> Scope
 modifyBindings f scope = scope { getBindings = f $ getBindings scope }
 
 modifyG :: (Int -> Int) -> Scope -> Scope
@@ -374,7 +362,7 @@ modifyImports f scope = scope { getImports = f $ getImports scope }
 newGlobal :: [String] -> Scope
 newGlobal = newGlobal' Map.empty
 
-newGlobal' :: Map String Binding -> [String] -> Scope
+newGlobal' :: Map String SExpr -> [String] -> Scope
 newGlobal' bindings args = Scope { getBindings = bindings
                                  , getG        = 0
                                  , getCmdArgs  = args
@@ -383,7 +371,7 @@ newGlobal' bindings args = Scope { getBindings = bindings
 newLocal :: IORef Scope -> IO (IORef Scope)
 newLocal = newLocal' Map.empty
 
-newLocal' :: Map String Binding -> IORef Scope -> IO (IORef Scope)
+newLocal' :: Map String SExpr -> IORef Scope -> IO (IORef Scope)
 newLocal' bindings parentRef = do
   g <- exploreIORef parentRef getG
   cmdArgs <- exploreIORef parentRef getCmdArgs
@@ -407,49 +395,29 @@ maybeOrM (x:xs) = do
     else maybeOrM xs
 maybeOrM []     = return Nothing
 
-scLookup :: String -> Scope -> IO (Maybe Binding)
+scLookup :: String -> Scope -> IO (Maybe SExpr)
 scLookup key scope = case Map.lookup key (getBindings scope) of
                        Just value -> return $ Just value
                        Nothing    -> let imports = map readIORef $ getImports scope
                                          lookups = map (scLookup key =<<) imports
                                      in maybeOrM lookups
 
-scLookupM :: String -> Scope -> IO (Maybe Macro)
-scLookupM key scope = case Map.lookup key (getBindings scope) of
-                        Just (BMacro m) -> return $ Just m
-                        _               -> let imports = map readIORef $ getImports scope
-                                               lookups = map (scLookupM key =<<) imports
-                                           in maybeOrM lookups
-
-scLookupS :: String -> Scope -> IO (Maybe SExpr)
-scLookupS key scope = case Map.lookup key (getBindings scope) of
-                        Just (BSExpr exp) -> return $ Just exp
-                        _                 -> let imports = map readIORef $ getImports scope
-                                                 lookups = map (scLookupS key =<<) imports
-                                             in maybeOrM lookups
-
 scMember :: String -> Scope -> IO Bool
 scMember key = fmap isJust . scLookup key
-
-scMemberM :: String -> Scope -> IO Bool
-scMemberM key = fmap isJust . scLookupM key
-
-scMemberS :: String -> Scope -> IO Bool
-scMemberS key = fmap isJust . scLookupS key
 
 scDelete :: String -> Scope -> IO Scope
 scDelete key scope = do
   mapM_ (scDelete key <=< readIORef) $ getImports scope
   return scope { getBindings = Map.delete key (getBindings scope) }
 
-scInsert :: String -> Binding -> Scope -> Scope
+scInsert :: String -> SExpr -> Scope -> Scope
 scInsert key value scope = scope { getBindings = Map.insert key value (getBindings scope) }
 
-scAppend :: Map String Binding -> Scope -> Scope
+scAppend :: Map String SExpr -> Scope -> Scope
 scAppend add scope = scope { getBindings = Map.union add (getBindings scope) }
 
 -- TODO: fix it, because it barely works
-scSet :: String -> Binding -> Scope -> IO Scope
+scSet :: String -> SExpr -> Scope -> IO Scope
 scSet key value scope = case Map.lookup key (getBindings scope) of
   Just  _ -> return $ scInsert key value scope
   Nothing -> do

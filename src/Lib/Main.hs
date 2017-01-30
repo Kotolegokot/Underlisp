@@ -36,13 +36,13 @@ soLet scopeRef (SList p pairs : body) = do
             add <- Map.fromList <$> mapM (putBinding scopeRef) exps
             liftIO $ modifyIORef scopeRef (scAppend add)
 
-          putBinding :: IORef Scope -> SExpr -> EvalM (String, Binding)
+          putBinding :: IORef Scope -> SExpr -> EvalM (String, SExpr)
           putBinding scopeRef (SList _ [SAtom _ (ASymbol var), lambdaList, body]) = do
             value <- soLambda scopeRef [lambdaList, body]
-            return (var, BSExpr value)
+            return (var, value)
           putBinding scopeRef (SList _ [SAtom _ (ASymbol var), value]) = do
             exp <- evalAlone scopeRef value
-            return (var, BSExpr exp)
+            return (var, exp)
           putBinding _        (SList _ (exp1:_))  = reportE (point exp1) "first item in a binding pair must be a keyword"
           putBinding _        other               = reportE (point other) "(var value) pair expected"
 soLet _        [expr]                    = reportE (point expr) "list expected"
@@ -51,7 +51,7 @@ soLet _        _                         = reportE' "at least one argument expec
 soIsDef :: IORef Scope -> [SExpr] -> EvalM SExpr
 soIsDef scopeRef [sKey] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
-  liftIO $ bool <$> exploreIORefIO scopeRef (scMemberS key)
+  liftIO $ bool <$> exploreIORefIO scopeRef (scMember key)
 soIsDef _        _      = reportE' "just one argument required"
 
 soUndef :: IORef Scope -> [SExpr] -> EvalM SExpr
@@ -65,12 +65,12 @@ soUndef _        _      = reportE' "just one argument required"
 soDefine :: IORef Scope -> [SExpr] -> EvalM SExpr
 soDefine scopeRef [sKey] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
-  liftIO $ modifyIORef scopeRef (scInsert key $ BSExpr nil)
+  liftIO $ modifyIORef scopeRef (scInsert key nil)
   return nil
 soDefine scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   value <- evalAlone scopeRef sValue
-  liftIO $ modifyIORef scopeRef (scInsert key $ BSExpr value)
+  liftIO $ modifyIORef scopeRef (scInsert key value)
   return nil
 soDefine _        _              = reportE' "two arguments required"
 
@@ -78,12 +78,12 @@ soDefine _        _              = reportE' "two arguments required"
 soSet :: IORef Scope -> [SExpr] -> EvalM SExpr
 soSet scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
-  result <- liftIO $ exploreIORefIO scopeRef (scLookupS key)
+  result <- liftIO $ exploreIORefIO scopeRef (scLookup key)
   case result of
     Just (SAtom _ (AProcedure SpecialOp {})) -> reportE' "rebinding special operators is forbidden"
     Just _                                   -> do
       value <- evalAlone scopeRef sValue
-      liftIO $ modifyIORefIO scopeRef (scSet key $ BSExpr value)
+      liftIO $ modifyIORefIO scopeRef (scSet key value)
       return nil
     Nothing                                  -> reportE' $ "undefined identificator '" ++ key ++ "'"
 soSet _        _              = reportE' "two arguments required"

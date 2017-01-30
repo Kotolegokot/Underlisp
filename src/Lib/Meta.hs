@@ -22,10 +22,10 @@ soMacroExpand _        _     = reportE' "just one argument required"
 soMacroExpand1 :: IORef Scope -> [SExpr] -> EvalM SExpr
 soMacroExpand1 scopeRef [exp] = evalAlone scopeRef exp >>= soMacroExpand1'
     where soMacroExpand1' l@(SList _ (SAtom _ (ASymbol sym):args)) = do
-            result <- liftIO $ exploreIORefIO scopeRef (scLookupM sym)
+            result <- liftIO $ exploreIORefIO scopeRef (scLookup sym)
             case result of
-              Just m   -> callMacro m args
-              Nothing  -> return l
+              Just (SAtom p (AProcedure m@(Macro _ _ _ _))) -> call scopeRef p m args
+              _                                             -> return l
           soMacroExpand1' other                                    = return other
 soMacroExpand1 _        _     = reportE' "just one argument required"
 

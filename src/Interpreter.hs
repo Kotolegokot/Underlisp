@@ -72,7 +72,7 @@ repl prelude = do
                     return nil
 
                 unless (isNil exp) (putStrLn $ "=> " ++ show exp)
-                modifyIORef scopeRef (scInsert "it" $ BSExpr exp)
+                modifyIORef scopeRef (scInsert "it" exp)
                 handleLines (forwardRow p) scopeRef
               Nothing   -> putStrLn "Bye!"
 
@@ -95,10 +95,10 @@ loadPrelude = do
 
 -- | start environment
 -- | contains built-in functions and special operators
-startEnv :: Map String Binding
+startEnv :: Map String SExpr
 startEnv = Map.fromList $
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ SpecialOp name args f [])) specialOperators ++
-  fmap (\(name, args, f) -> (name, BSExpr . procedure $ BuiltIn name args f [])) builtinFunctions
+  fmap (\(name, args, f) -> (name, procedure $ SpecialOp name args f [])) specialOperators ++
+  fmap (\(name, args, f) -> (name, procedure $ BuiltIn name args f [])) builtinFunctions
 
 -- | Do all preprocessing.
 -- For now it's just importing modules.
