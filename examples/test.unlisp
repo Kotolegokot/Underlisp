@@ -1,14 +1,14 @@
 (import "examples/dfa.unlisp")
 
 (defineq dfa-1
-      (dfa 0 '(1) (lambda (state symbol)
-	            	   (case state
-	            		 (0 (case symbol
-	            			  (#0 0)
-	            			  (#1 1)))
-	            		 (1 (case symbol
-	            			  (#0 0)
-					  (#1 1)))))))
+    (dfa 0 '(1) (lambda (state symbol)
+		  (case state
+		    (0 (case symbol
+			 (#0 0)
+			 (#1 1)))
+		    (1 (case symbol
+			 (#0 0)
+			 (#1 1)))))))
 
 (defun show-usage ()
   (print-string-ln "Usage: prog <sequence>"))

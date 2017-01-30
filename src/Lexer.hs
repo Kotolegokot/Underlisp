@@ -2,6 +2,7 @@ module Lexer (Lexeme (..)
              , scan) where
 
 import Control.Monad.Except
+import Control.Arrow ((>>>), (&&&))
 import Data.Char (isSpace)
 import Base
 import Point
@@ -41,9 +42,11 @@ scan point = scan' point [] None
           _    -> scan' (forward x point) lexemes Comment xs
         scan' origPoint lexemes Char sequence = parse_char origPoint [] sequence
           where parse_char point name xs@(x:rest)
-                  | isSeparator x = do
-                      c <- translateChar origPoint name
-                      scan' point ((c, origPoint) : lexemes) None xs
+                  | isSeparator x = if null name
+                                    then do c <- translateChar origPoint [x]
+                                            scan' (forward x point) ((c, origPoint) : lexemes) None rest
+                                    else do c <- translateChar origPoint name
+                                            scan' point ((c, origPoint) : lexemes) None xs
                   | otherwise     = parse_char (forward x point) (name ++ [x]) rest
                 parse_char point name [] = do
                   c <- translateChar origPoint name
@@ -56,7 +59,7 @@ scan point = scan' point [] None
         scan' origPoint lexemes OtherAtom sequence = parse_atom origPoint [] sequence
             where parse_atom point atom xs@(x:rest)
                     | isSeparator x = scan' point ((LAtom (strToAtom atom), origPoint) : lexemes) None xs
-                    | otherwise      = parse_atom (forwardColumn point) (atom ++ [x]) rest
+                    | otherwise     = parse_atom (forwardColumn point) (atom ++ [x]) rest
                   parse_atom point atom [] = scan' point ((LAtom (strToAtom atom), origPoint) : lexemes) None []
         scan' _     lexemes _         []       = return $ reverse lexemes
 
@@ -88,4 +91,4 @@ isClosed :: Char -> Bool
 isClosed = (`elem` ")]}")
 
 isBracket :: Char -> Bool
-isBracket a = isOpen a || isClosed a
+isBracket = isOpen &&& isClosed >>> uncurry (||)

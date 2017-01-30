@@ -2,4 +2,4 @@
 (defun factorial (x)
   (if (<= x 1)
       1
-    (* x (factorial (pred x)))))
+      (* x (factorial (pred x)))))

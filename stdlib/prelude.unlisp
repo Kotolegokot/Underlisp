@@ -30,9 +30,9 @@
 (defmacro cond (&body pairs)
   (if (empty? pairs)
       nil
-    `(if ~(head (head pairs))
-       ~(head (tail (head pairs)))
-       (cond @(tail pairs)))))
+      `(if ~(head (head pairs))
+	   ~(head (tail (head pairs)))
+	   (cond @(tail pairs)))))
 
 ;; otherwise is used with `cond` macro
 (defineq otherwise true)
@@ -117,17 +117,17 @@
   (contract xs list?)
   (if (empty? xs)
       (error "init: empty list")
-    (if (= 1 (length xs))
-	()
-	(prepend (head xs) (init (tail xs))))))
+      (if (= 1 (length xs))
+	  ()
+	  (prepend (head xs) (init (tail xs))))))
 
 (defun last (xs)
   (contract xs list?)
   (if (empty? xs)
       (error "last: empty list")
-    (if (= 1 (length xs))
-        xs
-      (last (tail xs)))))
+      (if (= 1 (length xs))
+	  xs
+	  (last (tail xs)))))
 
 (defun map (t f xs)
   (contract f procedure?)
@@ -158,16 +158,16 @@
   (contract xs list?)
   (if (empty? xs)
       acc
-    (foldl f (f acc (head xs))
-           (tail xs))))
+      (foldl f (f acc (head xs))
+	     (tail xs))))
 
 (defun foldr (f acc xs)
   (contract f procedure?)
   (contract xs list?)
   (if (empty? xs)
       acc
-    (foldr f (f (last xs) acc)
-           (init xs))))
+      (foldr f (f (last xs) acc)
+	     (init xs))))
 
 (defun zip (xs ys)
   (contract xs list?)
@@ -214,9 +214,9 @@
   (contactt xs list?)
   (if (empty? xs)
       nil
-    (if (p (head xs))
-        (head xs)
-	(find (p (tail xs))))))
+      (if (p (head xs))
+	  (head xs)
+	  (find (p (tail xs))))))
 
 (defun take (n xs)
   (contract n int?)
@@ -236,12 +236,12 @@
         (otherwise
          (if (= n 0)
              xs
-           (drop (- n 1) (tail xs))))))
+	     (drop (- n 1) (tail xs))))))
 
 (defun cons (a b)
   (if (list? b)
       (prepend a b)
-    (list a b)))
+      (list a b)))
 
 (defmacro case (expr &body pairs)
   (let ((handle-pairs (expr-var pairs)
@@ -294,31 +294,31 @@
   ;; state := none | tilde
   (defun format' (state template args)
     (case state
-          ('none (if (empty? template)
-                     ()
-                   (if (= (head template) #~)
-                       (format' 'tilde (tail template) args)
+      ('none (if (empty? template)
+		 ()
+		 (if (= (head template) #~)
+		     (format' 'tilde (tail template) args)
                      (prepend (head template)
                               (format' 'none (tail template) args)))))
-          ('tilde (if (empty? template)
-                      (error "EOL after ~")
-                    (case (head template)
-                          (#% (prepend #newline
-                                       (format' 'none (tail template) args)))
-                          (#~ (prepend #~
-                                       (format' 'none (tail template) args)))
-                          (#a (append (->string (head args))
-                                      (format' 'none (tail template) (tail args))))
-                          (#c (if (not (char? (head args)))
-                                  (error "char expected")
-                                (prepend (head args)
-                                         (format' 'none (tail template) (tail args)))))
-                          (#s (if (not (list? (head args)))
-                                  (error "list expected")
-                                (append (head args)
-                                        (format' 'none (tail template) (tail args)))))
-                          ((prepend (head template)
-                                    (format' 'none (tail template) args))))))))
+      ('tilde (if (empty? template)
+		  (error "EOL after ~")
+		  (case (head template)
+		    (#% (prepend #newline
+				 (format' 'none (tail template) args)))
+		    (#~ (prepend #~
+				 (format' 'none (tail template) args)))
+		    (#a (append (->string (head args))
+				(format' 'none (tail template) (tail args))))
+		    (#c (if (not (char? (head args)))
+			    (error "char expected")
+			    (prepend (head args)
+				     (format' 'none (tail template) (tail args)))))
+		    (#s (if (not (list? (head args)))
+			    (error "list expected")
+			    (append (head args)
+				    (format' 'none (tail template) (tail args)))))
+		    ((prepend (head template)
+			      (format' 'none (tail template) args))))))))
   (format' 'none template args))
 
 (defun print (template &rest args)
@@ -347,13 +347,13 @@
 (defun <<< (&rest fs)
   (if (empty? fs)
       id
-    (compose (head fs) (apply <<< (tail fs)))))
+      (compose (head fs) (apply <<< (tail fs)))))
 
 ;; same as (compose xn (compose x{n - 1} (... x1)))
 (defun >>> (&rest fs)
   (if (empty? fs)
       id
-    (compose (apply >>> (tail fs)) (head fs))))
+      (compose (apply >>> (tail fs)) (head fs))))
 
 ;; makes a function that takes a list take any
 ;; number of arguments
@@ -451,9 +451,9 @@
 (defun compare (x y)
   (if (= x y)
       'EQ
-    (if (< x y)
-      'LT
-      'GT)))
+      (if (< x y)
+	  'LT
+	  'GT)))
 
 (defun neg (x)
   (contract x number?)
@@ -475,20 +475,20 @@
   (contract x number?)
   (contract y number?)
   (cond
-   ((pos? x)                 (atan (/ y x)))
-   ((and (zero? x) (pos? y)) (/ pi 2))
-   ((and (neg? x)  (pos? y)) (+ pi (atan (/ y x))))
-   ((or
-     (and (<= x 0) (neg? y))
-     (and (neg? x) (negative-zero? y))
-     (and (negative-zero? x) (negative-zero? y)))
-    (neg (atan2 (neg y) x)))
-   ((and (zero? y)
-         (or (neg? x)
-             (negative-zero? x)))
-    pi)
-   ((and (zero? x) (zero? y)) y)
-   (otherwise (+ x y))))
+    ((pos? x)                 (atan (/ y x)))
+    ((and (zero? x) (pos? y)) (/ pi 2))
+    ((and (neg? x)  (pos? y)) (+ pi (atan (/ y x))))
+    ((or
+      (and (<= x 0) (neg? y))
+      (and (neg? x) (negative-zero? y))
+      (and (negative-zero? x) (negative-zero? y)))
+     (neg (atan2 (neg y) x)))
+    ((and (zero? y)
+	  (or (neg? x)
+	      (negative-zero? x)))
+     pi)
+    ((and (zero? x) (zero? y)) y)
+    (otherwise (+ x y))))
 
 (defun tan (x)
   (contract x number?)
@@ -535,9 +535,9 @@
 (defun sign (x)
   (contract x number?)
   (case (compare x 0)
-	('EQ 0)
-	('LT -1)
-	('GT 1)))
+    ('EQ 0)
+    ('LT -1)
+    ('GT 1)))
 
 (defineq succ [+ 1])
 (defineq pred [(flip -) 1])
@@ -546,7 +546,7 @@
   (contract x number?)
   (if (= (sign x) -1)
       (neg x)
-    x))
+      x))
 
 (defun in-range (a b x)
   (contract x number?)
