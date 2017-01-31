@@ -96,7 +96,7 @@ loadPrelude = do
 -- | start environment
 -- | contains built-in functions and special operators
 startEnv :: Map String SExpr
-startEnv = Map.fromList $ fmap (\(name, args, f) -> (name, procedure $ SpecialOp name args f [])) specialOperators
+startEnv = Map.fromList $ fmap (\(name, args, f) -> (name, procedure $ BuiltIn name args f [])) specialOperators
 
 -- | Do all preprocessing.
 -- For now it's just importing modules.

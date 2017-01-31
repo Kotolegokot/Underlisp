@@ -82,7 +82,7 @@ eval scopeRef l@(SList p (sFirst:args)) = do
           | isMacro pr                       = do
               exp <- call scopeRef (point sFirst) pr args
               add (Call p $ SList p (procedure pr:args)) $ eval scopeRef exp
-          | otherwise                        = -- isSpecialOp pr
+          | otherwise                        = -- isBuiltIn pr
               add (Call p $ SList p (procedure pr:args)) $ call scopeRef (point sFirst) pr args
 eval _ (SAtom p (ASymbol "_"))          = reportE p "addressing '_' is forbidden"
 eval scopeRef (SAtom p (ASymbol sym))   = do
@@ -241,10 +241,10 @@ bind (Macro scope prototype@(Prototype argNames optNames _) sexprs bound) args
   | length args + length args > length argNames + length optNames = reportE' "too many arguments"
   | otherwise                                                     =
       return $ UserDefined scope prototype sexprs (bound ++ args)
-bind (SpecialOp name (Just argsCount) f bound) args
+bind (BuiltIn name (Just argsCount) f bound) args
   | argsCount < (length bound + length args) = reportE' "too many arguments"
-  | otherwise                                 = return $ SpecialOp name (Just argsCount) f (bound ++ args)
-bind (SpecialOp name Nothing f bound) args = return $ SpecialOp name Nothing f (bound ++ args)
+  | otherwise                                 = return $ BuiltIn name (Just argsCount) f (bound ++ args)
+bind (BuiltIn name Nothing f bound) args = return $ BuiltIn name Nothing f (bound ++ args)
 
 -- | Call a procedure or special operator
 call :: IORef Scope -> Point -> Procedure -> [SExpr] -> EvalM SExpr
@@ -257,7 +257,7 @@ call scopeRef p pr args = fmap (setPoint p) $ case pr of
     bindings <- bindArgs prototype args
     childScope <- liftIO $ newLocal' bindings localScope
     setPoint p <$> expandEvalBody childScope exps
-  SpecialOp _ _ f bound                       -> f scopeRef (bound ++ args)
+  BuiltIn _ _ f bound                       -> f scopeRef (bound ++ args)
 
 -- | Evaluate arguments and pass them to function f
 withEvaluatedArgs :: (IORef Scope -> [SExpr] -> EvalM SExpr) -> IORef Scope -> [SExpr] -> EvalM SExpr

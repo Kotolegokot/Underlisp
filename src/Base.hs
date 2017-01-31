@@ -316,23 +316,23 @@ strToAtom atom
 
 ---- procedure ----
 data Procedure = UserDefined (IORef Scope) Prototype [SExpr] [SExpr]
-               | SpecialOp   String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
+               | BuiltIn   String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
                | Macro       (IORef Scope) Prototype [SExpr] [SExpr]
 
-isUserDefined, isSpecialOp, isMacro :: Procedure -> Bool
+isUserDefined, isBuiltIn, isMacro :: Procedure -> Bool
 
 isUserDefined UserDefined {} = True
 isUserDefined _              = False
 
-isSpecialOp SpecialOp {} = True
-isSpecialOp _            = False
+isBuiltIn BuiltIn {} = True
+isBuiltIn _            = False
 
 isMacro Macro {} = True
 isMacro _        = False
 
 instance Show Procedure where
   show UserDefined {}         = "#<procedure>"
-  show (SpecialOp name _ _ _) = "#<procedure:" ++ name ++ ">"
+  show (BuiltIn name _ _ _) = "#<procedure:" ++ name ++ ">"
   show (Macro name _ _ _)     = "#<macro>"
 ---- procedure ----
 
