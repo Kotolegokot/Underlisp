@@ -1,0 +1,29 @@
+(import "stdlib/unit-test.unlisp")
+
+(deftest test-boolean ()
+  (test-not)
+  (test-and)
+  (test-or)
+  (test-impl))
+
+(deftest test-not ()
+  (= (not true) false)
+  (= (not false) true))
+
+(deftest test-and ()
+  (= (and) true)
+  (= (and true) true)
+  (= (and false) false)
+  (= (and false true true) false))
+
+(deftest test-or ()
+  (= (or) false)
+  (= (or false) false)
+  (= (or true) true)
+  (= (or true false false) true))
+
+(deftest test-impl ()
+  (= (-> true false) false)
+  (= (-> false false) true)
+  (= (-> false true) true)
+  (= (-> true true) true))

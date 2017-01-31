@@ -18,3 +18,8 @@
     @(map-list (lambda (form)
 		 `(report-result ~form '~form))
 	       forms)))
+
+(defmacro deftest (name parameters &body body)
+  "Define a test function"
+  `(defun ~name ~parameters
+     (check @body)))
