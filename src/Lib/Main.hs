@@ -79,7 +79,6 @@ soSet scopeRef [sKey, sValue] = do
   key <- getSymbol =<< evalAlone scopeRef sKey
   result <- liftIO $ exploreIORefIO scopeRef (scLookup key)
   case result of
-    Just (SAtom _ (AProcedure BuiltIn {})) -> reportE' "rebinding special operators is forbidden"
     Just _                                   -> do
       value <- evalAlone scopeRef sValue
       liftIO $ modifyIORefIO scopeRef (scSet key value)

@@ -316,7 +316,7 @@ strToAtom atom
 
 ---- procedure ----
 data Procedure = UserDefined (IORef Scope) Prototype [SExpr] [SExpr]
-               | BuiltIn   String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
+               | BuiltIn     String (Maybe Int) (IORef Scope -> [SExpr] -> EvalM SExpr) [SExpr]
                | Macro       (IORef Scope) Prototype [SExpr] [SExpr]
 
 isUserDefined, isBuiltIn, isMacro :: Procedure -> Bool
@@ -331,9 +331,9 @@ isMacro Macro {} = True
 isMacro _        = False
 
 instance Show Procedure where
-  show UserDefined {}         = "#<procedure>"
+  show UserDefined {}       = "#<procedure>"
   show (BuiltIn name _ _ _) = "#<procedure:" ++ name ++ ">"
-  show (Macro name _ _ _)     = "#<macro>"
+  show (Macro name _ _ _)   = "#<macro>"
 ---- procedure ----
 
 ---- scope ----

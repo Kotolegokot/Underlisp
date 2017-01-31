@@ -243,7 +243,7 @@ bind (Macro scope prototype@(Prototype argNames optNames _) sexprs bound) args
       return $ UserDefined scope prototype sexprs (bound ++ args)
 bind (BuiltIn name (Just argsCount) f bound) args
   | argsCount < (length bound + length args) = reportE' "too many arguments"
-  | otherwise                                 = return $ BuiltIn name (Just argsCount) f (bound ++ args)
+  | otherwise                                = return $ BuiltIn name (Just argsCount) f (bound ++ args)
 bind (BuiltIn name Nothing f bound) args = return $ BuiltIn name Nothing f (bound ++ args)
 
 -- | Call a procedure or special operator
@@ -257,7 +257,7 @@ call scopeRef p pr args = fmap (setPoint p) $ case pr of
     bindings <- bindArgs prototype args
     childScope <- liftIO $ newLocal' bindings localScope
     setPoint p <$> expandEvalBody childScope exps
-  BuiltIn _ _ f bound                       -> f scopeRef (bound ++ args)
+  BuiltIn _ _ f bound                         -> f scopeRef (bound ++ args)
 
 -- | Evaluate arguments and pass them to function f
 withEvaluatedArgs :: (IORef Scope -> [SExpr] -> EvalM SExpr) -> IORef Scope -> [SExpr] -> EvalM SExpr

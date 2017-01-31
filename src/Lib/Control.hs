@@ -26,4 +26,3 @@ soSeq scopeRef exps = do
 specialOperators = [("if",    Just 3,  soIf)
                    ,("scope", Nothing, soScope)
                    ,("seq",   Nothing, soSeq)]
-
