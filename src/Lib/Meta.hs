@@ -1,5 +1,4 @@
-module Lib.Meta (builtinFunctions
-                ,specialOperators) where
+module Lib.Meta (specialOperators) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.IORef
@@ -87,12 +86,11 @@ biToSymbol :: IORef Scope -> [SExpr] -> EvalM SExpr
 biToSymbol _ [exp] = symbol <$> getString exp
 biToSymbol _ _     = reportE' "just one argument required"
 
-builtinFunctions = [("->symbol", Just 1, biToSymbol)]
-
 specialOperators = [("macroexpand-1", Just 1, soMacroExpand1)
                    ,("macroexpand",   Just 1, soMacroExpand)
                    ,("quote",         Just 1, soQuote)
                    ,("backquote",     Just 1, soBackquote)
                    ,("interprete",    Just 1, soInterprete)
                    ,("gensym",        Just 0, soGensym)
-                   ,("eval",          Just 1, soEval)]
+                   ,("eval",          Just 1, soEval)
+                   ,("->symbol",      Just 1, withEvaluatedArgs biToSymbol)]

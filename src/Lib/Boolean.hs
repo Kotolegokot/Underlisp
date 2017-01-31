@@ -1,5 +1,4 @@
-module Lib.Boolean (builtinFunctions
-                   ,specialOperators) where
+module Lib.Boolean (specialOperators) where
 
 import Data.IORef
 import Control.Monad (foldM)
@@ -24,7 +23,7 @@ soImpl :: IORef Scope -> [SExpr] -> EvalM SExpr
 soImpl scopeRef [arg1, arg2] = ifM (getBool =<< evalAlone scopeRef arg1) (evalAlone scopeRef arg2) (return $ bool True)
 soImpl _        _            = reportE' "two arguments requried"
 
-builtinFunctions = [("not", Just 1,  biNot)]
 specialOperators = [("and", Nothing, soAnd)
                    ,("or",  Nothing, soOr)
-                   ,("->",  Just 2,  soImpl)]
+                   ,("->",  Just 2,  soImpl)
+                   ,("not", Just 1,  withEvaluatedArgs biNot)]

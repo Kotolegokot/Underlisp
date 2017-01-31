@@ -1,5 +1,4 @@
-module Lib.Environment (builtinFunctions
-                       ,specialOperators) where
+module Lib.Environment (specialOperators) where
 
 -- other
 import qualified System.Posix.Env as E
@@ -93,11 +92,11 @@ biSetEnvironment _ [l] = do
         assurePairList (x:_)         = reportE (point x) "list expected"
 biSetEnvironment _ _   = reportE' "just one argument required"
 
-builtinFunctions = [("get-env",         Just 1, biGetEnv)
-                   ,("set-env",         Just 3, biSetEnv)
-                   ,("unset-env",       Just 1, biUnsetEnv)
-                   ,("get-environment", Just 0, biGetEnvironment)
-                   ,("set-environment", Just 1, biSetEnvironment)]
+specialOperators = [("get-args",        Just 0,  soGetArgs)
+                   ,("with-args",       Nothing, soWithArgs)
+                   ,("get-env",         Just 1,  withEvaluatedArgs biGetEnv)
+                   ,("set-env",         Just 3,  withEvaluatedArgs biSetEnv)
+                   ,("unset-env",       Just 1,  withEvaluatedArgs biUnsetEnv)
+                   ,("get-environment", Just 0,  withEvaluatedArgs biGetEnvironment)
+                   ,("set-environment", Just 1,  withEvaluatedArgs biSetEnvironment)]
 
-specialOperators = [("get-args",     Just 0,  soGetArgs)
-                   ,("with-args",    Nothing, soWithArgs)]

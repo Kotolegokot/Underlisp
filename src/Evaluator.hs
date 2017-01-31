@@ -76,7 +76,7 @@ eval scopeRef l@(SList p (sFirst:args)) = do
     else reportE (point sFirst) $ "unable to execute s-expression: '" ++ show first ++ "'"
   where eval' :: Procedure -> EvalM SExpr
         eval' pr
-          | isUserDefined pr || isBuiltIn pr = do
+          | isUserDefined pr = do
               args' <- evalAloneSeq scopeRef args
               add (Call p $ SList p (procedure pr:args')) $ call scopeRef (point sFirst) pr args'
           | isMacro pr                       = do
@@ -241,10 +241,6 @@ bind (Macro scope prototype@(Prototype argNames optNames _) sexprs bound) args
   | length args + length args > length argNames + length optNames = reportE' "too many arguments"
   | otherwise                                                     =
       return $ UserDefined scope prototype sexprs (bound ++ args)
-bind (BuiltIn name (Just argsCount) f bound) args
-  | argsCount < (length bound + length args) = reportE' "too many arguments"
-  | otherwise                                = return $ BuiltIn name (Just argsCount) f (bound ++ args)
-bind (BuiltIn name Nothing f bound) args = return $ BuiltIn name Nothing f (bound ++ args)
 bind (SpecialOp name (Just argsCount) f bound) args
   | argsCount < (length bound + length args) = reportE' "too many arguments"
   | otherwise                                 = return $ SpecialOp name (Just argsCount) f (bound ++ args)
@@ -261,5 +257,8 @@ call scopeRef p pr args = fmap (setPoint p) $ case pr of
     bindings <- bindArgs prototype args
     childScope <- liftIO $ newLocal' bindings localScope
     setPoint p <$> expandEvalBody childScope exps
-  BuiltIn _ _ f bound                         -> f scopeRef (bound ++ args)
   SpecialOp _ _ f bound                       -> f scopeRef (bound ++ args)
+
+-- | Evaluate arguments and pass them to function f
+withEvaluatedArgs :: (IORef Scope -> [SExpr] -> EvalM SExpr) -> IORef Scope -> [SExpr] -> EvalM SExpr
+withEvaluatedArgs f scopeRef = mapM (evalAlone scopeRef) >=> f scopeRef

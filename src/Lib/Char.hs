@@ -1,9 +1,11 @@
-module Lib.Char (builtinFunctions
-                ,specialOperators) where
+module Lib.Char (specialOperators) where
 
 import Prelude hiding (getChar)
 import Data.IORef
 import Data.Char (ord, chr)
+
+-- local modules
+import Evaluator
 import Base
 
 default (Int)
@@ -16,7 +18,5 @@ biIntToChar :: IORef Scope -> [SExpr] -> EvalM SExpr
 biIntToChar _ [exp] = char . chr <$> getInt exp
 biIntToChar _ _     = reportE' "just one argument required"
 
-builtinFunctions = [("char->int", Just 1, biCharToInt)
-                   ,("int->char", Just 1, biIntToChar)]
-
-specialOperators = []
+specialOperators = [("char->int", Just 1, withEvaluatedArgs biCharToInt)
+                   ,("int->char", Just 1, withEvaluatedArgs biIntToChar)]

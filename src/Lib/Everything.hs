@@ -29,17 +29,3 @@ specialOperators = concat [Bool.specialOperators
                           ,Ord.specialOperators
                           ,Sequence.specialOperators
                           ,Vector.specialOperators]
-
-builtinFunctions :: [(String, Maybe Int, IORef Scope -> [SExpr] -> EvalM SExpr)]
-builtinFunctions = concat [Bool.builtinFunctions
-                          ,Char.builtinFunctions
-                          ,Ctrl.builtinFunctions
-                          ,Env.builtinFunctions
-                          ,IO.builtinFunctions
-                          ,List.builtinFunctions
-                          ,Main.builtinFunctions
-                          ,Math.builtinFunctions
-                          ,Meta.builtinFunctions
-                          ,Ord.builtinFunctions
-                          ,Sequence.builtinFunctions
-                          ,Vector.builtinFunctions]

@@ -1,5 +1,4 @@
-module Lib.Control (builtinFunctions
-                   ,specialOperators) where
+module Lib.Control (specialOperators) where
 
 import Control.Conditional (if')
 import Data.IORef
@@ -23,8 +22,6 @@ soSeq :: IORef Scope -> [SExpr] -> EvalM SExpr
 soSeq scopeRef exps = do
   result <- evalSeq scopeRef exps
   return $ if null result then nil else last result
-
-builtinFunctions = []
 
 specialOperators = [("if",    Just 3,  soIf)
                    ,("scope", Nothing, soScope)

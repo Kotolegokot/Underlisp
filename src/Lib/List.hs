@@ -1,9 +1,11 @@
-module Lib.List (builtinFunctions
-                ,specialOperators) where
+module Lib.List (specialOperators) where
 
 import Control.Monad (liftM)
 import Data.IORef
+
+-- local modules
 import Base
+import Evaluator
 
 default (Int)
 
@@ -25,9 +27,7 @@ biTail _ _                  = reportE' "just one argument required"
 biAppend :: IORef Scope -> [SExpr] -> EvalM SExpr
 biAppend _ = liftM (list . concat) . mapM getList
 
-builtinFunctions = [("list",   Nothing, biList)
-                   ,("head",   Just 1,  biHead)
-                   ,("tail",   Just 1,  biTail)
-                   ,("append", Just 2,  biAppend)]
-
-specialOperators = []
+specialOperators = [("list",   Nothing, withEvaluatedArgs biList)
+                   ,("head",   Just 1,  withEvaluatedArgs biHead)
+                   ,("tail",   Just 1,  withEvaluatedArgs biTail)
+                   ,("append", Just 2,  withEvaluatedArgs biAppend)]

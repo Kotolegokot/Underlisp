@@ -1,10 +1,12 @@
-module Lib.IO (builtinFunctions
-              ,specialOperators) where
+module Lib.IO (specialOperators) where
 
 import Control.Monad.IO.Class (liftIO)
 
 import System.IO (stdout, hFlush)
 import Data.IORef
+
+-- local modules
+import Evaluator
 import Base
 
 default (Int)
@@ -26,9 +28,7 @@ biPutChar _ [SAtom _ (AChar c)] = liftIO (putChar c) >> return nil
 biPutChar _ [expr]              = reportE (point expr) "char expected"
 biPutChar _ _                   = reportE' "just one argument required"
 
-builtinFunctions = [("flush",    Just 0, biFlush)
-                   ,("get-line", Just 0, biGetLine)
-                   ,("->string", Just 1, biToString)
-                   ,("put-char", Just 1, biPutChar)]
-
-specialOperators = []
+specialOperators = [("flush",    Just 0, withEvaluatedArgs biFlush)
+                   ,("get-line", Just 0, withEvaluatedArgs biGetLine)
+                   ,("->string", Just 1, withEvaluatedArgs biToString)
+                   ,("put-char", Just 1, withEvaluatedArgs biPutChar)]

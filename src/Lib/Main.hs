@@ -1,5 +1,4 @@
-module Lib.Main (builtinFunctions
-                ,specialOperators) where
+module Lib.Main (specialOperators) where
 
 -- map
 import qualified Data.Map as Map
@@ -117,9 +116,6 @@ biError :: IORef Scope -> [SExpr] -> EvalM SExpr
 biError _ [exp] = reportE' =<< getString exp
 biError _ _     = reportE' "just one argument required"
 
-builtinFunctions = [("type",  Just 1, biType)
-                   ,("error", Just 1, biError)]
-
 specialOperators = [("let",      Nothing, soLet)
                    ,("set",      Just 2,  soSet)
                    ,("define",   Just 2,  soDefine)
@@ -127,4 +123,6 @@ specialOperators = [("let",      Nothing, soLet)
                    ,("def?",     Just 1,  soIsDef)
                    ,("undef",    Just 1,  soUndef)
                    ,("bind",     Nothing, soBind)
-                   ,("apply",    Just 2,  soApply)]
+                   ,("apply",    Just 2,  soApply)
+                   ,("type",     Just 1,  withEvaluatedArgs biType)
+                   ,("error",    Just 1,  withEvaluatedArgs biError)]

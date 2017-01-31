@@ -1,5 +1,4 @@
-module Lib.Sequence (builtinFunctions
-                    ,specialOperators) where
+module Lib.Sequence (specialOperators) where
 
 -- vector
 import qualified Data.Vector as Vec
@@ -13,6 +12,7 @@ import Safe (atMay)
 
 -- local modules
 import Base
+import Evaluator
 
 default (Int)
 
@@ -48,8 +48,6 @@ biNth _ [sN, seq] = do
        ,(otherwise, reportE (point seq) "sequence expected")]
 biNth _ _         = reportE' "two arguments required"
 
-builtinFunctions = [("empty?", Just 1, biIsEmpty)
-                   ,("concat", Just 2, biConcat)
-                   ,("nth",    Just 2, biNth)]
-
-specialOperators = []
+specialOperators = [("empty?", Just 1, withEvaluatedArgs biIsEmpty)
+                   ,("concat", Just 2, withEvaluatedArgs biConcat)
+                   ,("nth",    Just 2, withEvaluatedArgs biNth)]

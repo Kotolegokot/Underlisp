@@ -1,10 +1,12 @@
-module Lib.Math (builtinFunctions
-                ,specialOperators) where
+module Lib.Math (specialOperators) where
 
 import Numeric.Special.Trigonometric
 import Control.Monad (liftM2)
 import Data.IORef
+
+-- local modules
 import Base
+import Evaluator
 
 default (Int)
 
@@ -78,33 +80,30 @@ biDivMod _ [exp1, exp2] = do
   return $ list [int div, int mod]
 biDivMod _ _            = reportE' "two arguments required"
 
-builtinFunctions = [("+",              Nothing, biSum)
-                   ,("-",              Just 2,  biSubstract)
-                   ,("*",              Nothing, biProduct)
-                   ,("/",              Just 2,  biDivide)
-                   ,("float",          Just 1,  biFloat)
-                   ,("exp",            Just 1,  unaryFunction (fmap (float . exp) . getNumber))
-                   ,("ln",             Just 1,  unaryFunction (fmap (float . log) . getNumber))
-                   ,("^",              Just 2,  biPower)
-                   ,("sin",            Just 1,  unaryFunction (fmap (float . sin           ) .  getNumber))
-                   ,("cos",            Just 1,  unaryFunction (fmap (float . cos           ) .  getNumber))
-                   ,("asin",           Just 1,  unaryFunction (fmap (float . asin          ) .  getNumber))
-                   ,("acos",           Just 1,  unaryFunction (fmap (float . acos          ) .  getNumber))
-                   ,("atan",           Just 1,  unaryFunction (fmap (float . atan          ) .  getNumber))
-                   ,("acot",           Just 1,  unaryFunction (fmap (float . acot          ) .  getNumber))
-                   ,("sinh",           Just 1,  unaryFunction (fmap (float . sinh          ) .  getNumber))
-                   ,("cosh",           Just 1,  unaryFunction (fmap (float . cosh          ) .  getNumber))
-                   ,("truncate",       Just 1,  unaryFunction (fmap (int   . truncate      ) .  getNumber))
-                   ,("round",          Just 1,  unaryFunction (fmap (int   . round         ) .  getNumber))
-                   ,("ceiling",        Just 1,  unaryFunction (fmap (int   . ceiling       ) .  getNumber))
-                   ,("floor",          Just 1,  unaryFunction (fmap (int   . floor         ) .  getNumber))
-                   ,("nan?",           Just 1,  unaryFunction (fmap (bool  . isNaN         ) .  getFloat))
-                   ,("infinite?",      Just 1,  unaryFunction (fmap (bool  . isInfinite    ) .  getFloat))
-                   ,("denormalized?",  Just 1,  unaryFunction (fmap (bool  . isDenormalized) .  getFloat))
-                   ,("negative-zero?", Just 1,  unaryFunction (fmap (bool  . isNegativeZero) .  getFloat))
-                   ,("IEEE?",          Just 1,  unaryFunction (fmap (bool  . isIEEE        ) .  getFloat))
-                   ,("quot-rem",       Just 1,  biQuotRem)
-                   ,("div-mod",        Just 1,  biDivMod)]
-
-specialOperators = []
-
+specialOperators = [("+",              Nothing, withEvaluatedArgs biSum)
+                   ,("-",              Just 2,  withEvaluatedArgs biSubstract)
+                   ,("*",              Nothing, withEvaluatedArgs biProduct)
+                   ,("/",              Just 2,  withEvaluatedArgs biDivide)
+                   ,("float",          Just 1,  withEvaluatedArgs biFloat)
+                   ,("exp",            Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . exp) . getNumber))
+                   ,("ln",             Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . log) . getNumber))
+                   ,("^",              Just 2,  withEvaluatedArgs biPower)
+                   ,("sin",            Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . sin           ) .  getNumber))
+                   ,("cos",            Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . cos           ) .  getNumber))
+                   ,("asin",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . asin          ) .  getNumber))
+                   ,("acos",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . acos          ) .  getNumber))
+                   ,("atan",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . atan          ) .  getNumber))
+                   ,("acot",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . acot          ) .  getNumber))
+                   ,("sinh",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . sinh          ) .  getNumber))
+                   ,("cosh",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (float . cosh          ) .  getNumber))
+                   ,("truncate",       Just 1,  withEvaluatedArgs $ unaryFunction (fmap (int   . truncate      ) .  getNumber))
+                   ,("round",          Just 1,  withEvaluatedArgs $ unaryFunction (fmap (int   . round         ) .  getNumber))
+                   ,("ceiling",        Just 1,  withEvaluatedArgs $ unaryFunction (fmap (int   . ceiling       ) .  getNumber))
+                   ,("floor",          Just 1,  withEvaluatedArgs $ unaryFunction (fmap (int   . floor         ) .  getNumber))
+                   ,("nan?",           Just 1,  withEvaluatedArgs $ unaryFunction (fmap (bool  . isNaN         ) .  getFloat))
+                   ,("infinite?",      Just 1,  withEvaluatedArgs $ unaryFunction (fmap (bool  . isInfinite    ) .  getFloat))
+                   ,("denormalized?",  Just 1,  withEvaluatedArgs $ unaryFunction (fmap (bool  . isDenormalized) .  getFloat))
+                   ,("negative-zero?", Just 1,  withEvaluatedArgs $ unaryFunction (fmap (bool  . isNegativeZero) .  getFloat))
+                   ,("IEEE?",          Just 1,  withEvaluatedArgs $ unaryFunction (fmap (bool  . isIEEE        ) .  getFloat))
+                   ,("quot-rem",       Just 1,  withEvaluatedArgs biQuotRem)
+                   ,("div-mod",        Just 1,  withEvaluatedArgs biDivMod)]
