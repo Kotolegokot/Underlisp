@@ -114,6 +114,11 @@
 (defun append (&rest lists)
   (apply [concat 'list] lists))
 
+(defun precat (type x xs)
+  (contract type symbol?)
+  (contract xs sequence?)
+  (concat type (list x) xs))
+
 (defun init (xs)
   (contract xs list?)
   (if (empty? xs)
@@ -285,42 +290,42 @@
   (newline))
 
 (defun write (s-expr)
-  (print-string (->string s-expr)))
+  (print-string (show s-expr)))
 
 (defun write-ln (s-expr)
-  (print-string-ln (->string s-expr)))
+  (print-string-ln (show s-expr)))
 
 (defun format (template &rest args)
   (contract template string?)
   ;; state := none | tilde
-  (defun format' (state template args)
-    (case state
-      ('none (if (empty? template)
-		 ()
-		 (if (= (head template) #~)
-		     (format' 'tilde (tail template) args)
-                     (prepend (head template)
-                              (format' 'none (tail template) args)))))
-      ('tilde (if (empty? template)
-		  (error "EOL after ~")
-		  (case (head template)
-		    (#% (prepend #newline
-				 (format' 'none (tail template) args)))
-		    (#~ (prepend #~
-				 (format' 'none (tail template) args)))
-		    (#a (append (->string (head args))
-				(format' 'none (tail template) (tail args))))
-		    (#c (if (not (char? (head args)))
-			    (error "char expected")
-			    (prepend (head args)
-				     (format' 'none (tail template) (tail args)))))
-		    (#s (if (not (list? (head args)))
-			    (error "list expected")
-			    (append (head args)
-				    (format' 'none (tail template) (tail args)))))
-		    ((prepend (head template)
-			      (format' 'none (tail template) args))))))))
-  (format' 'none template args))
+  (let ((format' (state template args)
+	  (case state
+	    ('none (if (empty? template)
+		       ""
+		       (if (= (head template) #~)
+			   (format' 'tilde (tail template) args)
+			   (precat 'string (head template)
+				   (format' 'none (tail template) args)))))
+	    ('tilde (if (empty? template)
+			(error "EOL after ~")
+			(case (head template)
+			  (#% (precat 'string #newline
+				      (format' 'none (tail template) args)))
+			  (#~ (precat 'string #~
+				      (format' 'none (tail template) args)))
+			  (#a (concat 'string (show (head args))
+				      (format' 'none (tail template) (tail args))))
+			  (#c (if (not (char? (head args)))
+				  (error "char expected")
+				  (precat 'string (head args)
+					  (format' 'none (tail template) (tail args)))))
+			  (#s (if (not (list? (head args)))
+				  (error "list expected")
+				  (concat 'string (head args)
+					  (format' 'none (tail template) (tail args)))))
+			  ((precat 'string (head template)
+				    (format' 'none (tail template) args)))))))))
+    (format' 'none template args)))
 
 (defun print (template &rest args)
   (contract template string?)
@@ -568,3 +573,6 @@
 
 (defun string (&rest chars)
   (->seq 'string chars))
+
+(defmacro void (&body body)
+  `(seq @body nil))

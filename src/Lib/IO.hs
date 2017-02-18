@@ -19,9 +19,9 @@ biGetLine :: IORef Scope -> [SExpr] -> EvalM SExpr
 biGetLine _ [] = string <$> liftIO getLine
 biGetLine _ _  = reportE' "no arguments required"
 
-biToString :: IORef Scope -> [SExpr] -> EvalM SExpr
-biToString _ [arg] = return . string $ show arg
-biToString _ _     = reportE' "just one argument required"
+biShow :: IORef Scope -> [SExpr] -> EvalM SExpr
+biShow _ [arg] = return . string $ show arg
+biShow _ _     = reportE' "just one argument required"
 
 biPutChar :: IORef Scope -> [SExpr] -> EvalM SExpr
 biPutChar _ [SAtom _ (AChar c)] = liftIO (putChar c) >> return nil
@@ -30,5 +30,5 @@ biPutChar _ _                   = reportE' "just one argument required"
 
 specialOperators = [("flush",    Just 0, withEvaluatedArgs biFlush)
                    ,("get-line", Just 0, withEvaluatedArgs biGetLine)
-                   ,("->string", Just 1, withEvaluatedArgs biToString)
+                   ,("show",     Just 1, withEvaluatedArgs biShow)
                    ,("put-char", Just 1, withEvaluatedArgs biPutChar)]

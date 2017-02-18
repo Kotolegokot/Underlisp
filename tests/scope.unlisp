@@ -15,7 +15,7 @@
 ;;; environment
 (scope
  (defun f () "f")
- (defun g () (append (f) "g"))
+ (defun g () (concat 'string (f) "g"))
 
  (assert (= (g) "fg"))
  (scope
