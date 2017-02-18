@@ -14,6 +14,7 @@
    So 'import' must not be just a special operator or function,
    but rather something that's processed before expanding macros.
 ** DONE Fix 'import-module', 'load-module'
+** TODO Fix all that shit with 'apply'
 ** TODO Fix incorrect Points in exceptions
 ** TODO Write lots of tests
 *** TODO For built-in functions and special operators

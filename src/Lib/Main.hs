@@ -108,7 +108,9 @@ soApply scopeRef (first:args@(_:_)) = do
   args' <- evalAloneSeq scopeRef args
   l <- getList $ last args'
   let quotedArgs = map (list . (atom (ASymbol "quote"):) . return) $ init args' ++ l
-  call scopeRef (point first) pr quotedArgs
+  if isBuiltIn pr
+    then call scopeRef (point first) pr quotedArgs
+    else call scopeRef (point first) pr args'
 soApply _        _                  = reportE' "at least two arguments required"
 
 -- | Built-in function error
