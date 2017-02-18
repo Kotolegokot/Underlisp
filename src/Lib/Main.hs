@@ -106,9 +106,9 @@ soApply :: IORef Scope -> [SExpr] -> EvalM SExpr
 soApply scopeRef (first:args@(_:_)) = do
   pr <- getProcedure =<< evalAlone scopeRef first
   args' <- evalAloneSeq scopeRef args
-  l <- getList last args'
-  liftIO $ print $ init args' ++ l
-  call scopeRef (point first) pr (init args' ++ l)
+  l <- getList $ last args'
+  let quotedArgs = map (list . (atom (ASymbol "quote"):) . return) $ init args' ++ l
+  call scopeRef (point first) pr quotedArgs
 soApply _        _                  = reportE' "at least two arguments required"
 
 -- | Built-in function error
