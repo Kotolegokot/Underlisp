@@ -7,7 +7,7 @@ import Data.Char (isSpace)
 import Base
 import Point
 
-data Lexeme = Open Char | Closed Char | LAtom Atom | LString String | SugarCall String | SugarApply String
+data Lexeme = Open Char | Closed Char | LAtom Atom | SugarCall String | SugarApply String
   deriving (Eq, Show)
 
 data State = None | Comment | Char | String | Vector | OtherAtom
@@ -53,7 +53,7 @@ scan point = scan' point [] None
                   scan' point ((c, origPoint) : lexemes) None []
         scan' origPoint lexemes String sequence = parse_string origPoint [] sequence
             where parse_string point string xs@(x:rest)
-                    | x == '"'  = scan' (forward x point) ((LString (reverse string), origPoint) : lexemes) None rest
+                    | x == '"'  = scan' (forward x point) ((LAtom $ AString (reverse string), origPoint) : lexemes) None rest
                     | otherwise = parse_string (forward x point) (x : string) rest
                   parse_string point string [] = reportR point "unexpected EOF in the middle of a string"
         scan' origPoint lexemes OtherAtom sequence = parse_atom origPoint [] sequence

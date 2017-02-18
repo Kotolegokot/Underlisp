@@ -83,8 +83,6 @@ instance Ord SExpr where
 
 instance Show SExpr where
   show expr
-    | isEmptyList expr = "()"
-    | isString expr    = show $ fromString expr
     | isList   expr    = handleList (fromList expr)
     | otherwise        = show $ fromAtom expr -- isAtom
     where handleList [SAtom _ (ASymbol "backquote"),   arg] = "`" ++ show arg
@@ -92,9 +90,6 @@ instance Show SExpr where
           handleList [SAtom _ (ASymbol "interpolate"), arg] = "~" ++ show arg
           handleList [SAtom _ (ASymbol "unfold"),      arg] = "@" ++ show arg
           handleList (SAtom _ (ASymbol "bind")   :    args) = "[" ++ showList args ++ "]"
-          handleList l@(SAtom _ (ASymbol "list")   :  args)
-            | all isChar args = show $ map fromChar args
-            | otherwise       = "(" ++ showList l ++ ")"
           handleList l = "(" ++ showList l ++ ")"
 
           showList [x]    = show x
@@ -106,7 +101,7 @@ instance Type SExpr where
     | isList sexpr = "list"
     | otherwise    = showType $ fromAtom sexpr -- isAtom
 
-isNil, isInt, isFloat, isChar, isBool, isSymbol, isVector, isProcedure, isSequence, isNumber, isString :: SExpr -> Bool
+isNil, isInt, isFloat, isChar, isBool, isString, isSymbol, isVector, isProcedure, isSequence, isNumber :: SExpr -> Bool
 
 isNil (SAtom _ ANil) = True
 isNil _              = False
@@ -123,6 +118,9 @@ isChar _                   = False
 isBool (SAtom _ (ABool _)) = True
 isBool _                   = False
 
+isString (SAtom _ (AString _)) = True
+isString _                     = False
+
 isSymbol (SAtom _ (ASymbol _)) = True
 isSymbol _                     = False
 
@@ -132,11 +130,9 @@ isVector _                     = False
 isProcedure (SAtom _ (AProcedure _)) = True
 isProcedure _                       = False
 
-isSequence = isList &&& isVector >>> uncurry (||)
+isSequence = liftN [isList, isVector, isString] or
 
 isNumber = isFloat &&& isInt >>> uncurry (||)
-
-isString = isList &&& (all isChar . fromList) >>> uncurry (&&)
 
 fromInt :: SExpr -> Int
 fromInt (SAtom _ (AInt i)) = i
@@ -154,6 +150,10 @@ fromBool :: SExpr -> Bool
 fromBool (SAtom _ (ABool b)) = b
 fromBool _                   = undefined
 
+fromString :: SExpr -> String
+fromString (SAtom _ (AString s)) = s
+fromString _                     = undefined
+
 fromSymbol :: SExpr -> String
 fromSymbol (SAtom _ (ASymbol s)) = s
 fromSymbol _                     = undefined
@@ -168,8 +168,9 @@ fromProcedure _                       = undefined
 
 fromSequence :: SExpr -> [SExpr]
 fromSequence s
-  | isList s   = fromList s
+  | isList   s = fromList s
   | isVector s = Vec.toList $ fromVector s
+  | isString s = map char $ fromString s
   | otherwise  = undefined
 
 fromNumber :: SExpr -> Float
@@ -177,12 +178,6 @@ fromNumber n
   | isInt   n = fromIntegral $ fromInt n
   | isFloat n = fromFloat n
   | otherwise = undefined
-
-fromString :: SExpr -> String
-fromString s = map fromChar $ fromList s
-
-toString :: String -> SExpr
-toString = list . map char
 
 unpackSExpr :: (SExpr -> a) -> String -> SExpr -> EvalM a
 unpackSExpr fromA msg exp = fromFalsumM (reportE (point exp) (msg ++ " expected")) (fromA exp)
@@ -199,6 +194,9 @@ getChar = unpackSExpr fromChar "char"
 getBool :: SExpr -> EvalM Bool
 getBool = unpackSExpr fromBool "bool"
 
+getString :: SExpr -> EvalM String
+getString = unpackSExpr fromString "string"
+
 getSymbol :: SExpr -> EvalM String
 getSymbol = unpackSExpr fromSymbol "symbol"
 
@@ -214,9 +212,6 @@ getSequence = unpackSExpr fromSequence "sequence"
 getNumber :: SExpr -> EvalM Float
 getNumber = unpackSExpr fromNumber "number"
 
-getString :: SExpr -> EvalM String
-getString = unpackSExpr fromString "string"
-
 int :: Int -> SExpr
 int = atom . AInt
 
@@ -228,6 +223,9 @@ char = atom . AChar
 
 bool :: Bool -> SExpr
 bool = atom . ABool
+
+string :: String -> SExpr
+string = atom . AString
 
 symbol :: String -> SExpr
 symbol = atom . ASymbol
@@ -246,6 +244,7 @@ data Atom = ANil
           | AChar      Char
           | ABool      Bool
           | ASymbol    String
+          | AString    String
           | AVector    (Vector SExpr)
           | AProcedure Procedure
 
@@ -258,6 +257,7 @@ instance Eq Atom where
   (AChar c)      == (AChar c')     = c == c'
   (ABool b)      == (ABool b')     = b == b'
   (ASymbol s)    == (ASymbol s')   = s == s'
+  (AString s)    == (AString s')   = s == s'
   (AVector v)    == (AVector v')   = v == v'
   (AProcedure _) == (AProcedure _) = undefined
   _              == _              = False
@@ -271,6 +271,7 @@ instance Ord Atom where
   compare (AChar c)      (AChar c')       = compare c c'
   compare (ABool b)      (ABool b')       = compare b b'
   compare (ASymbol s)    (ASymbol s')     = compare s s'
+  compare (AString s)    (AString s')     = compare s s'
   compare (AVector v)    (AVector v')     = compare v v'
   compare (AProcedure _) (AProcedure _')  = undefined
   compare _              _                = undefined
@@ -285,12 +286,10 @@ instance Show Atom where
     ' '  -> "#space"
     _    -> ['#', c]
   show (ABool b)      = C.bool "false" "true" b
+  show (AString s)    = show s
   show (ASymbol s)    = s
-  show (AVector v)    = "!(" ++ showVector 0 ++ ")"
-    where showVector i
-            | i >= Vec.length v     = ""
-            | i == Vec.length v - 1 = show (v Vec.! i)
-            | otherwise             = show (v Vec.! i) ++ " " ++ showVector (i + 1)
+  show (AVector v)    = "!(" ++ showVector v ++ ")"
+    where showVector = unwords . Vec.toList . Vec.map show
   show (AProcedure c) = show c
 
 instance Type Atom where
@@ -300,6 +299,7 @@ instance Type Atom where
     AFloat     _ -> "float"
     AChar      _ -> "char"
     ABool      _ -> "bool"
+    AString    _ -> "string"
     ASymbol    _ -> "symbol"
     AVector    _ -> "vector"
     AProcedure _ -> "procedure"

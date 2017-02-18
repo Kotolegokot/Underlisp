@@ -16,11 +16,11 @@ biFlush _ [] = liftIO (hFlush stdout) >> return nil
 biFlush _ _  = reportE' "no arguments required"
 
 biGetLine :: IORef Scope -> [SExpr] -> EvalM SExpr
-biGetLine _ [] = toString <$> liftIO getLine
+biGetLine _ [] = string <$> liftIO getLine
 biGetLine _ _  = reportE' "no arguments required"
 
 biToString :: IORef Scope -> [SExpr] -> EvalM SExpr
-biToString _ [arg] = return . toString $ show arg
+biToString _ [arg] = return . string $ show arg
 biToString _ _     = reportE' "just one argument required"
 
 biPutChar :: IORef Scope -> [SExpr] -> EvalM SExpr

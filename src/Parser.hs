@@ -17,9 +17,6 @@ parse ((x,p):xs) = case x of
   LAtom a -> do
     xs' <- parse xs
     return (SAtom p a : xs')
-  LString l -> do
-    xs' <- parse xs
-    return (strToList p l : xs')
   SugarCall s -> do
     (sexpr, rest) <- parseSugarCall p s xs
     rest' <- parse rest
@@ -46,7 +43,6 @@ parseList p b pairs = case b of
                           then return (SList p $ reverse acc, xs)
                           else reportR p' $ "unmatching brackets: unclosed '" ++ [bracket] ++ "'"
           LAtom      a -> parseList' p bracket (SAtom p' a : acc) xs
-          LString    l -> parseList' p bracket (strToList p' l : acc) xs
           SugarCall  s -> do
             (expr, rest) <- parseSugarCall p' s xs
             parseList' p bracket (expr : acc) rest
@@ -68,7 +64,6 @@ parseSugarCall p s ((SugarCall s', p'):xs)  = do
 parseSugarCall p s ((SugarApply s', p'):xs) = do
   (subl, rest) <- parseSugarApply p' s' xs
   return (SList p [SAtom p (ASymbol s), subl] , rest)
-parseSugarCall p s ((LString   l,  p'):xs)  = return (SList p [SAtom p (ASymbol s), strToList p l], xs)
 parseSugarCall p s []                       = reportR p $ "unexpected EOF after '" ++ s ++ "'"
 
 parseSugarApply :: Point -> String -> [(Lexeme, Point)] -> Except Fail (SExpr, [(Lexeme, Point)])

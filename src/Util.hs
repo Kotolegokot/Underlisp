@@ -51,3 +51,7 @@ modifyIORefIO' ref f = do
   a <- readIORef ref
   a' <- f a
   writeIORef ref (seq a' a')
+
+-- other
+liftN :: [a -> b] -> ([b] -> c) -> a -> c
+liftN fs g x = g $ map ($ x) fs

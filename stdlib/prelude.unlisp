@@ -54,6 +54,8 @@
   (= 'char (type x)))
 (defun bool? (x)
   (= 'bool (type x)))
+(defun string? (x)
+  (= 'string (type x)))
 (defun symbol? (x)
   (= 'symbol (type x)))
 (defun procedure? (x)
@@ -64,17 +66,13 @@
 ;; tells if x is a sequence
 (defun sequence? (x)
   (or (vector? x)
-      (list? x)))
+      (list? x)
+      (string? x)))
 
 ;; tells if x is an int or float
 (defun number? (x)
   (or (int? x)
       (float? x)))
-
-;; tells whether x is a string
-(defun string? (x)
-  (and (list? x)
-       (all char? x)))
 
 ;; tells whether x is an atom
 (defun atom? (x)
@@ -112,6 +110,9 @@
 (defun prepend (x xs)
   (contract xs list?)
   (append (list x) xs))
+
+(defun append (&rest lists)
+  (apply [concat 'list] lists))
 
 (defun init (xs)
   (contract xs list?)
@@ -248,7 +249,7 @@
 	  (if (empty? pairs)
 	      ()
 	      (let ((first (head pairs)))
-		(append
+		(concat 'list
 		 (list (if (empty? (tail first))
 			   `(true ~(head first))
 			   `((= ~expr-var ~(head first))
@@ -553,13 +554,17 @@
   (and (<= a x) (<= x b)))
 
 (defun ->list (seq)
-  (contract seq sequence?)
-  (concat 'list seq))
+  (->seq 'list seq))
 
 (defun ->vector (seq)
-  (contract seq sequence?)
-  (concat 'vector seq))
+  (->seq 'vector seq))
+
+(defun ->string (seq)
+  (->seq 'string seq))
 
 (defun ->seq (t seq)
   (contract seq sequence?)
   (concat t seq))
+
+(defun string (&rest chars)
+  (->seq 'string chars))

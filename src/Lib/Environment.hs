@@ -35,7 +35,7 @@ biFunctionEnv _ [sexpr]                                               = reportE 
 biFunctionEnv _ _                                                     = reportE' "just one argument required"-}
 
 soGetArgs :: IORef Scope -> [SExpr] -> EvalM SExpr
-soGetArgs scopeRef [] = liftIO $ list . map toString <$> exploreIORef scopeRef getCmdArgs
+soGetArgs scopeRef [] = liftIO $ list . map string <$> exploreIORef scopeRef getCmdArgs
 soGetArgs _        _  = reportE' "no arguments required"
 
 soWithArgs :: IORef Scope -> [SExpr] -> EvalM SExpr
@@ -51,7 +51,7 @@ biGetEnv _ [name] = do
   name' <- getString name
   result <- liftIO $ E.getEnv name'
   return $ case result of
-    Just value -> toString value
+    Just value -> SAtom (point name) (AString value)
     Nothing    -> nil
 biGetEnv _ _ = reportE' "just one argument required"
 
@@ -74,7 +74,7 @@ biUnsetEnv _ _      = reportE' "just one argument required"
 biGetEnvironment :: IORef Scope -> [SExpr] -> EvalM SExpr
 biGetEnvironment _ [] = do
   environment <- liftIO E.getEnvironment
-  return . list $ map (\(name, value) -> list [toString name, toString value]) environment
+  return . list $ map (\(name, value) -> list [string name, string value]) environment
 biGetEnvironment _ _  = reportE' "no arguments required"
 
 biSetEnvironment :: IORef Scope -> [SExpr] -> EvalM SExpr

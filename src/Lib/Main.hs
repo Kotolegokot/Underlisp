@@ -106,7 +106,8 @@ soApply :: IORef Scope -> [SExpr] -> EvalM SExpr
 soApply scopeRef (first:args@(_:_)) = do
   pr <- getProcedure =<< evalAlone scopeRef first
   args' <- evalAloneSeq scopeRef args
-  l <- getList (last args')
+  l <- getList last args'
+  liftIO $ print $ init args' ++ l
   call scopeRef (point first) pr (init args' ++ l)
 soApply _        _                  = reportE' "at least two arguments required"
 
